@@ -309,63 +309,42 @@ export default function ShoppingPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white">
-          <div className="flex items-center gap-4">
-            <ShoppingCart className="w-8 h-8 opacity-80" />
-            <div>
-              <p className="text-orange-100 text-sm">To Buy</p>
-              <p className="text-2xl font-bold">{uncheckedItems.length}</p>
-            </div>
+      <div className="flex gap-3 mb-4">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-100 text-orange-700">
+          <ShoppingCart className="w-4 h-4" />
+          <span className="text-sm font-medium">{uncheckedItems.length} to buy</span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-100 text-green-700">
+          <Check className="w-4 h-4" />
+          <span className="text-sm font-medium">{checkedItems.length} done</span>
+        </div>
+        {recipeItems.length > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-100 text-purple-700">
+            <ChefHat className="w-4 h-4" />
+            <span className="text-sm font-medium">{recipeItems.length} from recipes</span>
           </div>
-        </Card>
-        <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white">
-          <div className="flex items-center gap-4">
-            <Check className="w-8 h-8 opacity-80" />
-            <div>
-              <p className="text-green-100 text-sm">Done</p>
-              <p className="text-2xl font-bold">{checkedItems.length}</p>
-            </div>
-          </div>
-        </Card>
-        <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white">
-          <div className="flex items-center gap-4">
-            <ChefHat className="w-8 h-8 opacity-80" />
-            <div>
-              <p className="text-purple-100 text-sm">From Recipes</p>
-              <p className="text-2xl font-bold">{recipeItems.length}</p>
-            </div>
-          </div>
-        </Card>
+        )}
       </div>
 
       {/* Recipe Vault Link */}
       {isConnected && (
-        <Card className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50" hover={false}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <ChefHat className="w-6 h-6 text-purple-600" />
-              <div>
-                <p className="font-medium text-slate-800">Add items from recipes</p>
-                <p className="text-sm text-slate-500">Go to Recipe Vault to add ingredients to this list</p>
-              </div>
-            </div>
-            <a
-              href="https://recipe-vault.vercel.app/shopping-list"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white rounded-xl hover:bg-purple-600 transition-colors"
-            >
-              Open Recipe Vault
-              <ExternalLink className="w-4 h-4" />
-            </a>
+        <a
+          href="https://recipe-vault.vercel.app/shopping-list"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between p-3 mb-4 rounded-xl bg-gradient-to-r from-purple-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-colors group"
+        >
+          <div className="flex items-center gap-2">
+            <ChefHat className="w-5 h-5 text-purple-600" />
+            <span className="text-sm font-medium text-slate-700">Add from Recipe Vault</span>
           </div>
-        </Card>
+          <ExternalLink className="w-4 h-4 text-purple-500 group-hover:translate-x-0.5 transition-transform" />
+        </a>
       )}
 
       {/* Shopping List by Category */}
       {sortedCategories.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {sortedCategories.map(category => {
             const categoryItems = groupedItems[category].filter(i => !i.is_checked)
             if (categoryItems.length === 0) return null
@@ -373,43 +352,36 @@ export default function ShoppingPage() {
             const config = getCategoryConfig(category)
 
             return (
-              <Card key={category} hover={false}>
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="text-xl">{config.emoji}</span>
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
+              <Card key={category} hover={false} className="p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span>{config.emoji}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                   </span>
-                  <span className="text-sm text-slate-500">{categoryItems.length} items</span>
+                  <span className="text-xs text-slate-400">{categoryItems.length}</span>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {categoryItems.map(item => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+                      className="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-slate-50 transition-colors group"
                     >
                       <button
                         onClick={() => toggleItem(item.id)}
-                        className="w-6 h-6 rounded-lg border-2 border-slate-300 hover:border-green-500 transition-colors flex items-center justify-center flex-shrink-0"
+                        className="w-5 h-5 rounded border-2 border-slate-300 hover:border-green-500 transition-colors flex items-center justify-center flex-shrink-0"
                       />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-700 truncate">{item.item_name}</p>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          {item.quantity && (
-                            <span>{item.quantity}{item.unit ? ` ${item.unit}` : ''}</span>
-                          )}
-                          {item.recipe_name && (
-                            <span className="flex items-center gap-1 text-purple-600">
-                              <ChefHat className="w-3 h-3" />
-                              {item.recipe_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                      <span className="flex-1 text-sm text-slate-700 truncate">{item.item_name}</span>
+                      {item.quantity && (
+                        <span className="text-xs text-slate-400">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</span>
+                      )}
+                      {item.recipe_name && (
+                        <ChefHat className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                      )}
                       <button
                         onClick={() => deleteItem(item.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                        className="p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   ))}
@@ -434,31 +406,29 @@ export default function ShoppingPage() {
 
       {/* Checked Items */}
       {checkedItems.length > 0 && (
-        <Card className="mt-6" hover={false}>
-          <CardHeader title={`Completed (${checkedItems.length})`} icon={<Check className="w-5 h-5" />} />
-          <div className="space-y-2">
+        <Card className="mt-4 p-4" hover={false}>
+          <div className="flex items-center gap-2 mb-2 text-slate-500">
+            <Check className="w-4 h-4" />
+            <span className="text-sm font-medium">Completed ({checkedItems.length})</span>
+          </div>
+          <div className="space-y-1">
             {checkedItems.map(item => (
               <div
                 key={item.id}
-                className="flex items-center gap-4 p-3 rounded-xl bg-green-50 group"
+                className="flex items-center gap-3 py-1 px-2 -mx-2 rounded-lg bg-green-50/50 group"
               >
                 <button
                   onClick={() => toggleItem(item.id)}
-                  className="w-6 h-6 rounded-lg bg-green-500 text-white flex items-center justify-center flex-shrink-0"
+                  className="w-5 h-5 rounded bg-green-500 text-white flex items-center justify-center flex-shrink-0"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-3 h-3" />
                 </button>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-400 line-through truncate">{item.item_name}</p>
-                  {item.quantity && (
-                    <p className="text-sm text-slate-400">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</p>
-                  )}
-                </div>
+                <span className="flex-1 text-sm text-slate-400 line-through truncate">{item.item_name}</span>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="p-2 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                  className="p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               </div>
             ))}

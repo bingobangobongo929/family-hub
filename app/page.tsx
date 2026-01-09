@@ -1,6 +1,12 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import { Calendar, CheckSquare, ShoppingCart, StickyNote, TrendingUp, Clock } from 'lucide-react'
 import Link from 'next/link'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import { type ShoppingListItem, type ShoppingList, getCategoryConfig } from '@/lib/database.types'
 
 const upcomingEvents = [
   { id: 1, title: "Olivia's Playgroup", time: "10:00 AM", color: "bg-purple-500" },
@@ -15,13 +21,50 @@ const recentTasks = [
   { id: 4, title: "Fix baby gate", assignee: "Dad", done: false },
 ]
 
-const shoppingPreview = [
-  "Nappies", "Baby wipes", "Whole milk", "Bananas", "Pasta"
-]
-
 export default function Dashboard() {
+  const { user } = useAuth()
+  const [shoppingItems, setShoppingItems] = useState<ShoppingListItem[]>([])
+  const [shoppingLoading, setShoppingLoading] = useState(true)
+
   const completedTasks = recentTasks.filter(t => t.done).length
   const totalTasks = recentTasks.length
+
+  useEffect(() => {
+    const fetchShopping = async () => {
+      if (!user) {
+        setShoppingLoading(false)
+        return
+      }
+
+      try {
+        const { data: listData } = await supabase
+          .from('shopping_lists')
+          .select('*')
+          .limit(1)
+
+        const list = (listData as ShoppingList[] | null)?.[0]
+
+        if (list) {
+          const { data: items } = await supabase
+            .from('shopping_list_items')
+            .select('*')
+            .eq('list_id', list.id)
+            .eq('is_checked', false)
+            .order('created_at', { ascending: false })
+            .limit(8)
+
+          setShoppingItems((items as ShoppingListItem[] | null) || [])
+        }
+      } catch (error) {
+        console.error('Error fetching shopping:', error)
+      }
+      setShoppingLoading(false)
+    }
+
+    fetchShopping()
+  }, [user])
+
+  const uncheckedCount = shoppingItems.length
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -54,8 +97,8 @@ export default function Dashboard() {
           <div className="flex items-center gap-4">
             <ShoppingCart className="w-8 h-8 opacity-80" />
             <div>
-              <p className="text-orange-100 text-sm">Shopping Items</p>
-              <p className="text-2xl font-bold">{shoppingPreview.length}</p>
+              <p className="text-orange-100 text-sm">To Buy</p>
+              <p className="text-2xl font-bold">{shoppingLoading ? '...' : uncheckedCount}</p>
             </div>
           </div>
         </Card>
@@ -141,16 +184,25 @@ export default function Dashboard() {
               </Link>
             }
           />
-          <div className="flex flex-wrap gap-2">
-            {shoppingPreview.map((item) => (
-              <span
-                key={item}
-                className="px-3 py-2 rounded-xl bg-orange-50 text-orange-700 text-sm font-medium"
-              >
-                {item}
-              </span>
-            ))}
-          </div>
+          {shoppingLoading ? (
+            <div className="text-sm text-slate-500">Loading...</div>
+          ) : shoppingItems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {shoppingItems.map((item) => {
+                const config = getCategoryConfig(item.category)
+                return (
+                  <span
+                    key={item.id}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium ${config.color}`}
+                  >
+                    {config.emoji} {item.item_name}
+                  </span>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500">No items to buy</p>
+          )}
         </Card>
 
         {/* Quick Notes */}
