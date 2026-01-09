@@ -5,6 +5,7 @@ import Card, { CardHeader } from '@/components/Card'
 import { ShoppingCart, Plus, Trash2, Check, RefreshCw, ChefHat, ExternalLink } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import {
+  type ShoppingList,
   type ShoppingListItem,
   type InsertShoppingListItem,
   getCategoryConfig,
@@ -63,7 +64,7 @@ export default function ShoppingPage() {
         return
       }
 
-      const list = listData?.[0]
+      const list = (listData as ShoppingList[] | null)?.[0]
 
       if (list) {
         setListId(list.id)
@@ -80,7 +81,7 @@ export default function ShoppingPage() {
         if (itemsError) {
           console.error('Error fetching items:', itemsError)
         } else {
-          setItems(itemsData || [])
+          setItems((itemsData as ShoppingListItem[] | null) || [])
         }
       } else {
         // No list found, use demo data
@@ -167,7 +168,7 @@ export default function ShoppingPage() {
       if (error) {
         console.error('Error adding item:', error)
       } else if (data) {
-        setItems([...items, data])
+        setItems([...items, data as ShoppingListItem])
       }
     } else {
       // Demo mode - add locally
