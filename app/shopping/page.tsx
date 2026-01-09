@@ -173,12 +173,19 @@ export default function ShoppingPage() {
     } else {
       // Demo mode - add locally
       const demoNewItem: ShoppingListItem = {
-        ...newItem,
         id: Date.now().toString(),
         list_id: 'demo',
+        item_name: newItemName.trim(),
+        quantity: newItemQuantity ? parseFloat(newItemQuantity) : 1,
+        unit: null,
+        category: newItemCategory,
         recipe_id: null,
         recipe_name: null,
         recipe_quantities: null,
+        is_checked: false,
+        is_pantry_staple: false,
+        is_manual: true,
+        sort_order: items.length,
         created_at: new Date().toISOString(),
       }
       setItems([...items, demoNewItem])
