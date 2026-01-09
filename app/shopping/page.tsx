@@ -14,16 +14,18 @@ interface ShoppingItem {
 }
 
 const initialItems: ShoppingItem[] = [
-  { id: 1, name: "Milk", quantity: "2 gallons", category: "Dairy", addedBy: "Mom", checked: false },
-  { id: 2, name: "Bread", quantity: "1 loaf", category: "Bakery", addedBy: "Dad", checked: false },
-  { id: 3, name: "Eggs", quantity: "1 dozen", category: "Dairy", addedBy: "Mom", checked: true },
-  { id: 4, name: "Bananas", quantity: "1 bunch", category: "Produce", addedBy: "Emma", checked: false },
-  { id: 5, name: "Chicken breast", quantity: "2 lbs", category: "Meat", addedBy: "Mom", checked: false },
-  { id: 6, name: "Pasta", quantity: "2 boxes", category: "Pantry", addedBy: "Dad", checked: false },
-  { id: 7, name: "Tomato sauce", quantity: "2 jars", category: "Pantry", addedBy: "Mom", checked: true },
-  { id: 8, name: "Cereal", quantity: "2 boxes", category: "Breakfast", addedBy: "Jake", checked: false },
-  { id: 9, name: "Orange juice", quantity: "1 carton", category: "Beverages", addedBy: "Emma", checked: false },
-  { id: 10, name: "Cheese", quantity: "1 block", category: "Dairy", addedBy: "Dad", checked: false },
+  { id: 1, name: "Nappies Size 4 (Olivia)", quantity: "1 pack", category: "Baby", addedBy: "Mum", checked: false },
+  { id: 2, name: "Nappies Size 6 (Ellie)", quantity: "1 pack", category: "Baby", addedBy: "Mum", checked: false },
+  { id: 3, name: "Baby wipes", quantity: "2 packs", category: "Baby", addedBy: "Dad", checked: true },
+  { id: 4, name: "Whole milk", quantity: "4 pints", category: "Dairy", addedBy: "Mum", checked: false },
+  { id: 5, name: "Bananas", quantity: "1 bunch", category: "Produce", addedBy: "Mum", checked: false },
+  { id: 6, name: "Pasta shapes", quantity: "2 bags", category: "Pantry", addedBy: "Dad", checked: false },
+  { id: 7, name: "Cheddar cheese", quantity: "1 block", category: "Dairy", addedBy: "Mum", checked: false },
+  { id: 8, name: "Petit filous", quantity: "2 packs", category: "Dairy", addedBy: "Mum", checked: false },
+  { id: 9, name: "Fish fingers", quantity: "1 box", category: "Frozen", addedBy: "Dad", checked: false },
+  { id: 10, name: "Peas (frozen)", quantity: "1 bag", category: "Frozen", addedBy: "Mum", checked: true },
+  { id: 11, name: "Ella's Kitchen pouches", quantity: "6 pouches", category: "Baby", addedBy: "Mum", checked: false },
+  { id: 12, name: "Rice cakes", quantity: "1 pack", category: "Snacks", addedBy: "Dad", checked: false },
 ]
 
 const categoryColors: Record<string, string> = {
@@ -32,8 +34,10 @@ const categoryColors: Record<string, string> = {
   Produce: 'bg-green-100 text-green-700',
   Meat: 'bg-red-100 text-red-700',
   Pantry: 'bg-purple-100 text-purple-700',
-  Breakfast: 'bg-orange-100 text-orange-700',
-  Beverages: 'bg-cyan-100 text-cyan-700',
+  Frozen: 'bg-cyan-100 text-cyan-700',
+  Beverages: 'bg-teal-100 text-teal-700',
+  Baby: 'bg-pink-100 text-pink-700',
+  Snacks: 'bg-orange-100 text-orange-700',
 }
 
 export default function ShoppingPage() {

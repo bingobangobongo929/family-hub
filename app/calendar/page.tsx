@@ -5,12 +5,12 @@ import Card, { CardHeader } from '@/components/Card'
 import { Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 
 const events = [
-  { id: 1, title: "Emma's Soccer Practice", date: 15, time: "3:30 PM", member: "Emma", color: "bg-purple-500" },
-  { id: 2, title: "Family Dinner", date: 15, time: "6:00 PM", member: "All", color: "bg-pink-500" },
-  { id: 3, title: "Jake's Piano Lesson", date: 16, time: "4:00 PM", member: "Jake", color: "bg-green-500" },
-  { id: 4, title: "Parent-Teacher Meeting", date: 18, time: "10:00 AM", member: "Mom", color: "bg-blue-500" },
-  { id: 5, title: "Dentist Appointment", date: 20, time: "2:00 PM", member: "Dad", color: "bg-orange-500" },
-  { id: 6, title: "Movie Night", date: 22, time: "7:00 PM", member: "All", color: "bg-pink-500" },
+  { id: 1, title: "Olivia's Playgroup", date: 15, time: "10:00 AM", member: "Olivia", color: "bg-purple-500" },
+  { id: 2, title: "Ellie's Nap Time", date: 15, time: "1:00 PM", member: "Ellie", color: "bg-green-500" },
+  { id: 3, title: "Family Swim Class", date: 16, time: "9:30 AM", member: "All", color: "bg-pink-500" },
+  { id: 4, title: "Health Visitor Check", date: 18, time: "10:00 AM", member: "Ellie", color: "bg-green-500" },
+  { id: 5, title: "Olivia's Birthday Party", date: 20, time: "2:00 PM", member: "Olivia", color: "bg-purple-500" },
+  { id: 6, title: "Soft Play Centre", date: 22, time: "11:00 AM", member: "All", color: "bg-pink-500" },
 ]
 
 const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']

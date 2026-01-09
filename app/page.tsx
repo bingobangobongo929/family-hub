@@ -3,20 +3,20 @@ import { Calendar, CheckSquare, ShoppingCart, StickyNote, TrendingUp, Clock } fr
 import Link from 'next/link'
 
 const upcomingEvents = [
-  { id: 1, title: "Emma's Soccer Practice", time: "3:30 PM", color: "bg-purple-500" },
-  { id: 2, title: "Family Dinner", time: "6:00 PM", color: "bg-pink-500" },
-  { id: 3, title: "Jake's Piano Lesson", time: "Tomorrow 4:00 PM", color: "bg-green-500" },
+  { id: 1, title: "Olivia's Playgroup", time: "10:00 AM", color: "bg-purple-500" },
+  { id: 2, title: "Ellie's Nap Time", time: "1:00 PM", color: "bg-green-500" },
+  { id: 3, title: "Family Swim Class", time: "Tomorrow 9:30 AM", color: "bg-pink-500" },
 ]
 
 const recentTasks = [
-  { id: 1, title: "Take out trash", assignee: "Jake", done: true },
-  { id: 2, title: "Walk the dog", assignee: "Emma", done: false },
-  { id: 3, title: "Grocery shopping", assignee: "Mom", done: false },
-  { id: 4, title: "Fix garage door", assignee: "Dad", done: false },
+  { id: 1, title: "Prepare Olivia's lunch box", assignee: "Mum", done: true },
+  { id: 2, title: "Restock nappies", assignee: "Dad", done: false },
+  { id: 3, title: "Book GP appointment for Ellie", assignee: "Mum", done: false },
+  { id: 4, title: "Fix baby gate", assignee: "Dad", done: false },
 ]
 
 const shoppingPreview = [
-  "Milk", "Bread", "Eggs", "Bananas", "Chicken breast"
+  "Nappies", "Baby wipes", "Whole milk", "Bananas", "Pasta"
 ]
 
 export default function Dashboard() {
@@ -166,11 +166,11 @@ export default function Dashboard() {
           />
           <div className="space-y-3">
             <div className="p-4 rounded-xl bg-yellow-50 border-l-4 border-yellow-400">
-              <p className="text-sm text-slate-700">Don't forget to pick up Emma's birthday cake on Saturday!</p>
-              <p className="text-xs text-slate-500 mt-2">- Mom</p>
+              <p className="text-sm text-slate-700">Olivia's 3rd birthday party on Saturday - cake ordered from bakery!</p>
+              <p className="text-xs text-slate-500 mt-2">- Mum</p>
             </div>
             <div className="p-4 rounded-xl bg-blue-50 border-l-4 border-blue-400">
-              <p className="text-sm text-slate-700">Plumber coming Tuesday between 2-4pm</p>
+              <p className="text-sm text-slate-700">Health visitor coming Thursday 10am</p>
               <p className="text-xs text-slate-500 mt-2">- Dad</p>
             </div>
           </div>

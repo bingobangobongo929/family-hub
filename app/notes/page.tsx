@@ -18,9 +18,9 @@ interface Note {
 const initialNotes: Note[] = [
   {
     id: 1,
-    title: "Emma's Birthday",
-    content: "Don't forget to pick up Emma's birthday cake on Saturday from the bakery on Main St. She wants chocolate with strawberry frosting!",
-    author: "Mom",
+    title: "Olivia's 3rd Birthday",
+    content: "Party on Saturday at 2pm! Cake ordered from bakery (Peppa Pig theme). Grandparents arriving Friday evening.",
+    author: "Mum",
     authorColor: "bg-pink-500",
     color: "bg-yellow-50 border-yellow-400",
     pinned: true,
@@ -28,53 +28,53 @@ const initialNotes: Note[] = [
   },
   {
     id: 2,
-    title: "Plumber Visit",
-    content: "Plumber coming Tuesday between 2-4pm to fix the kitchen sink. Make sure someone is home!",
-    author: "Dad",
-    authorColor: "bg-blue-500",
-    color: "bg-blue-50 border-blue-400",
+    title: "Ellie's Routine",
+    content: "Morning nap: 9:30-10:30am\nAfternoon nap: 1:00-3:00pm\nBedtime: 7:00pm\nCurrently on 3 bottles a day",
+    author: "Mum",
+    authorColor: "bg-pink-500",
+    color: "bg-green-50 border-green-400",
     pinned: true,
     createdAt: "Jan 7"
   },
   {
     id: 3,
-    title: "WiFi Password",
-    content: "New WiFi password: FamilyHub2026!\nNetwork name: HomeNetwork5G",
+    title: "Health Visitor",
+    content: "Thursday 10am - Ellie's developmental check. Remember to mention the rash on her arm.",
     author: "Dad",
     authorColor: "bg-blue-500",
-    color: "bg-green-50 border-green-400",
-    pinned: false,
+    color: "bg-blue-50 border-blue-400",
+    pinned: true,
     createdAt: "Jan 5"
   },
   {
     id: 4,
-    title: "School Project",
-    content: "Jake needs poster board and markers for his science project due next Friday.",
-    author: "Jake",
-    authorColor: "bg-green-500",
+    title: "Olivia's Favourite Foods",
+    content: "Currently likes: pasta, bananas, cheese, peas\nWon't eat: anything green except peas\nAllergies: None known",
+    author: "Mum",
+    authorColor: "bg-pink-500",
     color: "bg-purple-50 border-purple-400",
     pinned: false,
     createdAt: "Jan 6"
   },
   {
     id: 5,
-    title: "Carpool Schedule",
-    content: "Monday & Wednesday: We drive\nTuesday & Thursday: Johnsons drive\nFriday: Alternate weeks",
-    author: "Mom",
-    authorColor: "bg-pink-500",
-    color: "bg-orange-50 border-orange-400",
-    pinned: false,
-    createdAt: "Jan 3"
-  },
-  {
-    id: 6,
     title: "Emergency Contacts",
-    content: "Pediatrician: 555-0123\nVet: 555-0456\nNeighbor (Mrs. Johnson): 555-0789",
-    author: "Mom",
+    content: "GP Surgery: 020 7123 4567\nNHS 111 for non-emergency\nGrandma: 07700 900123\nNeighbour Sarah: 07700 900456",
+    author: "Mum",
     authorColor: "bg-pink-500",
     color: "bg-red-50 border-red-400",
     pinned: true,
     createdAt: "Jan 1"
+  },
+  {
+    id: 6,
+    title: "Nursery Info",
+    content: "Olivia at Little Stars Nursery\nMon/Wed/Fri 9am-3pm\nKey worker: Sophie\nContact: 020 7890 1234",
+    author: "Dad",
+    authorColor: "bg-blue-500",
+    color: "bg-orange-50 border-orange-400",
+    pinned: false,
+    createdAt: "Jan 3"
   },
 ]
 

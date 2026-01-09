@@ -15,14 +15,14 @@ interface Task {
 }
 
 const initialTasks: Task[] = [
-  { id: 1, title: "Take out trash", assignee: "Jake", assigneeColor: "bg-green-500", priority: "low", done: true, category: "Chores" },
-  { id: 2, title: "Walk the dog", assignee: "Emma", assigneeColor: "bg-purple-500", priority: "medium", done: false, category: "Pets" },
-  { id: 3, title: "Grocery shopping", assignee: "Mom", assigneeColor: "bg-pink-500", priority: "high", done: false, category: "Shopping" },
-  { id: 4, title: "Fix garage door", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "medium", done: false, category: "Home" },
-  { id: 5, title: "Clean bedroom", assignee: "Emma", assigneeColor: "bg-purple-500", priority: "medium", done: false, category: "Chores" },
-  { id: 6, title: "Mow the lawn", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "low", done: false, category: "Yard" },
-  { id: 7, title: "Do homework", assignee: "Jake", assigneeColor: "bg-green-500", priority: "high", done: false, category: "School" },
-  { id: 8, title: "Wash car", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "low", done: true, category: "Chores" },
+  { id: 1, title: "Restock nappies (size 4 & 6)", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "high", done: false, category: "Shopping" },
+  { id: 2, title: "Prepare Olivia's lunch box", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: true, category: "Kids" },
+  { id: 3, title: "Book Ellie's 1-year vaccinations", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "high", done: false, category: "Health" },
+  { id: 4, title: "Fix baby gate on stairs", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "high", done: false, category: "Safety" },
+  { id: 5, title: "Wash kids' clothes", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: false, category: "Chores" },
+  { id: 6, title: "Assemble new highchair", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "low", done: true, category: "Home" },
+  { id: 7, title: "Prep batch of baby food", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: false, category: "Kids" },
+  { id: 8, title: "Childproof kitchen cabinets", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "medium", done: false, category: "Safety" },
 ]
 
 const priorityColors = {

@@ -20,10 +20,10 @@ const navItems = [
 ]
 
 const familyMembers = [
-  { name: 'Mom', color: 'bg-pink-500' },
   { name: 'Dad', color: 'bg-blue-500' },
-  { name: 'Emma', color: 'bg-purple-500' },
-  { name: 'Jake', color: 'bg-green-500' },
+  { name: 'Mum', color: 'bg-pink-500' },
+  { name: 'Olivia', color: 'bg-purple-500', age: 3 },
+  { name: 'Ellie', color: 'bg-green-500', age: 1 },
 ]
 
 export default function Sidebar() {
