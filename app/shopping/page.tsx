@@ -51,28 +51,29 @@ export default function ShoppingPage() {
 
     try {
       // First get or create default shopping list
-      const { data: lists, error: listError } = await supabase
+      const { data: listData, error: listError } = await supabase
         .from('shopping_lists')
         .select('*')
         .limit(1)
-        .single()
 
-      if (listError && listError.code !== 'PGRST116') {
+      if (listError) {
         console.error('Error fetching list:', listError)
         setItems(demoItems)
         setLoading(false)
         return
       }
 
-      if (lists) {
-        setListId(lists.id)
+      const list = listData?.[0]
+
+      if (list) {
+        setListId(list.id)
         setIsConnected(true)
 
         // Fetch items for this list
         const { data: itemsData, error: itemsError } = await supabase
           .from('shopping_list_items')
           .select('*')
-          .eq('list_id', lists.id)
+          .eq('list_id', list.id)
           .order('category')
           .order('sort_order')
 
