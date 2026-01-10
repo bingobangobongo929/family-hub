@@ -4,6 +4,7 @@ import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import { ThemeProvider } from '@/lib/theme-context'
 import { FamilyProvider } from '@/lib/family-context'
+import { SettingsProvider } from '@/lib/settings-context'
 import AppLayout from '@/components/AppLayout'
 
 const inter = Inter({ subsets: ['latin'] })
@@ -24,9 +25,11 @@ export default function RootLayout({
         <ThemeProvider>
           <AuthProvider>
             <FamilyProvider>
-              <AppLayout>
-                {children}
-              </AppLayout>
+              <SettingsProvider>
+                <AppLayout>
+                  {children}
+                </AppLayout>
+              </SettingsProvider>
             </FamilyProvider>
           </AuthProvider>
         </ThemeProvider>

@@ -19,13 +19,14 @@ import {
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
+import { useSettings } from '@/lib/settings-context'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/routines', label: 'Routines', icon: Sun },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { href: '/rewards', label: 'Rewards', icon: Gift },
+  { href: '/rewards', label: 'Rewards', icon: Gift, requiresRewards: true },
   { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
   { href: '/notes', label: 'Notes', icon: StickyNote },
   { href: '/settings', label: 'Settings', icon: Settings },
@@ -36,6 +37,7 @@ export default function Sidebar() {
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { members } = useFamily()
+  const { rewardsEnabled } = useSettings()
 
   const handleSignOut = async () => {
     await signOut()
@@ -63,24 +65,26 @@ export default function Sidebar() {
         </div>
 
         <nav className="space-y-1">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? 'bg-sage-500 text-white shadow-md'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">{item.label}</span>
-              </Link>
-            )
-          })}
+          {navItems
+            .filter(item => !item.requiresRewards || rewardsEnabled)
+            .map((item) => {
+              const Icon = item.icon
+              const isActive = pathname === item.href
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                    isActive
+                      ? 'bg-sage-500 text-white shadow-md'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
+                </Link>
+              )
+            })}
         </nav>
 
         <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
@@ -97,7 +101,7 @@ export default function Sidebar() {
                   {member.avatar || member.name[0]}
                 </div>
                 <span className="text-sm text-slate-600 dark:text-slate-300 flex-1">{member.name}</span>
-                {member.role === 'child' && (
+                {rewardsEnabled && member.role === 'child' && (
                   <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                     <Star className="w-3 h-3 fill-current" />
                     {member.points}

@@ -1,0 +1,262 @@
+import { NextRequest, NextResponse } from 'next/server'
+
+// Types for AI response
+interface ExtractedEvent {
+  title: string
+  description?: string
+  start_date: string // YYYY-MM-DD
+  start_time?: string // HH:MM
+  end_date?: string
+  end_time?: string
+  all_day: boolean
+  location?: string
+  suggested_member?: string // Name to match against family members
+}
+
+interface AIResponse {
+  events: ExtractedEvent[]
+  summary: string
+  raw_text?: string
+}
+
+// Claude API call
+async function processWithClaude(
+  text: string,
+  image?: string,
+  context?: string
+): Promise<AIResponse> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('Anthropic API key not configured')
+  }
+
+  const systemPrompt = `You are a helpful assistant that extracts calendar events from text and images.
+Today's date is ${new Date().toISOString().split('T')[0]}.
+
+When extracting events, you should:
+1. Parse dates and times accurately, inferring reasonable values when not explicitly stated
+2. Use 24-hour format for times (HH:MM)
+3. Use ISO format for dates (YYYY-MM-DD)
+4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
+5. If an event spans multiple days or is recurring, create separate events for each occurrence
+6. Extract location if mentioned
+7. Identify which family member the event is for if mentioned
+
+${context ? `Family context:\n${context}` : ''}
+
+Return a JSON response with this structure:
+{
+  "events": [
+    {
+      "title": "Event name",
+      "description": "Optional details",
+      "start_date": "YYYY-MM-DD",
+      "start_time": "HH:MM",
+      "end_date": "YYYY-MM-DD",
+      "end_time": "HH:MM",
+      "all_day": false,
+      "location": "Optional location",
+      "suggested_member": "Name if specific to someone"
+    }
+  ],
+  "summary": "Brief summary of what was extracted"
+}
+
+Only return valid JSON, no markdown or extra text.`
+
+  const messages: any[] = []
+  const content: any[] = []
+
+  // Add image if provided (base64)
+  if (image) {
+    content.push({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+        data: image.replace(/^data:image\/\w+;base64,/, ''),
+      },
+    })
+  }
+
+  content.push({
+    type: 'text',
+    text: text || 'Please extract calendar events from this image.',
+  })
+
+  messages.push({ role: 'user', content })
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: 'claude-3-5-sonnet-20241022',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Claude API error:', error)
+    throw new Error(`Claude API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  const textContent = data.content.find((c: any) => c.type === 'text')?.text || '{}'
+
+  try {
+    // Try to parse the JSON response
+    const parsed = JSON.parse(textContent)
+    return {
+      events: parsed.events || [],
+      summary: parsed.summary || 'Events extracted',
+      raw_text: textContent,
+    }
+  } catch {
+    // If parsing fails, return empty result
+    return {
+      events: [],
+      summary: 'Could not extract events from input',
+      raw_text: textContent,
+    }
+  }
+}
+
+// Gemini API call
+async function processWithGemini(
+  text: string,
+  image?: string,
+  context?: string
+): Promise<AIResponse> {
+  const apiKey = process.env.GOOGLE_AI_API_KEY
+  if (!apiKey) {
+    throw new Error('Google AI API key not configured')
+  }
+
+  const prompt = `You are a helpful assistant that extracts calendar events from text and images.
+Today's date is ${new Date().toISOString().split('T')[0]}.
+
+When extracting events:
+1. Parse dates and times accurately, inferring reasonable values when not explicitly stated
+2. Use 24-hour format for times (HH:MM)
+3. Use ISO format for dates (YYYY-MM-DD)
+4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
+5. Extract location if mentioned
+6. Identify which family member the event is for if mentioned
+
+${context ? `Family context:\n${context}` : ''}
+
+Input to process:
+${text || 'Please extract calendar events from the provided image.'}
+
+Return ONLY valid JSON with this structure (no markdown, no extra text):
+{
+  "events": [
+    {
+      "title": "Event name",
+      "description": "Optional details",
+      "start_date": "YYYY-MM-DD",
+      "start_time": "HH:MM",
+      "end_date": "YYYY-MM-DD",
+      "end_time": "HH:MM",
+      "all_day": false,
+      "location": "Optional location",
+      "suggested_member": "Name if specific to someone"
+    }
+  ],
+  "summary": "Brief summary of what was extracted"
+}`
+
+  const parts: any[] = [{ text: prompt }]
+
+  // Add image if provided
+  if (image) {
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    const mimeType = image.startsWith('data:image/png') ? 'image/png' : 'image/jpeg'
+    parts.unshift({
+      inline_data: {
+        mime_type: mimeType,
+        data: base64Data,
+      },
+    })
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 1024,
+        },
+      }),
+    }
+  )
+
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Gemini API error:', error)
+    throw new Error(`Gemini API error: ${response.status}`)
+  }
+
+  const data = await response.json()
+  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+
+  try {
+    // Clean up potential markdown formatting
+    const cleaned = textContent.replace(/```json\n?|\n?```/g, '').trim()
+    const parsed = JSON.parse(cleaned)
+    return {
+      events: parsed.events || [],
+      summary: parsed.summary || 'Events extracted',
+      raw_text: textContent,
+    }
+  } catch {
+    return {
+      events: [],
+      summary: 'Could not extract events from input',
+      raw_text: textContent,
+    }
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { text, image, model = 'claude', context } = body
+
+    if (!text && !image) {
+      return NextResponse.json(
+        { error: 'Please provide text or an image to process' },
+        { status: 400 }
+      )
+    }
+
+    let result: AIResponse
+
+    if (model === 'gemini') {
+      result = await processWithGemini(text, image, context)
+    } else {
+      result = await processWithClaude(text, image, context)
+    }
+
+    return NextResponse.json(result)
+  } catch (error) {
+    console.error('Calendar AI error:', error)
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to process request' },
+      { status: 500 }
+    )
+  }
+}

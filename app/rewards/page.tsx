@@ -4,11 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Trophy, Star, Gift, Plus, Edit2, Trash2, Sparkles, Crown, Medal } from 'lucide-react'
+import { Trophy, Star, Gift, Plus, Edit2, Trash2, Sparkles, Crown, Medal, Settings } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useSettings } from '@/lib/settings-context'
 import { Reward, RewardRedemption } from '@/lib/database.types'
+import Link from 'next/link'
 
 // Demo rewards
 const DEMO_REWARDS: Reward[] = [
@@ -23,6 +25,7 @@ const DEMO_REWARDS: Reward[] = [
 export default function RewardsPage() {
   const { user } = useAuth()
   const { members, updateMemberPoints, getMember } = useFamily()
+  const { rewardsEnabled } = useSettings()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [redemptions, setRedemptions] = useState<RewardRedemption[]>([])
   const [loading, setLoading] = useState(true)
@@ -258,6 +261,31 @@ export default function RewardsPage() {
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl" />
+        </div>
+      </div>
+    )
+  }
+
+  // Show disabled message when rewards are off
+  if (!rewardsEnabled) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-6">
+            <Gift className="w-10 h-10 text-slate-400 dark:text-slate-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+            Rewards System Disabled
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+            The star rewards system is currently turned off. When you're ready to motivate the kids with points and prizes, enable it in Settings.
+          </p>
+          <Link href="/settings">
+            <Button>
+              <Settings className="w-5 h-5 mr-2" />
+              Go to Settings
+            </Button>
+          </Link>
         </div>
       </div>
     )

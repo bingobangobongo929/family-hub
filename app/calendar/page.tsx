@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar, Sparkles } from 'lucide-react'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
+import AICalendarInput from '@/components/AICalendarInput'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
@@ -31,6 +32,7 @@ export default function CalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
 
   // Form state
   const [formData, setFormData] = useState({
@@ -200,6 +202,54 @@ export default function CalendarPage() {
     }
   }
 
+  // Handle AI-extracted events
+  const handleAIEvents = async (aiEvents: any[]) => {
+    for (const event of aiEvents) {
+      const startDateTime = event.all_day
+        ? `${event.start_date}T00:00:00`
+        : `${event.start_date}T${event.start_time || '09:00'}:00`
+
+      const endDateTime = event.all_day || !event.end_time
+        ? null
+        : `${event.end_date || event.start_date}T${event.end_time}:00`
+
+      const eventData = {
+        title: event.title,
+        description: event.description || null,
+        start_time: new Date(startDateTime).toISOString(),
+        end_time: endDateTime ? new Date(endDateTime).toISOString() : null,
+        all_day: event.all_day,
+        color: event.color || '#3b82f6',
+        member_id: event.member_id || null,
+        location: event.location || null,
+        source: 'manual' as const,
+        user_id: user?.id || 'demo',
+      }
+
+      if (!user) {
+        const newEvent: CalendarEvent = {
+          ...eventData,
+          id: `demo-${Date.now()}-${Math.random()}`,
+          source_id: null,
+          recurrence_rule: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+        setEvents(prev => [...prev, newEvent])
+      } else {
+        try {
+          await supabase.from('calendar_events').insert(eventData)
+        } catch (error) {
+          console.error('Error saving AI event:', error)
+        }
+      }
+    }
+
+    if (user) {
+      await fetchEvents()
+    }
+  }
+
   // Generate calendar days
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
@@ -219,10 +269,16 @@ export default function CalendarPage() {
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Calendar</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Family schedule and events</p>
         </div>
-        <Button onClick={handleAddEvent} className="gap-2">
-          <Plus className="w-5 h-5" />
-          Add Event
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" onClick={() => setShowAIModal(true)} className="gap-2">
+            <Sparkles className="w-5 h-5" />
+            Smart Add
+          </Button>
+          <Button onClick={handleAddEvent} className="gap-2">
+            <Plus className="w-5 h-5" />
+            Add Event
+          </Button>
+        </div>
       </div>
 
       {/* Navigation */}
@@ -552,6 +608,13 @@ export default function CalendarPage() {
           </div>
         </div>
       </Modal>
+
+      {/* AI Calendar Input Modal */}
+      <AICalendarInput
+        isOpen={showAIModal}
+        onClose={() => setShowAIModal(false)}
+        onAddEvents={handleAIEvents}
+      />
     </div>
   )
 }

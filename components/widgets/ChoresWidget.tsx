@@ -5,6 +5,7 @@ import { CheckSquare, Check, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useSettings } from '@/lib/settings-context'
 import { Chore } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 
@@ -21,6 +22,7 @@ const DEMO_CHORES: Chore[] = [
 export default function ChoresWidget() {
   const { user } = useAuth()
   const { getMember, updateMemberPoints } = useFamily()
+  const { rewardsEnabled } = useSettings()
   const [chores, setChores] = useState<Chore[]>([])
   const [ref, { size, isWide }] = useWidgetSize()
 
@@ -115,7 +117,7 @@ export default function ChoresWidget() {
           <h3 className="font-semibold text-slate-800 dark:text-slate-100">Chores</h3>
         </div>
         <div className="flex items-center gap-2">
-          {(size === 'medium' || size === 'large' || size === 'xlarge') && totalPoints > 0 && (
+          {rewardsEnabled && (size === 'medium' || size === 'large' || size === 'xlarge') && totalPoints > 0 && (
             <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
               <Star className="w-3 h-3" />
               {totalPoints} available
@@ -140,6 +142,7 @@ export default function ChoresWidget() {
                 compact={false}
                 getMember={getMember}
                 onToggle={toggleChore}
+                showPoints={rewardsEnabled}
               />
             ))}
           </div>
@@ -154,6 +157,7 @@ export default function ChoresWidget() {
                 getMember={getMember}
                 onToggle={toggleChore}
                 completed
+                showPoints={rewardsEnabled}
               />
             ))}
           </div>
@@ -167,6 +171,7 @@ export default function ChoresWidget() {
               compact={compactMode}
               getMember={getMember}
               onToggle={toggleChore}
+              showPoints={rewardsEnabled}
             />
           ))}
 
@@ -193,13 +198,15 @@ function ChoreItem({
   compact,
   getMember,
   onToggle,
-  completed = false
+  completed = false,
+  showPoints = true
 }: {
   chore: Chore
   compact: boolean
   getMember: (id: string | null) => any
   onToggle: (chore: Chore) => void
   completed?: boolean
+  showPoints?: boolean
 }) {
   const member = getMember(chore.assigned_to)
 
@@ -232,7 +239,7 @@ function ChoreItem({
           {member.name.charAt(0)}
         </div>
       )}
-      {!completed && (
+      {showPoints && !completed && (
         <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-amber-600 dark:text-amber-400`}>
           +{chore.points}
         </span>

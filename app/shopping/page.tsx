@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import { ShoppingCart, Plus, Trash2, Check, RefreshCw, ChefHat, ExternalLink } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { recipeVaultSupabase } from '@/lib/supabase'
 import {
   type ShoppingList,
   type ShoppingListItem,
@@ -36,10 +36,10 @@ export default function ShoppingPage() {
   const [newItemCategory, setNewItemCategory] = useState('other')
   const [showAddForm, setShowAddForm] = useState(false)
 
-  // Check if Supabase is configured
+  // Check if Recipe Vault Supabase is configured
   const isSupabaseConfigured = () => {
-    return process.env.NEXT_PUBLIC_SUPABASE_URL &&
-           process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your-supabase-url'
+    return process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL &&
+           process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL !== 'your-supabase-url'
   }
 
   // Fetch shopping list from Supabase
@@ -52,7 +52,7 @@ export default function ShoppingPage() {
 
     try {
       // First get or create default shopping list
-      const { data: listData, error: listError } = await supabase
+      const { data: listData, error: listError } = await recipeVaultSupabase
         .from('shopping_lists')
         .select('*')
         .limit(1)
@@ -71,7 +71,7 @@ export default function ShoppingPage() {
         setIsConnected(true)
 
         // Fetch items for this list
-        const { data: itemsData, error: itemsError } = await supabase
+        const { data: itemsData, error: itemsError } = await recipeVaultSupabase
           .from('shopping_list_items')
           .select('*')
           .eq('list_id', list.id)
@@ -110,7 +110,7 @@ export default function ShoppingPage() {
     ))
 
     if (isConnected) {
-      const { error } = await supabase
+      const { error } = await recipeVaultSupabase
         .from('shopping_list_items')
         .update({ is_checked: !item.is_checked })
         .eq('id', id)
@@ -130,7 +130,7 @@ export default function ShoppingPage() {
     setItems(items.filter(i => i.id !== id))
 
     if (isConnected) {
-      const { error } = await supabase
+      const { error } = await recipeVaultSupabase
         .from('shopping_list_items')
         .delete()
         .eq('id', id)
@@ -162,7 +162,7 @@ export default function ShoppingPage() {
     }
 
     if (isConnected && listId) {
-      const { data, error } = await supabase
+      const { data, error } = await recipeVaultSupabase
         .from('shopping_list_items')
         .insert(newItem)
         .select()

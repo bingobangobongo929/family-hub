@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, Check, Plus } from 'lucide-react'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { recipeVaultSupabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { ShoppingListItem, getCategoryConfig } from '@/lib/database.types'
@@ -34,14 +34,14 @@ export default function ShoppingWidget() {
 
     try {
       // Get the user's shopping list
-      const { data: lists } = await supabase
+      const { data: lists } = await recipeVaultSupabase
         .from('shopping_lists')
         .select('id')
         .limit(1)
 
       if (lists?.[0]) {
         setListId(lists[0].id)
-        const { data } = await supabase
+        const { data } = await recipeVaultSupabase
           .from('shopping_list_items')
           .select('*')
           .eq('list_id', lists[0].id)
@@ -74,7 +74,7 @@ export default function ShoppingWidget() {
     if (!user) return
 
     try {
-      await supabase
+      await recipeVaultSupabase
         .from('shopping_list_items')
         .update({ is_checked: newChecked })
         .eq('id', item.id)

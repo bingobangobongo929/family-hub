@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -19,6 +19,10 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [showMemberModal, setShowMemberModal] = useState(false)
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null)
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [googleEmail, setGoogleEmail] = useState<string | null>(null)
+  const [googleSyncing, setGoogleSyncing] = useState(false)
+  const [googleLastSync, setGoogleLastSync] = useState<string | null>(null)
 
   // Member form state
   const [memberForm, setMemberForm] = useState({
@@ -59,7 +63,81 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetchSettings()
+    checkGoogleConnection()
   }, [fetchSettings])
+
+  // Check Google Calendar connection status
+  const checkGoogleConnection = async () => {
+    if (!user) return
+
+    try {
+      const { data } = await supabase
+        .from('user_integrations')
+        .select('provider_email, updated_at')
+        .eq('user_id', user.id)
+        .eq('provider', 'google_calendar')
+        .single()
+
+      if (data) {
+        setGoogleConnected(true)
+        setGoogleEmail(data.provider_email)
+        setGoogleLastSync(data.updated_at)
+      }
+    } catch (error) {
+      // No connection found
+    }
+  }
+
+  // Connect Google Calendar
+  const handleConnectGoogle = async () => {
+    try {
+      const response = await fetch('/api/google-calendar/auth?action=url')
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error) {
+      console.error('Error connecting Google Calendar:', error)
+    }
+  }
+
+  // Disconnect Google Calendar
+  const handleDisconnectGoogle = async () => {
+    if (!user || !confirm('Disconnect Google Calendar?')) return
+
+    try {
+      await fetch('/api/google-calendar/auth', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id }),
+      })
+
+      setGoogleConnected(false)
+      setGoogleEmail(null)
+      setGoogleLastSync(null)
+    } catch (error) {
+      console.error('Error disconnecting Google Calendar:', error)
+    }
+  }
+
+  // Sync Google Calendar
+  const handleSyncGoogle = async () => {
+    if (!user) return
+
+    setGoogleSyncing(true)
+    try {
+      const response = await fetch(`/api/google-calendar/sync?user_id=${user.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setGoogleLastSync(new Date().toISOString())
+        alert(`Synced ${data.synced} events from Google Calendar`)
+      }
+    } catch (error) {
+      console.error('Error syncing Google Calendar:', error)
+    }
+    setGoogleSyncing(false)
+  }
 
   const updateSetting = async (key: string, value: any) => {
     const newSettings = { ...settings, [key]: value }
@@ -249,6 +327,125 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+      </Card>
+
+      {/* Features */}
+      <Card className="mb-6">
+        <CardHeader title="Features" icon={<Sparkles className="w-5 h-5" />} />
+        <div className="mt-4 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-100">Rewards System</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Enable stars and points for completing chores</p>
+            </div>
+            <button
+              onClick={() => updateSetting('rewards_enabled', !settings.rewards_enabled)}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                settings.rewards_enabled ? 'bg-sage-500' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                  settings.rewards_enabled ? 'translate-x-6' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-100">Calendar AI Model</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">AI for smart calendar entry</p>
+            </div>
+            <div className="flex gap-2">
+              {[
+                { id: 'claude', label: 'Claude' },
+                { id: 'gemini', label: 'Gemini' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => updateSetting('ai_model', opt.id)}
+                  className={`px-4 py-2 rounded-xl transition-all ${
+                    settings.ai_model === opt.id
+                      ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Calendar Integrations */}
+      <Card className="mb-6">
+        <CardHeader title="Calendar Integrations" icon={<Calendar className="w-5 h-5" />} />
+        <div className="mt-4 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-white dark:bg-slate-700 flex items-center justify-center shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-100">Google Calendar</p>
+                {googleConnected ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-600 dark:text-green-400">Connected: {googleEmail}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Sync your family calendar</p>
+                )}
+              </div>
+            </div>
+            {googleConnected ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleSyncGoogle}
+                  disabled={googleSyncing}
+                >
+                  {googleSyncing ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleDisconnectGoogle}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Unlink className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" onClick={handleConnectGoogle} disabled={!user}>
+                <Link className="w-4 h-4 mr-2" />
+                Connect
+              </Button>
+            )}
+          </div>
+          {googleLastSync && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
+              Last synced: {new Date(googleLastSync).toLocaleString()}
+            </p>
+          )}
+          {!user && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Sign in to connect Google Calendar
+            </p>
+          )}
         </div>
       </Card>
 

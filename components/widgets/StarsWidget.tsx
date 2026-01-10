@@ -1,10 +1,23 @@
 'use client'
 
-import { Star, Trophy } from 'lucide-react'
+import { Star, Trophy, Gift } from 'lucide-react'
 import { useFamily } from '@/lib/family-context'
+import { useSettings } from '@/lib/settings-context'
 
 export default function StarsWidget() {
   const { members } = useFamily()
+  const { rewardsEnabled } = useSettings()
+
+  // If rewards disabled, show a placeholder
+  if (!rewardsEnabled) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-2xl text-center">
+        <Gift className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
+        <p className="text-sm text-slate-400 dark:text-slate-500">Rewards disabled</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Enable in Settings</p>
+      </div>
+    )
+  }
 
   // Get kids sorted by points
   const kids = members

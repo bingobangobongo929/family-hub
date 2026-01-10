@@ -248,6 +248,8 @@ export const WIDGET_TYPES = [
   { id: 'rewards', name: 'Stars & Rewards', icon: '⭐', description: 'Points leaderboard', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
   { id: 'notes', name: 'Pinboard', icon: '📌', description: 'Pinned family notes', minW: 2, minH: 2, defaultW: 2, defaultH: 3 },
   { id: 'shopping', name: 'Shopping', icon: '🛒', description: 'Shopping list preview', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
+  { id: 'timer', name: 'Timer', icon: '⏱️', description: 'Fun countdown timers with sounds', minW: 2, minH: 2, defaultW: 2, defaultH: 3 },
+  { id: 'countdown', name: 'Countdown', icon: '🎂', description: 'Days until birthdays & events', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
 ]
 
 export function getWidgetType(id: string) {
@@ -276,6 +278,8 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   weather_unit: 'celsius',
   dashboard_background: 'default',
   dashboard_gradient: 'warm',
+  rewards_enabled: false, // Star/points reward system for kids
+  ai_model: 'claude', // 'claude' or 'gemini' for calendar AI
 }
 
 // Preset gradient options for dashboard backgrounds

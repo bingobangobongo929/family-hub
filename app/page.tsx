@@ -16,13 +16,15 @@ import {
   QuickActionsWidget,
   PhotoWidget,
   ShoppingWidget,
+  TimerWidget,
   AVAILABLE_WIDGETS,
   DEFAULT_LAYOUT,
 } from '@/components/widgets'
 import { Calendar, CheckSquare, ShoppingCart, Star, Edit3, X, Plus, Trash2, RotateCcw, Sun, Moon } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabase, recipeVaultSupabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useSettings } from '@/lib/settings-context'
 import { DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
@@ -42,6 +44,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   photo: PhotoWidget,
   routine: QuickRoutineWidget,
   shopping: ShoppingWidget,
+  timer: TimerWidget,
 }
 
 const STORAGE_KEY = 'family-hub-widget-layout'
@@ -50,6 +53,7 @@ const ACTIVE_WIDGETS_KEY = 'family-hub-active-widgets'
 export default function Dashboard() {
   const { user } = useAuth()
   const { members } = useFamily()
+  const { rewardsEnabled } = useSettings()
   const [shoppingCount, setShoppingCount] = useState(0)
   const [choreStats, setChoreStats] = useState({ completed: 0, total: 0 })
   const [eventCount, setEventCount] = useState(0)
@@ -169,14 +173,14 @@ export default function Dashboard() {
       }
 
       try {
-        // Shopping count
-        const { data: listData } = await supabase
+        // Shopping count (from Recipe Vault database)
+        const { data: listData } = await recipeVaultSupabase
           .from('shopping_lists')
           .select('id')
           .limit(1)
 
         if (listData?.[0]) {
-          const { count } = await supabase
+          const { count } = await recipeVaultSupabase
             .from('shopping_list_items')
             .select('*', { count: 'exact', head: true })
             .eq('list_id', listData[0].id)
@@ -185,7 +189,7 @@ export default function Dashboard() {
           setShoppingCount(count || 0)
         }
 
-        // Chore stats
+        // Chore stats (from Family Hub database)
         const { data: chores } = await supabase
           .from('chores')
           .select('status')
@@ -291,17 +295,31 @@ export default function Dashboard() {
           </div>
         </Link>
 
-        <Link href="/rewards">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
-            <div className="flex items-center gap-3">
-              <Star className="w-8 h-8 opacity-80" />
-              <div>
-                <p className="text-purple-100 text-sm">Total Stars</p>
-                <p className="text-2xl font-bold">{totalStars}</p>
+        {rewardsEnabled ? (
+          <Link href="/rewards">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
+              <div className="flex items-center gap-3">
+                <Star className="w-8 h-8 opacity-80" />
+                <div>
+                  <p className="text-purple-100 text-sm">Total Stars</p>
+                  <p className="text-2xl font-bold">{totalStars}</p>
+                </div>
               </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        ) : (
+          <Link href="/notes">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
+              <div className="flex items-center gap-3">
+                <Star className="w-8 h-8 opacity-80" />
+                <div>
+                  <p className="text-purple-100 text-sm">Family</p>
+                  <p className="text-2xl font-bold">{members.length}</p>
+                </div>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Edit Mode Toolbar */}
