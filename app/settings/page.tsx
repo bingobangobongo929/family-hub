@@ -170,6 +170,7 @@ export default function SettingsPage() {
       const { error } = await supabase
         .from('family_members')
         .insert({
+          user_id: user.id,
           name: memberForm.name,
           color: memberForm.color,
           role: memberForm.role,

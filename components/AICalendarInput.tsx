@@ -211,11 +211,11 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const selectedCount = extractedEvents.filter(e => e.selected).length
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Smart Add" size="lg">
-      <div className="space-y-4">
+    <Modal isOpen={isOpen} onClose={onClose} title="Smart Add" size="3xl">
+      <div className="space-y-6">
         {/* AI Model Indicator */}
-        <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-          <Sparkles className="w-4 h-4" />
+        <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
+          <Sparkles className="w-5 h-5" />
           <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 3 Flash'}</span>
         </div>
 
@@ -223,24 +223,24 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
           <>
             {/* Text Input */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Describe the event(s)
               </label>
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="e.g., Olivia has swimming lessons every Tuesday at 4pm at the leisure centre, or Doctor's appointment tomorrow at 10am..."
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent resize-none"
-                rows={4}
+                className="w-full px-5 py-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-lg focus:ring-2 focus:ring-sage-500 focus:border-transparent resize-none"
+                rows={6}
               />
             </div>
 
             {/* Image Upload */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
                 Or upload an image (optional)
               </label>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
                 Screenshot a school newsletter, appointment letter, or any schedule
               </p>
 
@@ -249,22 +249,22 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                   <img
                     src={imagePreview}
                     alt="Uploaded"
-                    className="max-h-48 rounded-xl border border-slate-200 dark:border-slate-600"
+                    className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-600"
                   />
                   <button
                     onClick={handleRemoveImage}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                    className="absolute -top-3 -right-3 w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-6 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-sage-400 dark:hover:border-sage-500 transition-colors flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400"
+                  className="w-full p-8 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-sage-400 dark:hover:border-sage-500 transition-colors flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400"
                 >
-                  <Image className="w-8 h-8" />
-                  <span className="text-sm">Click to upload image</span>
+                  <Image className="w-12 h-12" />
+                  <span className="text-base">Tap to upload image</span>
                 </button>
               )}
               <input
@@ -278,29 +278,30 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
             {/* Error */}
             {error && (
-              <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl text-base">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <Button variant="secondary" onClick={onClose}>
+            <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <Button variant="secondary" onClick={onClose} className="px-6 py-3 text-base">
                 Cancel
               </Button>
               <Button
                 onClick={handleProcess}
                 disabled={isProcessing || (!inputText && !image)}
+                className="px-6 py-3 text-base"
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                     Processing...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-5 h-5 mr-2" />
                     Extract Events
                   </>
                 )}
