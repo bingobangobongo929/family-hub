@@ -114,6 +114,12 @@ export default function CountdownWidget() {
     const displayEvents = sortedCountdowns.slice(0, 4)
     const useGrid = displayEvents.length === 4
 
+    // Scale text based on size
+    const gridEmoji = size === 'xlarge' ? 'text-4xl' : 'text-2xl'
+    const gridName = size === 'xlarge' ? 'text-base' : 'text-sm'
+    const gridDays = size === 'xlarge' ? 'text-4xl' : 'text-2xl'
+    const gridDate = size === 'xlarge' ? 'text-sm' : 'text-xs'
+
     return (
       <div ref={ref} className={`h-full ${useGrid ? 'grid grid-cols-2 grid-rows-2' : 'flex'} gap-2 p-3 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl`}>
         {displayEvents.map((event, idx) => (
@@ -121,12 +127,12 @@ export default function CountdownWidget() {
             key={event.id}
             className={`flex-1 flex flex-col items-center justify-center text-center rounded-xl bg-gradient-to-br ${getTypeColor(event.type)} p-2 text-white ${!useGrid && idx === 0 ? 'scale-[1.02]' : ''}`}
           >
-            <span className="text-xl">{event.emoji}</span>
-            <p className="text-[10px] opacity-90 mt-0.5 truncate w-full px-1">{event.title.replace("'s Birthday", "")}</p>
-            <div className="font-bold text-xl">
+            <span className={gridEmoji}>{event.emoji}</span>
+            <p className={`${gridName} opacity-90 mt-1 truncate w-full px-1 font-medium`}>{event.title.replace("'s Birthday", "")}</p>
+            <div className={`font-bold ${gridDays}`}>
               {event.daysLeft === 0 ? 'Today!' : event.daysLeft === 1 ? '1 day' : `${event.daysLeft}d`}
             </div>
-            <p className="text-[9px] opacity-75">
+            <p className={`${gridDate} opacity-75 mt-1`}>
               {format(parseISO(event.date), 'MMM d')}
             </p>
           </div>
