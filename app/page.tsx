@@ -15,6 +15,7 @@ import {
   AnnouncementsWidget,
   QuickActionsWidget,
   PhotoWidget,
+  ShoppingWidget,
   AVAILABLE_WIDGETS,
   DEFAULT_LAYOUT,
 } from '@/components/widgets'
@@ -40,6 +41,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   quickactions: QuickActionsWidget,
   photo: PhotoWidget,
   routine: QuickRoutineWidget,
+  shopping: ShoppingWidget,
 }
 
 const STORAGE_KEY = 'family-hub-widget-layout'

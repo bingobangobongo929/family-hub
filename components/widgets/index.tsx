@@ -9,6 +9,7 @@ export { default as MealPlanWidget } from './MealPlanWidget'
 export { default as AnnouncementsWidget } from './AnnouncementsWidget'
 export { default as QuickActionsWidget } from './QuickActionsWidget'
 export { default as PhotoWidget } from './PhotoWidget'
+export { default as ShoppingWidget } from './ShoppingWidget'
 
 // Widget type definitions for the dashboard
 export const AVAILABLE_WIDGETS = [
@@ -24,6 +25,7 @@ export const AVAILABLE_WIDGETS = [
   { id: 'quickactions', name: 'Quick Add', icon: '➕', component: 'QuickActionsWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 2 } },
   { id: 'photo', name: 'Photos', icon: '📷', component: 'PhotoWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 2 } },
   { id: 'routine', name: 'Routine', icon: '☀️', component: 'QuickRoutineWidget', defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 2 } },
+  { id: 'shopping', name: 'Shopping', icon: '🛒', component: 'ShoppingWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 2, h: 2 } },
 ]
 
 // Default layout for new users
