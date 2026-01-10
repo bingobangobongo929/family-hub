@@ -10,14 +10,14 @@ import { ShoppingListItem, getCategoryConfig } from '@/lib/database.types'
 
 // Demo shopping items
 const DEMO_ITEMS: ShoppingListItem[] = [
-  { id: '1', list_id: 'demo', item_name: 'Milk', quantity: 2, unit: 'L', category: 'dairy', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 0, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '2', list_id: 'demo', item_name: 'Bread', quantity: 1, unit: null, category: 'bakery', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 1, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '3', list_id: 'demo', item_name: 'Eggs', quantity: 12, unit: null, category: 'dairy', is_checked: true, is_manual: true, is_pantry_staple: false, sort_order: 2, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '4', list_id: 'demo', item_name: 'Apples', quantity: 6, unit: null, category: 'produce', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 3, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '5', list_id: 'demo', item_name: 'Chicken breast', quantity: 500, unit: 'g', category: 'meat', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 4, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '6', list_id: 'demo', item_name: 'Pasta', quantity: 1, unit: 'kg', category: 'pantry', is_checked: false, is_manual: true, is_pantry_staple: true, sort_order: 5, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '7', list_id: 'demo', item_name: 'Tomatoes', quantity: 4, unit: null, category: 'produce', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 6, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
-  { id: '8', list_id: 'demo', item_name: 'Cheese', quantity: 200, unit: 'g', category: 'dairy', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 7, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '', updated_at: '' },
+  { id: '1', list_id: 'demo', item_name: 'Milk', quantity: 2, unit: 'L', category: 'dairy', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 0, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '2', list_id: 'demo', item_name: 'Bread', quantity: 1, unit: null, category: 'bakery', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 1, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '3', list_id: 'demo', item_name: 'Eggs', quantity: 12, unit: null, category: 'dairy', is_checked: true, is_manual: true, is_pantry_staple: false, sort_order: 2, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '4', list_id: 'demo', item_name: 'Apples', quantity: 6, unit: null, category: 'produce', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 3, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '5', list_id: 'demo', item_name: 'Chicken breast', quantity: 500, unit: 'g', category: 'meat', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 4, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '6', list_id: 'demo', item_name: 'Pasta', quantity: 1, unit: 'kg', category: 'pantry', is_checked: false, is_manual: true, is_pantry_staple: true, sort_order: 5, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '7', list_id: 'demo', item_name: 'Tomatoes', quantity: 4, unit: null, category: 'produce', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 6, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
+  { id: '8', list_id: 'demo', item_name: 'Cheese', quantity: 200, unit: 'g', category: 'dairy', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 7, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
 ]
 
 export default function ShoppingWidget() {
