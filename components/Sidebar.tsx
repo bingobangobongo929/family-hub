@@ -9,12 +9,14 @@ import {
   ShoppingCart,
   StickyNote,
   Users,
-  LogOut
+  LogOut,
+  Sun
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/routines', label: 'Routines', icon: Sun },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
   { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
