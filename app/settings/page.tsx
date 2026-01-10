@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
-import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS } from '@/lib/database.types'
+import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -220,6 +220,34 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Dashboard Background */}
+      <Card className="mb-6">
+        <CardHeader title="Dashboard Background" icon={<Palette className="w-5 h-5" />} />
+        <div className="mt-4 space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Choose a background style for your dashboard
+          </p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {DASHBOARD_GRADIENTS.map(gradient => (
+              <button
+                key={gradient.id}
+                onClick={() => updateSetting('dashboard_gradient', gradient.id)}
+                className={`relative h-20 rounded-xl overflow-hidden transition-all ${
+                  settings.dashboard_gradient === gradient.id
+                    ? 'ring-2 ring-sage-500 ring-offset-2 dark:ring-offset-slate-900'
+                    : 'hover:ring-2 hover:ring-slate-300 dark:hover:ring-slate-600'
+                }`}
+              >
+                <div className={`absolute inset-0 ${gradient.class || 'bg-gradient-to-br from-cream-50 to-cream-100 dark:from-slate-900 dark:to-slate-800'} ${gradient.class ? 'bg-gradient-to-br' : ''}`} />
+                <span className="absolute bottom-1 left-0 right-0 text-center text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {gradient.name}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </Card>

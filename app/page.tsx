@@ -1,14 +1,49 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import Card, { CardHeader } from '@/components/Card'
-import { ClockWidget, WeatherWidget, ScheduleWidget, ChoresWidget, StarsWidget, NotesWidget } from '@/components/widgets'
-import { Calendar, CheckSquare, ShoppingCart, Gift, Sun, Moon, Star } from 'lucide-react'
+import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
+import {
+  ClockWidget,
+  WeatherWidget,
+  ScheduleWidget,
+  ChoresWidget,
+  StarsWidget,
+  NotesWidget,
+  CountdownWidget,
+  MealPlanWidget,
+  AnnouncementsWidget,
+  QuickActionsWidget,
+  PhotoWidget,
+  AVAILABLE_WIDGETS,
+  DEFAULT_LAYOUT,
+} from '@/components/widgets'
+import { Calendar, CheckSquare, ShoppingCart, Star, Edit3, X, Plus, Trash2, RotateCcw, Sun, Moon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
-import { type ShoppingListItem, type ShoppingList, getCategoryConfig, Chore, CalendarEvent, Routine, RoutineStep } from '@/lib/database.types'
+import { DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
+
+const ResponsiveGridLayout = WidthProvider(Responsive)
+
+// Map widget IDs to components
+const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
+  clock: ClockWidget,
+  weather: WeatherWidget,
+  schedule: ScheduleWidget,
+  chores: ChoresWidget,
+  stars: StarsWidget,
+  notes: NotesWidget,
+  countdown: CountdownWidget,
+  meals: MealPlanWidget,
+  announcements: AnnouncementsWidget,
+  quickactions: QuickActionsWidget,
+  photo: PhotoWidget,
+  routine: QuickRoutineWidget,
+}
+
+const STORAGE_KEY = 'family-hub-widget-layout'
+const ACTIVE_WIDGETS_KEY = 'family-hub-active-widgets'
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -17,6 +52,105 @@ export default function Dashboard() {
   const [choreStats, setChoreStats] = useState({ completed: 0, total: 0 })
   const [eventCount, setEventCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [showWidgetPicker, setShowWidgetPicker] = useState(false)
+  const [layouts, setLayouts] = useState<{ lg: Layout[] }>({ lg: DEFAULT_LAYOUT })
+  const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))
+  const [mounted, setMounted] = useState(false)
+  const [backgroundGradient, setBackgroundGradient] = useState<string>('default')
+
+  // Load saved layout on mount
+  useEffect(() => {
+    setMounted(true)
+    const savedLayout = localStorage.getItem(STORAGE_KEY)
+    const savedWidgets = localStorage.getItem(ACTIVE_WIDGETS_KEY)
+    const savedSettings = localStorage.getItem('family-hub-settings')
+
+    if (savedLayout) {
+      try {
+        setLayouts(JSON.parse(savedLayout))
+      } catch (e) {
+        console.error('Failed to parse saved layout')
+      }
+    }
+
+    if (savedWidgets) {
+      try {
+        setActiveWidgets(JSON.parse(savedWidgets))
+      } catch (e) {
+        console.error('Failed to parse saved widgets')
+      }
+    }
+
+    if (savedSettings) {
+      try {
+        const settings = JSON.parse(savedSettings)
+        if (settings.dashboard_gradient) {
+          setBackgroundGradient(settings.dashboard_gradient)
+        }
+      } catch (e) {
+        console.error('Failed to parse saved settings')
+      }
+    }
+  }, [])
+
+  // Save layout changes
+  const handleLayoutChange = useCallback((currentLayout: Layout[], allLayouts: { lg: Layout[] }) => {
+    if (!mounted) return
+    setLayouts(allLayouts)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts))
+  }, [mounted])
+
+  // Add widget
+  const addWidget = useCallback((widgetId: string) => {
+    if (activeWidgets.includes(widgetId)) return
+
+    const widgetConfig = AVAILABLE_WIDGETS.find(w => w.id === widgetId)
+    if (!widgetConfig) return
+
+    const newLayout: Layout = {
+      i: widgetId,
+      x: 0,
+      y: Infinity, // Place at bottom
+      w: widgetConfig.defaultSize.w,
+      h: widgetConfig.defaultSize.h,
+      minW: widgetConfig.minSize.w,
+      minH: widgetConfig.minSize.h,
+    }
+
+    const newActiveWidgets = [...activeWidgets, widgetId]
+    const newLayouts = {
+      lg: [...layouts.lg, newLayout]
+    }
+
+    setActiveWidgets(newActiveWidgets)
+    setLayouts(newLayouts)
+    localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(newActiveWidgets))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newLayouts))
+    setShowWidgetPicker(false)
+  }, [activeWidgets, layouts])
+
+  // Remove widget
+  const removeWidget = useCallback((widgetId: string) => {
+    const newActiveWidgets = activeWidgets.filter(w => w !== widgetId)
+    const newLayouts = {
+      lg: layouts.lg.filter(l => l.i !== widgetId)
+    }
+
+    setActiveWidgets(newActiveWidgets)
+    setLayouts(newLayouts)
+    localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(newActiveWidgets))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newLayouts))
+  }, [activeWidgets, layouts])
+
+  // Reset to default
+  const resetLayout = useCallback(() => {
+    const defaultWidgets = DEFAULT_LAYOUT.map(l => l.i)
+    setActiveWidgets(defaultWidgets)
+    setLayouts({ lg: DEFAULT_LAYOUT })
+    localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(defaultWidgets))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ lg: DEFAULT_LAYOUT }))
+  }, [])
 
   // Fetch stats
   useEffect(() => {
@@ -85,12 +219,36 @@ export default function Dashboard() {
     .filter(m => m.role === 'child')
     .reduce((acc, m) => acc + m.points, 0)
 
+  // Available widgets that aren't active
+  const availableToAdd = AVAILABLE_WIDGETS.filter(w => !activeWidgets.includes(w.id))
+
+  // Get gradient class
+  const gradientConfig = DASHBOARD_GRADIENTS.find(g => g.id === backgroundGradient)
+  const gradientClass = gradientConfig?.class || ''
+
+  if (!mounted) {
+    return <div className="max-w-7xl mx-auto animate-pulse">Loading...</div>
+  }
+
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className={`max-w-7xl mx-auto ${gradientClass ? `-mx-4 -mt-4 px-4 pt-4 pb-8 min-h-screen bg-gradient-to-br ${gradientClass}` : ''}`}>
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Good {getTimeOfDay()}!</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Here's what's happening with your family today.</p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Good {getTimeOfDay()}!</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Here's what's happening with your family today.</p>
+        </div>
+        <button
+          onClick={() => setIsEditMode(!isEditMode)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+            isEditMode
+              ? 'bg-sage-500 text-white'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+          } shadow-sm`}
+        >
+          {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+          {isEditMode ? 'Done' : 'Edit'}
+        </button>
       </div>
 
       {/* Quick Stats Bar */}
@@ -144,39 +302,108 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Edit Mode Toolbar */}
+      {isEditMode && (
+        <div className="mb-4 flex items-center gap-3 p-3 bg-sage-50 dark:bg-sage-900/20 rounded-xl border border-sage-200 dark:border-sage-800">
+          <button
+            onClick={() => setShowWidgetPicker(true)}
+            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Widget
+          </button>
+          <button
+            onClick={resetLayout}
+            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset Layout
+          </button>
+          <span className="text-sm text-slate-500 dark:text-slate-400 ml-auto">
+            Drag widgets to reorder, resize from corners
+          </span>
+        </div>
+      )}
+
       {/* Widget Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Row 1 */}
-        <div className="h-48">
-          <ClockWidget />
-        </div>
+      <div className={isEditMode ? 'edit-mode' : ''}>
+        <ResponsiveGridLayout
+          className="layout"
+          layouts={layouts}
+          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+          cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
+          rowHeight={100}
+          isDraggable={isEditMode}
+          isResizable={isEditMode}
+          onLayoutChange={handleLayoutChange}
+          margin={[16, 16]}
+          containerPadding={[0, 0]}
+          useCSSTransforms={true}
+        >
+          {activeWidgets.map(widgetId => {
+            const WidgetComponent = WIDGET_COMPONENTS[widgetId]
+            if (!WidgetComponent) return null
 
-        <div className="h-48">
-          <WeatherWidget />
-        </div>
-
-        <div className="h-48">
-          <StarsWidget />
-        </div>
-
-        {/* Row 2 */}
-        <div className="h-64 lg:col-span-2">
-          <ScheduleWidget />
-        </div>
-
-        <div className="h-64">
-          <ChoresWidget />
-        </div>
-
-        {/* Row 3 */}
-        <div className="h-48 lg:col-span-2">
-          <QuickRoutineWidget />
-        </div>
-
-        <div className="h-48">
-          <NotesWidget />
-        </div>
+            return (
+              <div key={widgetId} className="relative">
+                <div className="h-full">
+                  <WidgetComponent />
+                </div>
+                {isEditMode && (
+                  <button
+                    onClick={() => removeWidget(widgetId)}
+                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10 shadow-md"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </ResponsiveGridLayout>
       </div>
+
+      {/* Widget Picker Modal */}
+      {showWidgetPicker && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden animate-scale-in">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Add Widget</h2>
+              <button
+                onClick={() => setShowWidgetPicker(false)}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto max-h-[60vh]">
+              {availableToAdd.length === 0 ? (
+                <p className="text-center text-slate-500 dark:text-slate-400 py-8">
+                  All widgets are already added!
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {availableToAdd.map(widget => (
+                    <button
+                      key={widget.id}
+                      onClick={() => addWidget(widget.id)}
+                      className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
+                    >
+                      <span className="text-2xl">{widget.icon}</span>
+                      <div>
+                        <p className="font-medium text-slate-800 dark:text-slate-100">{widget.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {widget.defaultSize.w}x{widget.defaultSize.h}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

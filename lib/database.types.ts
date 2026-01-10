@@ -274,7 +274,20 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   sleep_end: '06:00',
   weather_location: 'Randers, Denmark',
   weather_unit: 'celsius',
+  dashboard_background: 'default',
+  dashboard_gradient: 'warm',
 }
+
+// Preset gradient options for dashboard backgrounds
+export const DASHBOARD_GRADIENTS = [
+  { id: 'default', name: 'Default', class: '' },
+  { id: 'warm', name: 'Warm Sunset', class: 'from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20' },
+  { id: 'cool', name: 'Cool Ocean', class: 'from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20' },
+  { id: 'nature', name: 'Fresh Nature', class: 'from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20' },
+  { id: 'lavender', name: 'Lavender Dreams', class: 'from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20' },
+  { id: 'rose', name: 'Rose Garden', class: 'from-rose-50 to-pink-50 dark:from-rose-950/20 dark:to-pink-950/20' },
+  { id: 'sage', name: 'Sage Calm', class: 'from-sage-50 to-emerald-50 dark:from-sage-950/20 dark:to-emerald-950/20' },
+]
 
 // ============================================
 // SHOPPING LIST (from recipe-vault integration)
