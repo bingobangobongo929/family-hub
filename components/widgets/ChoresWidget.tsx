@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { CheckSquare, Check } from 'lucide-react'
+import { CheckSquare, Check, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { Chore } from '@/lib/database.types'
+import { useWidgetSize } from '@/lib/useWidgetSize'
 
 // Demo chores
 const DEMO_CHORES: Chore[] = [
@@ -13,12 +14,15 @@ const DEMO_CHORES: Chore[] = [
   { id: '2', user_id: 'demo', title: 'Brush teeth', emoji: '🪥', description: null, assigned_to: 'demo-olivia', points: 1, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'completed', category: 'health', sort_order: 1, created_at: '', completed_at: new Date().toISOString(), completed_by: 'demo-olivia', updated_at: '' },
   { id: '3', user_id: 'demo', title: 'Tidy toys', emoji: '🧸', description: null, assigned_to: 'demo-olivia', points: 3, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'tidying', sort_order: 2, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
   { id: '4', user_id: 'demo', title: 'Help set table', emoji: '🍽️', description: null, assigned_to: 'demo-olivia', points: 2, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'meals', sort_order: 3, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
+  { id: '5', user_id: 'demo', title: 'Put shoes away', emoji: '👟', description: null, assigned_to: 'demo-ellie', points: 1, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'tidying', sort_order: 4, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
+  { id: '6', user_id: 'demo', title: 'Water plants', emoji: '🌱', description: null, assigned_to: 'demo-olivia', points: 2, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'garden', sort_order: 5, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
 ]
 
 export default function ChoresWidget() {
   const { user } = useAuth()
   const { getMember, updateMemberPoints } = useFamily()
   const [chores, setChores] = useState<Chore[]>([])
+  const [ref, { size, isWide }] = useWidgetSize()
 
   const fetchChores = useCallback(async () => {
     if (!user) {
@@ -34,7 +38,7 @@ export default function ChoresWidget() {
         .or(`due_date.is.null,due_date.eq.${today}`)
         .order('status', { ascending: true })
         .order('sort_order', { ascending: true })
-        .limit(5)
+        .limit(10)
 
       if (data) {
         setChores(data)
@@ -53,12 +57,10 @@ export default function ChoresWidget() {
     const newStatus = chore.status === 'completed' ? 'pending' : 'completed'
     const pointDelta = newStatus === 'completed' ? chore.points : -chore.points
 
-    // Update member points
     if (chore.assigned_to) {
       await updateMemberPoints(chore.assigned_to, pointDelta)
     }
 
-    // Update chore status
     if (!user) {
       setChores(chores.map(c =>
         c.id === chore.id
@@ -85,56 +87,156 @@ export default function ChoresWidget() {
   }
 
   const pendingChores = chores.filter(c => c.status === 'pending')
-  const completedCount = chores.filter(c => c.status === 'completed').length
+  const completedChores = chores.filter(c => c.status === 'completed')
+  const completedCount = completedChores.length
+
+  // Number of chores to show based on size
+  const maxChores = {
+    small: 3,
+    medium: 4,
+    large: 6,
+    xlarge: 8,
+  }[size]
+
+  const showCompleted = size === 'large' || size === 'xlarge'
+  const compactMode = size === 'small'
+
+  // Points available
+  const totalPoints = pendingChores.reduce((sum, c) => sum + c.points, 0)
 
   return (
-    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+    <div
+      ref={ref}
+      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm"
+    >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <CheckSquare className="w-4 h-4 text-sage-500" />
           <h3 className="font-semibold text-slate-800 dark:text-slate-100">Chores</h3>
         </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400">
-          {completedCount}/{chores.length} done
-        </span>
+        <div className="flex items-center gap-2">
+          {(size === 'medium' || size === 'large' || size === 'xlarge') && totalPoints > 0 && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <Star className="w-3 h-3" />
+              {totalPoints} available
+            </span>
+          )}
+          <span className="text-xs text-slate-500 dark:text-slate-400">
+            {completedCount}/{chores.length}
+          </span>
+        </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-hidden">
-        {pendingChores.slice(0, 4).map(chore => {
-          const member = getMember(chore.assigned_to)
-
-          return (
-            <button
-              key={chore.id}
-              onClick={() => toggleChore(chore)}
-              className="w-full flex items-center gap-3 p-2 rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
-            >
-              <span className="text-lg">{chore.emoji}</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-800 dark:text-slate-100 truncate">
-                  {chore.title}
-                </p>
-              </div>
-              {member && (
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px]"
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.name.charAt(0)}
-                </div>
-              )}
-              <span className="text-xs text-amber-600 dark:text-amber-400">+{chore.points}</span>
-            </button>
-          )
-        })}
-
-        {pendingChores.length === 0 && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center">
-            <Check className="w-8 h-8 text-green-500 mb-2" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">All done!</p>
+      {/* Wide layout - show in columns */}
+      {isWide && (size === 'large' || size === 'xlarge') ? (
+        <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
+          {/* Pending column */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">To Do</p>
+            {pendingChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
+              <ChoreItem
+                key={chore.id}
+                chore={chore}
+                compact={false}
+                getMember={getMember}
+                onToggle={toggleChore}
+              />
+            ))}
           </div>
-        )}
-      </div>
+          {/* Completed column */}
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Done</p>
+            {completedChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
+              <ChoreItem
+                key={chore.id}
+                chore={chore}
+                compact={false}
+                getMember={getMember}
+                onToggle={toggleChore}
+                completed
+              />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className={`flex-1 space-y-${compactMode ? '1' : '2'} overflow-hidden`}>
+          {pendingChores.slice(0, maxChores).map(chore => (
+            <ChoreItem
+              key={chore.id}
+              chore={chore}
+              compact={compactMode}
+              getMember={getMember}
+              onToggle={toggleChore}
+            />
+          ))}
+
+          {pendingChores.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+              <Check className="w-8 h-8 text-green-500 mb-2" />
+              <p className="text-sm text-slate-500 dark:text-slate-400">All done!</p>
+            </div>
+          )}
+
+          {pendingChores.length > maxChores && (
+            <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-1">
+              +{pendingChores.length - maxChores} more
+            </p>
+          )}
+        </div>
+      )}
     </div>
+  )
+}
+
+function ChoreItem({
+  chore,
+  compact,
+  getMember,
+  onToggle,
+  completed = false
+}: {
+  chore: Chore
+  compact: boolean
+  getMember: (id: string | null) => any
+  onToggle: (chore: Chore) => void
+  completed?: boolean
+}) {
+  const member = getMember(chore.assigned_to)
+
+  return (
+    <button
+      onClick={() => onToggle(chore)}
+      className={`w-full flex items-center gap-3 ${compact ? 'py-1' : 'p-2'} rounded-lg ${
+        completed
+          ? 'bg-green-50 dark:bg-green-900/20'
+          : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700'
+      } transition-colors text-left`}
+    >
+      <span className={`${compact ? 'text-base' : 'text-lg'} ${completed ? 'opacity-50' : ''}`}>
+        {completed ? '✓' : chore.emoji}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className={`${compact ? 'text-xs' : 'text-sm'} ${
+          completed
+            ? 'text-slate-500 dark:text-slate-400 line-through'
+            : 'text-slate-800 dark:text-slate-100'
+        } truncate`}>
+          {chore.title}
+        </p>
+      </div>
+      {member && (
+        <div
+          className={`${compact ? 'w-4 h-4 text-[8px]' : 'w-5 h-5 text-[10px]'} rounded-full flex items-center justify-center text-white`}
+          style={{ backgroundColor: member.color }}
+        >
+          {member.name.charAt(0)}
+        </div>
+      )}
+      {!completed && (
+        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-amber-600 dark:text-amber-400`}>
+          +{chore.points}
+        </span>
+      )}
+    </button>
   )
 }

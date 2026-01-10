@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { differenceInDays, differenceInHours, parseISO, format } from 'date-fns'
-import { PartyPopper, Calendar, Gift, Plane, Star } from 'lucide-react'
+import { differenceInDays, parseISO, format } from 'date-fns'
+import { useWidgetSize } from '@/lib/useWidgetSize'
 
 interface CountdownEvent {
   id: string
@@ -45,9 +45,10 @@ function getNextBirthday(month: number, day: number): string {
 export default function CountdownWidget() {
   const [countdowns] = useState<CountdownEvent[]>(DEMO_COUNTDOWNS)
   const [now, setNow] = useState(new Date())
+  const [ref, { size, isWide, isTall }] = useWidgetSize()
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 60000) // Update every minute
+    const timer = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
 
@@ -58,15 +59,16 @@ export default function CountdownWidget() {
     .sort((a, b) => a.daysLeft - b.daysLeft)
 
   const nextEvent = sortedCountdowns[0]
-  const otherEvents = sortedCountdowns.slice(1, 3)
 
-  if (!nextEvent) {
-    return (
-      <div className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
-        <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
-      </div>
-    )
-  }
+  // Number of secondary events based on size
+  const secondaryCount = {
+    small: 2,
+    medium: 2,
+    large: 4,
+    xlarge: 5,
+  }[size]
+
+  const otherEvents = sortedCountdowns.slice(1, 1 + secondaryCount)
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -77,13 +79,67 @@ export default function CountdownWidget() {
     }
   }
 
+  // Size-based styling
+  const emojiSize = {
+    small: 'text-2xl',
+    medium: 'text-3xl',
+    large: 'text-4xl',
+    xlarge: 'text-5xl',
+  }[size]
+
+  const countdownSize = {
+    small: 'text-3xl',
+    medium: 'text-4xl',
+    large: 'text-5xl',
+    xlarge: 'text-6xl',
+  }[size]
+
+  const titleSize = {
+    small: 'text-xs',
+    medium: 'text-sm',
+    large: 'text-base',
+    xlarge: 'text-lg',
+  }[size]
+
+  if (!nextEvent) {
+    return (
+      <div ref={ref} className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+        <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
+      </div>
+    )
+  }
+
+  // Wide layout - show multiple countdowns side by side
+  if (isWide && (size === 'large' || size === 'xlarge')) {
+    const displayEvents = sortedCountdowns.slice(0, 3)
+    return (
+      <div ref={ref} className="h-full flex gap-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+        {displayEvents.map((event, idx) => (
+          <div
+            key={event.id}
+            className={`flex-1 flex flex-col items-center justify-center text-center rounded-xl bg-gradient-to-br ${getTypeColor(event.type)} p-3 text-white ${idx === 0 ? 'scale-105' : 'opacity-90'}`}
+          >
+            <span className={idx === 0 ? 'text-3xl' : 'text-2xl'}>{event.emoji}</span>
+            <p className="text-xs opacity-90 mt-1 truncate w-full">{event.title}</p>
+            <div className={`font-bold ${idx === 0 ? 'text-3xl' : 'text-2xl'}`}>
+              {event.daysLeft === 0 ? 'Today!' : event.daysLeft === 1 ? 'Tomorrow!' : `${event.daysLeft}d`}
+            </div>
+            <p className="text-[10px] opacity-75 mt-1">
+              {format(parseISO(event.date), 'MMM d')}
+            </p>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   return (
-    <div className="h-full flex flex-col p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+    <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
       {/* Main countdown */}
       <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} p-4 text-white`}>
-        <span className="text-3xl mb-1">{nextEvent.emoji}</span>
-        <p className="text-sm opacity-90 mb-1">{nextEvent.title}</p>
-        <div className="text-4xl font-bold">
+        <span className={`${emojiSize} mb-1`}>{nextEvent.emoji}</span>
+        <p className={`${titleSize} opacity-90 mb-1`}>{nextEvent.title}</p>
+        <div className={`${countdownSize} font-bold`}>
           {nextEvent.daysLeft === 0 ? (
             <span>Today!</span>
           ) : nextEvent.daysLeft === 1 ? (
@@ -99,7 +155,7 @@ export default function CountdownWidget() {
 
       {/* Other upcoming */}
       {otherEvents.length > 0 && (
-        <div className="mt-3 space-y-1">
+        <div className={`mt-3 ${size === 'large' || size === 'xlarge' ? 'grid grid-cols-2 gap-2' : 'space-y-1'}`}>
           {otherEvents.map(event => (
             <div key={event.id} className="flex items-center gap-2 text-sm">
               <span>{event.emoji}</span>

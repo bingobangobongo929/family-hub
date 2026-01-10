@@ -1,6 +1,7 @@
 'use client'
 
-import { CloudSun, Sun, Cloud, CloudRain, Snowflake } from 'lucide-react'
+import { CloudSun, Sun, Cloud, CloudRain, Snowflake, Wind, Droplets } from 'lucide-react'
+import { useWidgetSize } from '@/lib/useWidgetSize'
 
 // Demo weather data
 const DEMO_WEATHER = {
@@ -8,12 +9,17 @@ const DEMO_WEATHER = {
   condition: 'partly_cloudy',
   high: 11,
   low: 4,
-  location: 'Manchester',
+  location: 'Randers',
+  humidity: 72,
+  wind: 15,
   forecast: [
     { day: 'Tue', temp: 10, icon: 'cloudy' },
     { day: 'Wed', temp: 12, icon: 'sunny' },
     { day: 'Thu', temp: 9, icon: 'rainy' },
     { day: 'Fri', temp: 7, icon: 'cloudy' },
+    { day: 'Sat', temp: 6, icon: 'rainy' },
+    { day: 'Sun', temp: 8, icon: 'partly_cloudy' },
+    { day: 'Mon', temp: 11, icon: 'sunny' },
   ]
 }
 
@@ -29,39 +35,96 @@ const getWeatherIcon = (condition: string, size: string = 'w-10 h-10') => {
 }
 
 export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' | 'fahrenheit' }) {
+  const [ref, { size, isWide, isTall }] = useWidgetSize()
+
   const temp = unit === 'fahrenheit'
     ? Math.round(DEMO_WEATHER.temp * 9/5 + 32)
     : DEMO_WEATHER.temp
 
+  const convertTemp = (t: number) => unit === 'fahrenheit' ? Math.round(t * 9/5 + 32) : t
+
+  // Number of forecast days based on size
+  const forecastDays = {
+    small: 3,
+    medium: 4,
+    large: 5,
+    xlarge: 7,
+  }[size]
+
+  // Icon sizes based on widget size
+  const mainIconSize = {
+    small: 'w-10 h-10',
+    medium: 'w-12 h-12',
+    large: 'w-16 h-16',
+    xlarge: 'w-20 h-20',
+  }[size]
+
+  const tempSize = {
+    small: 'text-3xl',
+    medium: 'text-4xl',
+    large: 'text-5xl',
+    xlarge: 'text-6xl',
+  }[size]
+
+  const showDetails = size === 'large' || size === 'xlarge'
+  const showHighLow = size !== 'small'
+
   return (
-    <div className="h-full flex flex-col p-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
-      <div className="flex items-center justify-between mb-3">
+    <div
+      ref={ref}
+      className="h-full flex flex-col p-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl"
+    >
+      {/* Current weather */}
+      <div className="flex items-start justify-between mb-3">
         <div>
           <p className="text-sm text-slate-500 dark:text-slate-400">{DEMO_WEATHER.location}</p>
           <div className="flex items-baseline gap-1">
-            <span className="text-4xl font-light text-slate-800 dark:text-slate-100">
+            <span className={`${tempSize} font-light text-slate-800 dark:text-slate-100`}>
               {temp}°
             </span>
             <span className="text-slate-500 dark:text-slate-400">
               {unit === 'fahrenheit' ? 'F' : 'C'}
             </span>
           </div>
+          {showHighLow && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              H: {convertTemp(DEMO_WEATHER.high)}° L: {convertTemp(DEMO_WEATHER.low)}°
+            </p>
+          )}
         </div>
-        {getWeatherIcon(DEMO_WEATHER.condition)}
+        <div className="flex flex-col items-center">
+          {getWeatherIcon(DEMO_WEATHER.condition, mainIconSize)}
+          <p className="text-xs text-slate-600 dark:text-slate-300 capitalize mt-1">
+            {DEMO_WEATHER.condition.replace('_', ' ')}
+          </p>
+        </div>
       </div>
 
-      <p className="text-sm text-slate-600 dark:text-slate-300 mb-3 capitalize">
-        {DEMO_WEATHER.condition.replace('_', ' ')}
-      </p>
+      {/* Additional details for larger sizes */}
+      {showDetails && (
+        <div className="flex gap-4 mb-3 py-2 border-y border-slate-200/50 dark:border-slate-600/50">
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <Droplets className="w-4 h-4" />
+            <span>{DEMO_WEATHER.humidity}%</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <Wind className="w-4 h-4" />
+            <span>{DEMO_WEATHER.wind} km/h</span>
+          </div>
+        </div>
+      )}
 
+      {/* Forecast */}
       <div className="flex-1 flex items-end">
-        <div className="w-full flex justify-between">
-          {DEMO_WEATHER.forecast.map((day) => (
-            <div key={day.day} className="text-center">
+        <div className="w-full grid gap-1" style={{ gridTemplateColumns: `repeat(${forecastDays}, 1fr)` }}>
+          {DEMO_WEATHER.forecast.slice(0, forecastDays).map((day) => (
+            <div key={day.day} className="text-center p-1">
               <p className="text-xs text-slate-500 dark:text-slate-400">{day.day}</p>
-              {getWeatherIcon(day.icon, 'w-5 h-5')}
+              <div className="my-1 flex justify-center">
+                {getWeatherIcon(day.icon, size === 'xlarge' ? 'w-6 h-6' : 'w-5 h-5')}
+              </div>
               <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                {unit === 'fahrenheit' ? Math.round(day.temp * 9/5 + 32) : day.temp}°
+                {convertTemp(day.temp)}°
               </p>
             </div>
           ))}
