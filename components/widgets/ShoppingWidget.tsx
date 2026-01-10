@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { ShoppingCart, Check, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { recipeVaultSupabase } from '@/lib/supabase'
-import { useAuth } from '@/lib/auth-context'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { ShoppingListItem, getCategoryConfig } from '@/lib/database.types'
 
@@ -20,44 +19,56 @@ const DEMO_ITEMS: ShoppingListItem[] = [
   { id: '8', list_id: 'demo', item_name: 'Cheese', quantity: 200, unit: 'g', category: 'dairy', is_checked: false, is_manual: true, is_pantry_staple: false, sort_order: 7, recipe_id: null, recipe_name: null, recipe_quantities: null, created_at: '' },
 ]
 
+// Check if Recipe Vault Supabase is configured
+const isRecipeVaultConfigured = () => {
+  return process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL &&
+         process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL !== ''
+}
+
 export default function ShoppingWidget() {
-  const { user } = useAuth()
   const [items, setItems] = useState<ShoppingListItem[]>([])
   const [listId, setListId] = useState<string | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
   const [ref, { size, isWide, isTall }] = useWidgetSize()
 
   const fetchItems = useCallback(async () => {
-    if (!user) {
+    if (!isRecipeVaultConfigured()) {
       setItems(DEMO_ITEMS)
       return
     }
 
     try {
-      // Get the user's shopping list
-      const { data: lists } = await recipeVaultSupabase
+      // Get the shopping list from Recipe Vault
+      const { data: lists, error: listError } = await recipeVaultSupabase
         .from('shopping_lists')
         .select('id')
         .limit(1)
 
-      if (lists?.[0]) {
-        setListId(lists[0].id)
-        const { data } = await recipeVaultSupabase
-          .from('shopping_list_items')
-          .select('*')
-          .eq('list_id', lists[0].id)
-          .order('is_checked', { ascending: true })
-          .order('category', { ascending: true })
-          .order('sort_order', { ascending: true })
+      if (listError || !lists?.[0]) {
+        console.error('Error fetching list:', listError)
+        setItems(DEMO_ITEMS)
+        return
+      }
 
-        if (data) {
-          setItems(data)
-        }
+      setListId(lists[0].id)
+      setIsConnected(true)
+
+      const { data } = await recipeVaultSupabase
+        .from('shopping_list_items')
+        .select('*')
+        .eq('list_id', lists[0].id)
+        .order('is_checked', { ascending: true })
+        .order('category', { ascending: true })
+        .order('sort_order', { ascending: true })
+
+      if (data) {
+        setItems(data)
       }
     } catch (error) {
       console.error('Error fetching shopping items:', error)
       setItems(DEMO_ITEMS)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
     fetchItems()
@@ -71,7 +82,7 @@ export default function ShoppingWidget() {
       i.id === item.id ? { ...i, is_checked: newChecked } : i
     ))
 
-    if (!user) return
+    if (!isConnected) return
 
     try {
       await recipeVaultSupabase
