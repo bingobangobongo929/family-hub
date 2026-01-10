@@ -74,7 +74,7 @@ export default function CountdownWidget() {
     switch (type) {
       case 'birthday': return 'from-pink-500 to-rose-500'
       case 'holiday': return 'from-amber-500 to-orange-500'
-      case 'trip': return 'from-blue-500 to-cyan-500'
+      case 'trip': return 'from-teal-500 to-cyan-500'
       default: return 'from-purple-500 to-indigo-500'
     }
   }
@@ -103,7 +103,7 @@ export default function CountdownWidget() {
 
   if (!nextEvent) {
     return (
-      <div ref={ref} className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+      <div ref={ref} className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
         <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
       </div>
     )
@@ -121,11 +121,11 @@ export default function CountdownWidget() {
     const gridDate = size === 'xlarge' ? 'text-sm' : 'text-xs'
 
     return (
-      <div ref={ref} className={`h-full ${useGrid ? 'grid grid-cols-2 grid-rows-2' : 'flex'} gap-2 p-3 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl`}>
+      <div ref={ref} className={`h-full ${useGrid ? 'grid grid-cols-2 grid-rows-2' : 'flex'} gap-2 p-3 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark`}>
         {displayEvents.map((event, idx) => (
           <div
             key={event.id}
-            className={`flex-1 flex flex-col items-center justify-center text-center rounded-xl bg-gradient-to-br ${getTypeColor(event.type)} p-2 text-white ${!useGrid && idx === 0 ? 'scale-[1.02]' : ''}`}
+            className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(event.type)} p-2 text-white shadow-lg ${!useGrid && idx === 0 ? 'scale-[1.02]' : ''}`}
           >
             <span className={gridEmoji}>{event.emoji}</span>
             <p className={`${gridName} opacity-90 mt-1 truncate w-full px-1 font-medium`}>{event.title.replace("'s Birthday", "")}</p>
@@ -142,12 +142,12 @@ export default function CountdownWidget() {
   }
 
   return (
-    <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+    <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
       {/* Main countdown */}
-      <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} p-4 text-white`}>
+      <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} p-4 text-white shadow-lg`}>
         <span className={`${emojiSize} mb-1`}>{nextEvent.emoji}</span>
-        <p className={`${titleSize} opacity-90 mb-1`}>{nextEvent.title}</p>
-        <div className={`${countdownSize} font-bold`}>
+        <p className={`${titleSize} opacity-90 mb-1 font-medium`}>{nextEvent.title}</p>
+        <div className={`font-display ${countdownSize} font-bold`}>
           {nextEvent.daysLeft === 0 ? (
             <span>Today!</span>
           ) : nextEvent.daysLeft === 1 ? (
@@ -156,7 +156,7 @@ export default function CountdownWidget() {
             <span>{nextEvent.daysLeft} days</span>
           )}
         </div>
-        <p className="text-xs opacity-75 mt-1">
+        <p className="text-xs opacity-75 mt-1 font-medium">
           {format(parseISO(nextEvent.date), 'EEEE, MMM d')}
         </p>
       </div>
@@ -165,10 +165,10 @@ export default function CountdownWidget() {
       {otherEvents.length > 0 && (
         <div className={`mt-3 ${size === 'large' || size === 'xlarge' ? 'grid grid-cols-2 gap-2' : 'space-y-1'}`}>
           {otherEvents.map(event => (
-            <div key={event.id} className="flex items-center gap-2 text-sm">
+            <div key={event.id} className="flex items-center gap-2 text-sm bg-white/50 dark:bg-slate-700/30 px-2 py-1.5 rounded-xl">
               <span>{event.emoji}</span>
-              <span className="flex-1 text-slate-700 dark:text-slate-300 truncate">{event.title}</span>
-              <span className="text-slate-500 dark:text-slate-400">{event.daysLeft}d</span>
+              <span className="flex-1 text-slate-700 dark:text-slate-300 truncate font-medium">{event.title}</span>
+              <span className="text-teal-600 dark:text-teal-400 font-semibold">{event.daysLeft}d</span>
             </div>
           ))}
         </div>

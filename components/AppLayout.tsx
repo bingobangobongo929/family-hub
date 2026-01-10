@@ -44,8 +44,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Show loading spinner while checking auth
   if (loading && isSupabaseConfigured) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cream-50 to-cream-100 dark:from-slate-900 dark:to-slate-800">
-        <RefreshCw className="w-8 h-8 animate-spin text-sage-500" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-warm-50 to-warm-100 dark:from-slate-900 dark:to-slate-800">
+        <RefreshCw className="w-8 h-8 animate-spin text-teal-500" />
       </div>
     )
   }
@@ -58,7 +58,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Demo mode (no Supabase) or logged in - show full app
   if (!isSupabaseConfigured || user) {
     return (
-      <div className="flex min-h-screen bg-cream-50 dark:bg-slate-900">
+      <div className="flex min-h-screen bg-warm-50 dark:bg-slate-900">
         <Sidebar />
         <main className="flex-1 ml-64 p-8">
           {children}

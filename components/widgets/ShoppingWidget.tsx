@@ -123,12 +123,12 @@ export default function ShoppingWidget() {
   return (
     <div
       ref={ref}
-      className="h-full flex flex-col p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl"
+      className="h-full flex flex-col p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <ShoppingCart className="w-4 h-4 text-amber-600" />
-          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Shopping</h3>
+          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Shopping</h3>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -225,11 +225,11 @@ function ShoppingItem({
   return (
     <button
       onClick={() => onToggle(item)}
-      className={`w-full flex items-center gap-2 ${compact ? 'py-0.5' : 'py-1 px-2'} rounded-lg hover:bg-amber-100/50 dark:hover:bg-slate-600/50 transition-colors text-left group`}
+      className={`w-full flex items-center gap-2 ${compact ? 'py-0.5' : 'py-1 px-2'} rounded-xl hover:bg-amber-100/50 dark:hover:bg-slate-600/50 transition-colors text-left group`}
     >
-      <div className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} rounded border-2 ${
+      <div className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} rounded-md border-2 ${
         item.is_checked
-          ? 'bg-green-500 border-green-500'
+          ? 'bg-teal-500 border-teal-500'
           : 'border-slate-300 dark:border-slate-500 group-hover:border-amber-400'
       } flex items-center justify-center flex-shrink-0`}>
         {item.is_checked && <Check className="w-3 h-3 text-white" />}

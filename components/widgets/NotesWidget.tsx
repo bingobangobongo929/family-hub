@@ -44,17 +44,17 @@ export default function NotesWidget() {
   }, [fetchNotes])
 
   return (
-    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
       <div className="flex items-center gap-2 mb-3">
-        <Pin className="w-4 h-4 text-sage-500" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Pinned Notes</h3>
+        <Pin className="w-4 h-4 text-teal-500" />
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Pinned Notes</h3>
       </div>
 
       <div className="flex-1 space-y-2 overflow-hidden">
         {notes.map(note => (
           <div
             key={note.id}
-            className="p-2 rounded-lg text-sm"
+            className="p-2.5 rounded-xl text-sm transition-colors hover:ring-2 hover:ring-teal-200 dark:hover:ring-teal-800"
             style={{ backgroundColor: note.color + '80' }}
           >
             {note.title && (

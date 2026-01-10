@@ -32,7 +32,7 @@ export default function PhotoWidget({ autoPlay = true }: { autoPlay?: boolean })
   const prev = () => setCurrentIndex((currentIndex - 1 + DEMO_PHOTOS.length) % DEMO_PHOTOS.length)
 
   return (
-    <div className="h-full flex flex-col rounded-2xl overflow-hidden relative group">
+    <div className="h-full flex flex-col rounded-3xl overflow-hidden relative group shadow-widget dark:shadow-widget-dark">
       {/* Photo display (using gradient placeholder) */}
       <div className={`absolute inset-0 bg-gradient-to-br ${current.gradient} transition-all duration-500`}>
         <div className="absolute inset-0 flex items-center justify-center">
@@ -41,8 +41,8 @@ export default function PhotoWidget({ autoPlay = true }: { autoPlay?: boolean })
       </div>
 
       {/* Caption */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/50 to-transparent">
-        <p className="text-white text-sm font-medium">{current.caption}</p>
+      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+        <p className="text-white text-sm font-display font-medium">{current.caption}</p>
       </div>
 
       {/* Controls - show on hover */}

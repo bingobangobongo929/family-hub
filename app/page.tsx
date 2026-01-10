@@ -241,16 +241,18 @@ export default function Dashboard() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Good {getTimeOfDay()}!</h1>
+          <h1 className="font-display text-3xl font-semibold text-slate-800 dark:text-slate-100">
+            Good <span className="text-teal-600 dark:text-teal-400">{getTimeOfDay()}</span>!
+          </h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Here's what's happening with your family today.</p>
         </div>
         <button
           onClick={() => setIsEditMode(!isEditMode)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-medium ${
             isEditMode
-              ? 'bg-sage-500 text-white'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
-          } shadow-sm`}
+              ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-500/25'
+              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400'
+          } shadow-card`}
         >
           {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
           {isEditMode ? 'Done' : 'Edit'}
@@ -260,11 +262,11 @@ export default function Dashboard() {
       {/* Quick Stats Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <Link href="/calendar">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-sage-500 to-sage-600 text-white hover:from-sage-600 hover:to-sage-700 transition-all cursor-pointer shadow-md hover:shadow-lg">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 transition-all cursor-pointer shadow-lg shadow-teal-500/20 hover:shadow-xl hover:shadow-teal-500/30 hover:-translate-y-0.5">
             <div className="flex items-center gap-3">
-              <Calendar className="w-8 h-8 opacity-80" />
+              <Calendar className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-sage-100 text-sm">Today</p>
+                <p className="text-teal-100 text-sm font-medium">Today</p>
                 <p className="text-2xl font-bold">{loading ? '...' : eventCount} events</p>
               </div>
             </div>
@@ -272,11 +274,11 @@ export default function Dashboard() {
         </Link>
 
         <Link href="/tasks">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all cursor-pointer shadow-md hover:shadow-lg">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all cursor-pointer shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 hover:-translate-y-0.5">
             <div className="flex items-center gap-3">
-              <CheckSquare className="w-8 h-8 opacity-80" />
+              <CheckSquare className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-emerald-100 text-sm">Chores</p>
+                <p className="text-emerald-100 text-sm font-medium">Chores</p>
                 <p className="text-2xl font-bold">{loading ? '...' : `${choreStats.completed}/${choreStats.total}`}</p>
               </div>
             </div>
@@ -284,11 +286,11 @@ export default function Dashboard() {
         </Link>
 
         <Link href="/shopping">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-coral-400 to-coral-500 text-white hover:from-coral-500 hover:to-coral-600 transition-all cursor-pointer shadow-lg shadow-coral-500/20 hover:shadow-xl hover:shadow-coral-500/30 hover:-translate-y-0.5">
             <div className="flex items-center gap-3">
-              <ShoppingCart className="w-8 h-8 opacity-80" />
+              <ShoppingCart className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-amber-100 text-sm">Shopping</p>
+                <p className="text-coral-100 text-sm font-medium">Shopping</p>
                 <p className="text-2xl font-bold">{loading ? '...' : shoppingCount} items</p>
               </div>
             </div>
@@ -297,11 +299,11 @@ export default function Dashboard() {
 
         {rewardsEnabled ? (
           <Link href="/rewards">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
-                <Star className="w-8 h-8 opacity-80" />
+                <Star className="w-8 h-8 opacity-90" />
                 <div>
-                  <p className="text-purple-100 text-sm">Total Stars</p>
+                  <p className="text-purple-100 text-sm font-medium">Total Stars</p>
                   <p className="text-2xl font-bold">{totalStars}</p>
                 </div>
               </div>
@@ -309,11 +311,11 @@ export default function Dashboard() {
           </Link>
         ) : (
           <Link href="/notes">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-md hover:shadow-lg">
+            <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 hover:-translate-y-0.5">
               <div className="flex items-center gap-3">
-                <Star className="w-8 h-8 opacity-80" />
+                <Star className="w-8 h-8 opacity-90" />
                 <div>
-                  <p className="text-purple-100 text-sm">Family</p>
+                  <p className="text-purple-100 text-sm font-medium">Family</p>
                   <p className="text-2xl font-bold">{members.length}</p>
                 </div>
               </div>
@@ -324,17 +326,17 @@ export default function Dashboard() {
 
       {/* Edit Mode Toolbar */}
       {isEditMode && (
-        <div className="mb-4 flex items-center gap-3 p-3 bg-sage-50 dark:bg-sage-900/20 rounded-xl border border-sage-200 dark:border-sage-800">
+        <div className="mb-4 flex items-center gap-3 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-2xl border border-teal-200/50 dark:border-teal-800/50">
           <button
             onClick={() => setShowWidgetPicker(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Add Widget
           </button>
           <button
             onClick={resetLayout}
-            className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-slate-800 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <RotateCcw className="w-4 h-4" />
             Reset Layout
@@ -372,7 +374,7 @@ export default function Dashboard() {
                 {isEditMode && (
                   <button
                     onClick={() => removeWidget(widgetId)}
-                    className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors z-10 shadow-md"
+                    className="absolute -top-2 -right-2 w-7 h-7 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 transition-colors z-10 shadow-lg"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -385,18 +387,18 @@ export default function Dashboard() {
 
       {/* Widget Picker Modal */}
       {showWidgetPicker && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-hidden animate-scale-in">
-            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Add Widget</h2>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden animate-scale-in">
+            <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="font-display text-xl font-semibold text-slate-800 dark:text-slate-100">Add Widget</h2>
               <button
                 onClick={() => setShowWidgetPicker(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
               >
                 <X className="w-5 h-5 text-slate-500" />
               </button>
             </div>
-            <div className="p-4 overflow-y-auto max-h-[60vh]">
+            <div className="p-5 overflow-y-auto max-h-[60vh]">
               {availableToAdd.length === 0 ? (
                 <p className="text-center text-slate-500 dark:text-slate-400 py-8">
                   All widgets are already added!
@@ -407,7 +409,7 @@ export default function Dashboard() {
                     <button
                       key={widget.id}
                       onClick={() => addWidget(widget.id)}
-                      className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
+                      className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl hover:bg-teal-50 dark:hover:bg-teal-900/20 hover:ring-2 hover:ring-teal-500/20 transition-all text-left"
                     >
                       <span className="text-2xl">{widget.icon}</span>
                       <div>
@@ -483,7 +485,7 @@ function QuickRoutineWidget() {
   const progress = steps.filter(s => completedSteps.has(s.id)).length
 
   return (
-    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm">
+    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           {routineTime === 'morning' ? (
@@ -491,24 +493,24 @@ function QuickRoutineWidget() {
           ) : (
             <Moon className="w-4 h-4 text-indigo-500" />
           )}
-          <h3 className="font-semibold text-slate-800 dark:text-slate-100">
+          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
             {routineTime === 'morning' ? 'Morning' : 'Evening'} Routine
           </h3>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setRoutineTime('morning')}
-            className={`p-1.5 rounded-lg ${routineTime === 'morning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' : 'text-slate-400'}`}
+            className={`p-1.5 rounded-lg transition-colors ${routineTime === 'morning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
           >
             <Sun className="w-4 h-4" />
           </button>
           <button
             onClick={() => setRoutineTime('evening')}
-            className={`p-1.5 rounded-lg ${routineTime === 'evening' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-slate-400'}`}
+            className={`p-1.5 rounded-lg transition-colors ${routineTime === 'evening' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
           >
             <Moon className="w-4 h-4" />
           </button>
-          <span className="ml-2 text-xs text-slate-500">{progress}/{steps.length}</span>
+          <span className="ml-2 text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">{progress}/{steps.length}</span>
         </div>
       </div>
 
@@ -522,12 +524,12 @@ function QuickRoutineWidget() {
                 onClick={() => toggleStep(step.id)}
                 className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
                   isDone
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                    ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 ring-2 ring-teal-500/20'
                     : 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <span className="text-xl">{isDone ? '✓' : step.emoji}</span>
-                <span className="text-xs truncate w-full text-center">{step.title}</span>
+                <span className="text-xs truncate w-full text-center font-medium">{step.title}</span>
               </button>
             )
           })}
@@ -535,14 +537,14 @@ function QuickRoutineWidget() {
       </div>
 
       {progress === steps.length && (
-        <div className="mt-2 text-center text-sm text-green-600 dark:text-green-400 font-medium">
+        <div className="mt-2 text-center text-sm text-teal-600 dark:text-teal-400 font-medium">
           All done! Great job!
         </div>
       )}
 
       <Link
         href="/routines"
-        className="mt-2 text-center text-xs text-sage-600 dark:text-sage-400 hover:text-sage-700 dark:hover:text-sage-300"
+        className="mt-2 text-center text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium"
       >
         View full routines
       </Link>

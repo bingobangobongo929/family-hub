@@ -26,7 +26,7 @@ export default function AnnouncementsWidget() {
 
   if (announcements.length === 0) {
     return (
-      <div className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+      <div className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
         <p className="text-slate-500 dark:text-slate-400 text-sm">No announcements</p>
       </div>
     )
@@ -39,14 +39,14 @@ export default function AnnouncementsWidget() {
   const prev = () => setCurrentIndex((currentIndex - 1 + announcements.length) % announcements.length)
 
   return (
-    <div className={`h-full flex flex-col p-4 rounded-2xl ${
+    <div className={`h-full flex flex-col p-4 rounded-3xl shadow-widget dark:shadow-widget-dark ${
       current.priority === 'important'
         ? 'bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-900/30 dark:to-red-900/30'
-        : 'bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-800 dark:to-slate-700'
+        : 'bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700'
     }`}>
       <div className="flex items-center gap-2 mb-3">
-        <Megaphone className={`w-4 h-4 ${current.priority === 'important' ? 'text-rose-500' : 'text-blue-500'}`} />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Announcements</h3>
+        <Megaphone className={`w-4 h-4 ${current.priority === 'important' ? 'text-rose-500' : 'text-teal-500'}`} />
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Announcements</h3>
         {announcements.length > 1 && (
           <span className="text-xs text-slate-500 ml-auto">
             {currentIndex + 1}/{announcements.length}
@@ -93,14 +93,14 @@ export default function AnnouncementsWidget() {
 
       {/* Dots indicator */}
       {announcements.length > 1 && (
-        <div className="flex justify-center gap-1 mt-2">
+        <div className="flex justify-center gap-1.5 mt-2">
           {announcements.map((_, i) => (
             <button
               key={i}
               onClick={() => setCurrentIndex(i)}
               className={`w-2 h-2 rounded-full transition-colors ${
                 i === currentIndex
-                  ? current.priority === 'important' ? 'bg-rose-500' : 'bg-blue-500'
+                  ? current.priority === 'important' ? 'bg-rose-500' : 'bg-teal-500'
                   : 'bg-slate-300 dark:bg-slate-600'
               }`}
             />

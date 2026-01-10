@@ -157,9 +157,9 @@ export default function TimerWidget() {
   return (
     <div
       ref={ref}
-      className={`h-full flex flex-col p-4 rounded-2xl transition-all ${
+      className={`h-full flex flex-col p-4 rounded-3xl shadow-widget dark:shadow-widget-dark transition-all ${
         isComplete
-          ? 'bg-gradient-to-br from-green-400 to-emerald-500 animate-pulse'
+          ? 'bg-gradient-to-br from-teal-400 to-emerald-500 animate-pulse'
           : selectedPreset
           ? `bg-gradient-to-br ${selectedPreset.color}`
           : 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700'
@@ -168,8 +168,8 @@ export default function TimerWidget() {
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Timer className={`w-4 h-4 ${selectedPreset || isComplete ? 'text-white' : 'text-slate-500'}`} />
-          <h3 className={`font-semibold ${selectedPreset || isComplete ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+          <Timer className={`w-4 h-4 ${selectedPreset || isComplete ? 'text-white' : 'text-teal-500'}`} />
+          <h3 className={`font-display font-semibold ${selectedPreset || isComplete ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
             {isComplete ? 'Time\'s Up!' : selectedPreset ? selectedPreset.label : 'Timer'}
           </h3>
         </div>
@@ -194,7 +194,7 @@ export default function TimerWidget() {
               <button
                 key={preset.id}
                 onClick={() => startTimer(preset)}
-                className={`flex ${compactMode ? 'flex-col' : 'flex-row'} items-center ${compactMode ? 'justify-center' : 'gap-2'} p-2 rounded-xl bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 transition-all hover:scale-[1.02] active:scale-[0.98]`}
+                className={`flex ${compactMode ? 'flex-col' : 'flex-row'} items-center ${compactMode ? 'justify-center' : 'gap-2'} p-2 rounded-xl bg-white dark:bg-slate-700 hover:bg-teal-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 transition-all hover:scale-[1.02] active:scale-[0.98]`}
               >
                 <span className={`${compactMode ? 'text-xl' : 'text-2xl'}`}>{preset.emoji}</span>
                 <div className={`${compactMode ? 'text-center' : ''}`}>

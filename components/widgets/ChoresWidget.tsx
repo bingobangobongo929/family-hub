@@ -109,21 +109,21 @@ export default function ChoresWidget() {
   return (
     <div
       ref={ref}
-      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm"
+      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark"
     >
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <CheckSquare className="w-4 h-4 text-sage-500" />
-          <h3 className="font-semibold text-slate-800 dark:text-slate-100">Chores</h3>
+          <CheckSquare className="w-4 h-4 text-teal-500" />
+          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Chores</h3>
         </div>
         <div className="flex items-center gap-2">
           {rewardsEnabled && (size === 'medium' || size === 'large' || size === 'xlarge') && totalPoints > 0 && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
               <Star className="w-3 h-3" />
-              {totalPoints} available
+              {totalPoints}
             </span>
           )}
-          <span className="text-xs text-slate-500 dark:text-slate-400">
+          <span className="text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">
             {completedCount}/{chores.length}
           </span>
         </div>
@@ -134,7 +134,7 @@ export default function ChoresWidget() {
         <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
           {/* Pending column */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">To Do</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">To Do</p>
             {pendingChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
               <ChoreItem
                 key={chore.id}
@@ -148,7 +148,7 @@ export default function ChoresWidget() {
           </div>
           {/* Completed column */}
           <div className="space-y-2">
-            <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">Done</p>
+            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 mb-1">Done</p>
             {completedChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
               <ChoreItem
                 key={chore.id}
@@ -177,13 +177,15 @@ export default function ChoresWidget() {
 
           {pendingChores.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-              <Check className="w-8 h-8 text-green-500 mb-2" />
-              <p className="text-sm text-slate-500 dark:text-slate-400">All done!</p>
+              <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-2">
+                <Check className="w-6 h-6 text-teal-500" />
+              </div>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">All done!</p>
             </div>
           )}
 
           {pendingChores.length > maxChores && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-1">
+            <p className="text-xs text-teal-600 dark:text-teal-400 text-center pt-1 font-medium">
               +{pendingChores.length - maxChores} more
             </p>
           )}
@@ -213,9 +215,9 @@ function ChoreItem({
   return (
     <button
       onClick={() => onToggle(chore)}
-      className={`w-full flex items-center gap-3 ${compact ? 'py-1' : 'p-2'} rounded-lg ${
+      className={`w-full flex items-center gap-3 ${compact ? 'py-1.5 px-2' : 'p-2.5'} rounded-xl ${
         completed
-          ? 'bg-green-50 dark:bg-green-900/20'
+          ? 'bg-teal-50 dark:bg-teal-900/20'
           : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700'
       } transition-colors text-left`}
     >
@@ -223,7 +225,7 @@ function ChoreItem({
         {completed ? '✓' : chore.emoji}
       </span>
       <div className="flex-1 min-w-0">
-        <p className={`${compact ? 'text-xs' : 'text-sm'} ${
+        <p className={`font-medium ${compact ? 'text-xs' : 'text-sm'} ${
           completed
             ? 'text-slate-500 dark:text-slate-400 line-through'
             : 'text-slate-800 dark:text-slate-100'
@@ -233,14 +235,14 @@ function ChoreItem({
       </div>
       {member && (
         <div
-          className={`${compact ? 'w-4 h-4 text-[8px]' : 'w-5 h-5 text-[10px]'} rounded-full flex items-center justify-center text-white`}
+          className={`${compact ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center text-white font-medium ring-2 ring-white dark:ring-slate-700`}
           style={{ backgroundColor: member.color }}
         >
           {member.name.charAt(0)}
         </div>
       )}
       {showPoints && !completed && (
-        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-amber-600 dark:text-amber-400`}>
+        <span className={`${compact ? 'text-[10px]' : 'text-xs'} font-semibold text-amber-600 dark:text-amber-400`}>
           +{chore.points}
         </span>
       )}

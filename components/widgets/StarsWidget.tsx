@@ -11,7 +11,7 @@ export default function StarsWidget() {
   // If rewards disabled, show a placeholder
   if (!rewardsEnabled) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-2xl text-center">
+      <div className="h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark text-center">
         <Gift className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
         <p className="text-sm text-slate-400 dark:text-slate-500">Rewards disabled</p>
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Enable in Settings</p>
@@ -25,17 +25,17 @@ export default function StarsWidget() {
     .sort((a, b) => b.points - a.points)
 
   return (
-    <div className="h-full flex flex-col p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl">
+    <div className="h-full flex flex-col p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="w-4 h-4 text-amber-500" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Stars</h3>
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Stars</h3>
       </div>
 
       <div className="flex-1 space-y-2">
         {kids.map((member, index) => (
           <div
             key={member.id}
-            className={`flex items-center gap-3 p-2 rounded-lg ${
+            className={`flex items-center gap-3 p-2.5 rounded-xl ${
               index === 0
                 ? 'bg-amber-100/50 dark:bg-amber-900/30'
                 : 'bg-white/50 dark:bg-slate-700/50'

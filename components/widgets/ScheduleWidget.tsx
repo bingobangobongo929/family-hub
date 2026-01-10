@@ -79,13 +79,13 @@ export default function ScheduleWidget() {
   return (
     <div
       ref={ref}
-      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-2xl shadow-sm"
+      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark"
     >
       <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-sage-500" />
-        <h3 className="font-semibold text-slate-800 dark:text-slate-100">Today</h3>
+        <Clock className="w-4 h-4 text-teal-500" />
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Today</h3>
         {events.length > 0 && (
-          <span className="text-xs text-slate-500 dark:text-slate-400 ml-auto">
+          <span className="text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full ml-auto">
             {upcomingEvents.length} upcoming
           </span>
         )}
@@ -104,18 +104,18 @@ export default function ScheduleWidget() {
             return (
               <div
                 key={event.id}
-                className={`flex items-center gap-3 ${compactMode ? 'py-1' : 'p-2'} rounded-lg bg-slate-50 dark:bg-slate-700/50`}
+                className={`flex items-center gap-3 ${compactMode ? 'py-1.5 px-2' : 'p-2.5'} rounded-xl bg-slate-50 dark:bg-slate-700/50 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700`}
               >
                 <div
-                  className={`${compactMode ? 'w-0.5 h-8' : 'w-1 h-10'} rounded-full flex-shrink-0`}
-                  style={{ backgroundColor: event.color || member?.color || '#888' }}
+                  className={`${compactMode ? 'w-1 h-8' : 'w-1 h-10'} rounded-full flex-shrink-0`}
+                  style={{ backgroundColor: event.color || member?.color || '#14b8a6' }}
                 />
                 <div className="flex-1 min-w-0">
                   <p className={`font-medium ${compactMode ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-100 truncate`}>
                     {event.title}
                   </p>
                   <div className="flex items-center gap-2">
-                    <p className={`${compactMode ? 'text-[10px]' : 'text-xs'} text-slate-500 dark:text-slate-400`}>
+                    <p className={`${compactMode ? 'text-[10px]' : 'text-xs'} text-slate-500 dark:text-slate-400 font-medium`}>
                       {time}
                       {member && ` • ${member.name}`}
                     </p>
@@ -131,7 +131,7 @@ export default function ScheduleWidget() {
             )
           })}
           {upcomingEvents.length > maxEvents && (
-            <p className="text-xs text-slate-400 dark:text-slate-500 text-center pt-1">
+            <p className="text-xs text-teal-600 dark:text-teal-400 text-center pt-1 font-medium">
               +{upcomingEvents.length - maxEvents} more
             </p>
           )}

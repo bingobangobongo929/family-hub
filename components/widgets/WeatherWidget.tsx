@@ -72,29 +72,29 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
   return (
     <div
       ref={ref}
-      className="h-full flex flex-col p-4 bg-gradient-to-br from-sky-50 to-blue-50 dark:from-slate-800 dark:to-slate-700 rounded-2xl"
+      className="h-full flex flex-col p-4 bg-gradient-to-br from-sky-50 to-teal-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark"
     >
       {/* Current weather */}
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{DEMO_WEATHER.location}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{DEMO_WEATHER.location}</p>
           <div className="flex items-baseline gap-1">
-            <span className={`${tempSize} font-light text-slate-800 dark:text-slate-100`}>
+            <span className={`font-display ${tempSize} font-light text-slate-800 dark:text-slate-100`}>
               {temp}°
             </span>
-            <span className="text-slate-500 dark:text-slate-400">
+            <span className="text-slate-500 dark:text-slate-400 text-sm">
               {unit === 'fahrenheit' ? 'F' : 'C'}
             </span>
           </div>
           {showHighLow && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
               H: {convertTemp(DEMO_WEATHER.high)}° L: {convertTemp(DEMO_WEATHER.low)}°
             </p>
           )}
         </div>
         <div className="flex flex-col items-center">
           {getWeatherIcon(DEMO_WEATHER.condition, mainIconSize)}
-          <p className="text-xs text-slate-600 dark:text-slate-300 capitalize mt-1">
+          <p className="text-xs text-slate-600 dark:text-slate-300 capitalize mt-1 font-medium">
             {DEMO_WEATHER.condition.replace('_', ' ')}
           </p>
         </div>
@@ -104,12 +104,12 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
       {showDetails && (
         <div className="flex gap-4 mb-3 py-2 border-y border-slate-200/50 dark:border-slate-600/50">
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <Droplets className="w-4 h-4" />
-            <span>{DEMO_WEATHER.humidity}%</span>
+            <Droplets className="w-4 h-4 text-teal-500" />
+            <span className="font-medium">{DEMO_WEATHER.humidity}%</span>
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <Wind className="w-4 h-4" />
-            <span>{DEMO_WEATHER.wind} km/h</span>
+            <Wind className="w-4 h-4 text-teal-500" />
+            <span className="font-medium">{DEMO_WEATHER.wind} km/h</span>
           </div>
         </div>
       )}
@@ -118,12 +118,12 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
       <div className="flex-1 flex items-end">
         <div className="w-full grid gap-1" style={{ gridTemplateColumns: `repeat(${forecastDays}, 1fr)` }}>
           {DEMO_WEATHER.forecast.slice(0, forecastDays).map((day) => (
-            <div key={day.day} className="text-center p-1">
-              <p className="text-xs text-slate-500 dark:text-slate-400">{day.day}</p>
+            <div key={day.day} className="text-center p-1.5 rounded-xl bg-white/50 dark:bg-slate-700/30">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{day.day}</p>
               <div className="my-1 flex justify-center">
                 {getWeatherIcon(day.icon, size === 'xlarge' ? 'w-6 h-6' : 'w-5 h-5')}
               </div>
-              <p className="text-xs font-medium text-slate-700 dark:text-slate-300">
+              <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 {convertTemp(day.temp)}°
               </p>
             </div>
