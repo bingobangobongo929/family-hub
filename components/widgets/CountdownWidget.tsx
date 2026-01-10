@@ -17,7 +17,7 @@ const DEMO_COUNTDOWNS: CountdownEvent[] = [
   { id: '1', title: "Olivia's Birthday", date: getNextBirthday(12, 23), emoji: '🎂', type: 'birthday' },
   { id: '2', title: "Ellie's Birthday", date: getNextBirthday(9, 12), emoji: '🎂', type: 'birthday' },
   { id: '3', title: "Mum's Birthday", date: getNextBirthday(3, 28), emoji: '🎁', type: 'birthday' },
-  { id: '4', title: "Dad's Birthday", date: getNextBirthday(5, 21), emoji: '🎁', type: 'birthday' },
+  { id: '4', title: "Ed's Birthday", date: getNextBirthday(5, 21), emoji: '🎁', type: 'birthday' },
   { id: '5', title: 'Christmas', date: getNextHoliday(12, 25), emoji: '🎄', type: 'holiday' },
   { id: '6', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
 ]
