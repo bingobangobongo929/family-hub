@@ -113,12 +113,12 @@ export default function Sidebar() {
       {user && (
         <div className="p-4 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-medium">
-              {user.email?.[0].toUpperCase() || 'U'}
+            <div className="w-8 h-8 rounded-full bg-sage-500 flex items-center justify-center text-white text-sm font-medium">
+              E
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
-                {user.email}
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                Ed
               </p>
             </div>
           </div>
