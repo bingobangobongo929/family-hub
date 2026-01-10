@@ -115,8 +115,8 @@ export default function Dashboard() {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800">Welcome back!</h1>
-        <p className="text-slate-500 mt-1">Here's what's happening with your family today.</p>
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Welcome back!</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">Here's what's happening with your family today.</p>
       </div>
 
       {/* Quick Stats */}
@@ -182,8 +182,8 @@ export default function Dashboard() {
                 onClick={() => setRoutineTime('morning')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   routineTime === 'morning'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <Sun className="w-4 h-4 inline mr-1" />
@@ -193,8 +193,8 @@ export default function Dashboard() {
                 onClick={() => setRoutineTime('evening')}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   routineTime === 'evening'
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300'
+                    : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <Moon className="w-4 h-4 inline mr-1" />
@@ -211,12 +211,12 @@ export default function Dashboard() {
                   onClick={() => toggleRoutine(routine.id)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
                     isDone
-                      ? 'bg-green-50 border-green-300 text-green-700'
-                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-primary-300 hover:bg-primary-50'
+                      ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-primary-300 dark:hover:border-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/30'
                   }`}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-lg ${
-                    isDone ? 'bg-green-500 text-white' : 'bg-slate-200'
+                    isDone ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-600'
                   }`}>
                     {isDone ? '✓' : '○'}
                   </div>
@@ -255,12 +255,12 @@ export default function Dashboard() {
               <Link
                 key={event.id}
                 href="/calendar"
-                className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
               >
                 <div className={`w-2 h-10 rounded-full ${event.color}`} />
                 <div className="flex-1">
-                  <p className="font-medium text-slate-700">{event.title}</p>
-                  <p className="text-sm text-slate-500">{event.time}</p>
+                  <p className="font-medium text-slate-700 dark:text-slate-200">{event.title}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{event.time}</p>
                 </div>
               </Link>
             ))}
@@ -283,21 +283,21 @@ export default function Dashboard() {
               <Link
                 key={task.id}
                 href="/tasks"
-                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center ${
                   task.done
                     ? 'bg-green-500 border-green-500 text-white'
-                    : 'border-slate-300'
+                    : 'border-slate-300 dark:border-slate-600'
                 }`}>
                   {task.done && <span className="text-xs">✓</span>}
                 </div>
                 <div className="flex-1">
-                  <p className={`font-medium ${task.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
+                  <p className={`font-medium ${task.done ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                     {task.title}
                   </p>
                 </div>
-                <span className="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                <span className="text-xs px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                   {task.assignee}
                 </span>
               </Link>
@@ -317,7 +317,7 @@ export default function Dashboard() {
             }
           />
           {shoppingLoading ? (
-            <div className="text-sm text-slate-500">Loading...</div>
+            <div className="text-sm text-slate-500 dark:text-slate-400">Loading...</div>
           ) : shoppingItems.length > 0 ? (
             <Link href="/shopping" className="flex flex-wrap gap-2 cursor-pointer">
               {shoppingItems.map((item) => {
@@ -333,7 +333,7 @@ export default function Dashboard() {
               })}
             </Link>
           ) : (
-            <p className="text-sm text-slate-500">No items to buy</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">No items to buy</p>
           )}
         </Card>
 
@@ -349,13 +349,13 @@ export default function Dashboard() {
             }
           />
           <div className="space-y-2">
-            <Link href="/notes" className="block p-3 rounded-xl bg-yellow-50 border-l-4 border-yellow-400 hover:bg-yellow-100 transition-colors cursor-pointer">
-              <p className="text-sm text-slate-700">Olivia's 3rd birthday party on Saturday - cake ordered from bakery!</p>
-              <p className="text-xs text-slate-500 mt-1">- Mum</p>
+            <Link href="/notes" className="block p-3 rounded-xl bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/50 transition-colors cursor-pointer">
+              <p className="text-sm text-slate-700 dark:text-slate-200">Olivia's 3rd birthday party on Saturday - cake ordered from bakery!</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">- Mum</p>
             </Link>
-            <Link href="/notes" className="block p-3 rounded-xl bg-blue-50 border-l-4 border-blue-400 hover:bg-blue-100 transition-colors cursor-pointer">
-              <p className="text-sm text-slate-700">Health visitor coming Thursday 10am</p>
-              <p className="text-xs text-slate-500 mt-1">- Dad</p>
+            <Link href="/notes" className="block p-3 rounded-xl bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer">
+              <p className="text-sm text-slate-700 dark:text-slate-200">Health visitor coming Thursday 10am</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">- Dad</p>
             </Link>
           </div>
         </Card>

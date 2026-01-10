@@ -33,7 +33,7 @@ export function CardHeader({ title, icon, action }: CardHeaderProps) {
             {icon}
           </div>
         )}
-        <h2 className="text-lg font-semibold text-slate-800">{title}</h2>
+        <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
       </div>
       {action}
     </div>

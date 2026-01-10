@@ -10,9 +10,11 @@ import {
   StickyNote,
   Users,
   LogOut,
-  Sun
+  Sun,
+  Moon
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useTheme } from '@/lib/theme-context'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -33,6 +35,7 @@ const familyMembers = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
+  const { theme, toggleTheme } = useTheme()
 
   const handleSignOut = async () => {
     await signOut()
@@ -41,13 +44,22 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 h-full w-64 glass shadow-xl z-50 flex flex-col">
       <div className="p-6 flex-1">
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
-            <Users className="w-6 h-6 text-white" />
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+              Family Hub
+            </h1>
           </div>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-            Family Hub
-          </h1>
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          </button>
         </div>
 
         <nav className="space-y-2">
@@ -61,7 +73,7 @@ export default function Sidebar() {
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
                     ? 'bg-primary-500 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-100'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
                 <Icon className="w-5 h-5" />
@@ -71,7 +83,7 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="mt-8 pt-8 border-t border-slate-200">
+        <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
           <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
             Family Members
           </h3>
@@ -81,7 +93,7 @@ export default function Sidebar() {
                 <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white text-sm font-medium`}>
                   {member.name[0]}
                 </div>
-                <span className="text-sm text-slate-600">{member.name}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-300">{member.name}</span>
               </div>
             ))}
           </div>
@@ -90,20 +102,20 @@ export default function Sidebar() {
 
       {/* User section at bottom */}
       {user && (
-        <div className="p-4 border-t border-slate-200">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-primary-500 flex items-center justify-center text-white text-sm font-medium">
               {user.email?.[0].toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 truncate">
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
                 {user.email}
               </p>
             </div>
           </div>
           <button
             onClick={handleSignOut}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
           >
             <LogOut className="w-4 h-4" />
             Sign Out
