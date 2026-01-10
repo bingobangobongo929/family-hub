@@ -1,0 +1,6 @@
+export { default as ClockWidget } from './ClockWidget'
+export { default as WeatherWidget } from './WeatherWidget'
+export { default as ScheduleWidget } from './ScheduleWidget'
+export { default as ChoresWidget } from './ChoresWidget'
+export { default as StarsWidget } from './StarsWidget'
+export { default as NotesWidget } from './NotesWidget'

@@ -1,154 +1,471 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { format } from 'date-fns'
+import { CheckSquare, Plus, Star, Trash2, RotateCcw } from 'lucide-react'
 import Card, { CardHeader } from '@/components/Card'
-import { CheckSquare, Plus, Filter, User } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import Modal from '@/components/ui/Modal'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
+import { useFamily } from '@/lib/family-context'
+import { Chore, CHORE_CATEGORIES, getChoreCategoryConfig } from '@/lib/database.types'
 
-interface Task {
-  id: number
-  title: string
-  assignee: string
-  assigneeColor: string
-  priority: 'low' | 'medium' | 'high'
-  done: boolean
-  category: string
-}
-
-const initialTasks: Task[] = [
-  { id: 1, title: "Restock nappies (size 4 & 6)", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "high", done: false, category: "Shopping" },
-  { id: 2, title: "Prepare Olivia's lunch box", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: true, category: "Kids" },
-  { id: 3, title: "Book Ellie's 1-year vaccinations", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "high", done: false, category: "Health" },
-  { id: 4, title: "Fix baby gate on stairs", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "high", done: false, category: "Safety" },
-  { id: 5, title: "Wash kids' clothes", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: false, category: "Chores" },
-  { id: 6, title: "Assemble new highchair", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "low", done: true, category: "Home" },
-  { id: 7, title: "Prep batch of baby food", assignee: "Mum", assigneeColor: "bg-pink-500", priority: "medium", done: false, category: "Kids" },
-  { id: 8, title: "Childproof kitchen cabinets", assignee: "Dad", assigneeColor: "bg-blue-500", priority: "medium", done: false, category: "Safety" },
+// Demo chores
+const DEMO_CHORES: Chore[] = [
+  { id: 'demo-1', user_id: 'demo', title: 'Make bed', emoji: '🛏️', description: '', assigned_to: 'demo-olivia', points: 2, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'bedroom', sort_order: 0, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
+  { id: 'demo-2', user_id: 'demo', title: 'Feed the fish', emoji: '🐠', description: '', assigned_to: 'demo-olivia', points: 3, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'pets', sort_order: 1, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
+  { id: 'demo-3', user_id: 'demo', title: 'Put toys away', emoji: '🧸', description: '', assigned_to: 'demo-olivia', points: 3, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'completed', category: 'tidying', sort_order: 2, created_at: '', completed_at: new Date().toISOString(), completed_by: 'demo-olivia', updated_at: '' },
+  { id: 'demo-4', user_id: 'demo', title: 'Restock nappies', emoji: '👶', description: '', assigned_to: 'demo-dad', points: 0, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'none', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'baby', sort_order: 3, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
 ]
 
-const priorityColors = {
-  low: 'bg-slate-100 text-slate-600',
-  medium: 'bg-yellow-100 text-yellow-700',
-  high: 'bg-red-100 text-red-700',
-}
-
 export default function TasksPage() {
-  const [tasks, setTasks] = useState(initialTasks)
+  const { user } = useAuth()
+  const { members, getMember, updateMemberPoints } = useFamily()
+  const [chores, setChores] = useState<Chore[]>([])
+  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [showAddModal, setShowAddModal] = useState(false)
 
-  const toggleTask = (id: number) => {
-    setTasks(tasks.map(task =>
-      task.id === id ? { ...task, done: !task.done } : task
-    ))
+  // Form state
+  const [formData, setFormData] = useState({
+    title: '',
+    emoji: '✨',
+    description: '',
+    assigned_to: '',
+    points: 1,
+    due_date: '',
+    category: 'general',
+    repeat_frequency: 'none' as const,
+  })
+
+  const fetchChores = useCallback(async () => {
+    if (!user) {
+      setChores(DEMO_CHORES)
+      setLoading(false)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('chores')
+        .select('*')
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      setChores((data as Chore[]) || [])
+    } catch (error) {
+      console.error('Error fetching chores:', error)
+    }
+    setLoading(false)
+  }, [user])
+
+  useEffect(() => {
+    fetchChores()
+  }, [fetchChores])
+
+  const handleToggleChore = async (chore: Chore) => {
+    const newStatus = chore.status === 'completed' ? 'pending' : 'completed'
+    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null
+    const pointsChange = newStatus === 'completed' ? chore.points : -chore.points
+
+    if (!user) {
+      setChores(prev => prev.map(c =>
+        c.id === chore.id
+          ? { ...c, status: newStatus, completed_at: completedAt, completed_by: chore.assigned_to }
+          : c
+      ))
+      if (chore.assigned_to && chore.points > 0) {
+        updateMemberPoints(chore.assigned_to, pointsChange)
+      }
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chores')
+        .update({
+          status: newStatus,
+          completed_at: completedAt,
+          completed_by: newStatus === 'completed' ? chore.assigned_to : null,
+        })
+        .eq('id', chore.id)
+
+      if (error) throw error
+
+      // Update member points
+      if (chore.assigned_to && chore.points > 0) {
+        await updateMemberPoints(chore.assigned_to, pointsChange)
+      }
+
+      await fetchChores()
+    } catch (error) {
+      console.error('Error updating chore:', error)
+    }
   }
 
-  const filteredTasks = filter === 'all'
-    ? tasks
-    : tasks.filter(t => t.assignee === filter)
+  const handleAddChore = () => {
+    setFormData({
+      title: '',
+      emoji: '✨',
+      description: '',
+      assigned_to: '',
+      points: 1,
+      due_date: format(new Date(), 'yyyy-MM-dd'),
+      category: 'general',
+      repeat_frequency: 'none',
+    })
+    setShowAddModal(true)
+  }
 
-  const completedCount = tasks.filter(t => t.done).length
-  const totalCount = tasks.length
-  const progressPercent = Math.round((completedCount / totalCount) * 100)
+  const handleSaveChore = async () => {
+    if (!formData.title.trim()) return
 
-  const members = [...new Set(tasks.map(t => t.assignee))]
+    const choreData = {
+      title: formData.title,
+      emoji: formData.emoji,
+      description: formData.description || null,
+      assigned_to: formData.assigned_to || null,
+      points: formData.points,
+      due_date: formData.due_date || null,
+      category: formData.category,
+      repeat_frequency: formData.repeat_frequency,
+      status: 'pending' as const,
+      user_id: user?.id || 'demo',
+      repeat_interval: 1,
+      sort_order: chores.length,
+    }
+
+    if (!user) {
+      const newChore: Chore = {
+        ...choreData,
+        id: `demo-${Date.now()}`,
+        due_time: null,
+        repeat_days: null,
+        created_at: new Date().toISOString(),
+        completed_at: null,
+        completed_by: null,
+        updated_at: new Date().toISOString(),
+      }
+      setChores(prev => [...prev, newChore])
+      setShowAddModal(false)
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chores')
+        .insert(choreData)
+
+      if (error) throw error
+      await fetchChores()
+      setShowAddModal(false)
+    } catch (error) {
+      console.error('Error saving chore:', error)
+    }
+  }
+
+  const handleDeleteChore = async (choreId: string) => {
+    if (!user) {
+      setChores(prev => prev.filter(c => c.id !== choreId))
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('chores')
+        .delete()
+        .eq('id', choreId)
+
+      if (error) throw error
+      await fetchChores()
+    } catch (error) {
+      console.error('Error deleting chore:', error)
+    }
+  }
+
+  const childMembers = members.filter(m => m.role === 'child')
+  const filteredChores = filter === 'all'
+    ? chores
+    : chores.filter(c => c.assigned_to === filter)
+
+  const completedCount = chores.filter(c => c.status === 'completed').length
+  const totalCount = chores.length
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
+  // Calculate total stars earned today
+  const totalStarsToday = chores
+    .filter(c => c.status === 'completed')
+    .reduce((sum, c) => sum + c.points, 0)
 
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="mb-8 flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Tasks</h1>
-          <p className="text-slate-500 mt-1">Manage family chores and responsibilities.</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Chores</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">Earn stars by completing tasks!</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors">
+        <Button onClick={handleAddChore} className="gap-2">
           <Plus className="w-5 h-5" />
-          Add Task
-        </button>
+          Add Chore
+        </Button>
       </div>
 
-      {/* Progress */}
-      <Card className="mb-6" hover={false}>
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-slate-600">Weekly Progress</span>
-          <span className="text-sm font-bold text-primary-600">{completedCount}/{totalCount} completed</span>
-        </div>
-        <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-primary-500 to-accent-500 rounded-full transition-all duration-500"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
+        <Card className="bg-gradient-to-br from-sage-500 to-sage-600 text-white">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-sage-100 text-sm">Completed</p>
+              <p className="text-2xl font-bold">{completedCount}/{totalCount}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+          <div className="flex items-center gap-3">
+            <Star className="w-8 h-8 opacity-80" />
+            <div>
+              <p className="text-amber-100 text-sm">Stars Today</p>
+              <p className="text-2xl font-bold">{totalStarsToday}</p>
+            </div>
+          </div>
+        </Card>
+        <Card className="hidden sm:block">
+          <div className="text-center">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Progress</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{progressPercent}%</p>
+          </div>
+        </Card>
+      </div>
 
-      {/* Filter */}
+      {/* Filter by family member */}
       <div className="flex gap-2 mb-6 flex-wrap">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors min-h-[44px] ${
             filter === 'all'
-              ? 'bg-primary-500 text-white'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              ? 'bg-sage-500 text-white'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
           }`}
         >
           All
         </button>
         {members.map(member => (
           <button
-            key={member}
-            onClick={() => setFilter(member)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              filter === member
-                ? 'bg-primary-500 text-white'
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            key={member.id}
+            onClick={() => setFilter(member.id)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors min-h-[44px] flex items-center gap-2 ${
+              filter === member.id
+                ? 'bg-sage-500 text-white'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
             }`}
           >
-            {member}
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs"
+              style={{ backgroundColor: member.color }}
+            >
+              {member.name[0]}
+            </div>
+            {member.name}
           </button>
         ))}
       </div>
 
-      {/* Task List */}
+      {/* Chore List */}
       <Card hover={false}>
         <CardHeader
-          title="Task List"
+          title="Today's Chores"
           icon={<CheckSquare className="w-5 h-5" />}
         />
-        <div className="space-y-2">
-          {filteredTasks.map(task => (
-            <div
-              key={task.id}
-              onClick={() => toggleTask(task.id)}
-              className={`flex items-center gap-4 p-4 rounded-xl cursor-pointer transition-all ${
-                task.done ? 'bg-green-50' : 'hover:bg-slate-50'
-              }`}
-            >
-              <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
-                task.done
-                  ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-slate-300 hover:border-primary-500'
-              }`}>
-                {task.done && <span className="text-sm">✓</span>}
-              </div>
+        {loading ? (
+          <p className="text-slate-500 dark:text-slate-400">Loading...</p>
+        ) : filteredChores.length === 0 ? (
+          <div className="text-center py-8">
+            <CheckSquare className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
+            <p className="text-slate-500 dark:text-slate-400">No chores yet. Add one to get started!</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {filteredChores.map(chore => {
+              const assignee = getMember(chore.assigned_to)
+              const categoryConfig = getChoreCategoryConfig(chore.category)
+              const isCompleted = chore.status === 'completed'
 
-              <div className="flex-1">
-                <p className={`font-medium ${task.done ? 'text-slate-400 line-through' : 'text-slate-700'}`}>
-                  {task.title}
-                </p>
-                <span className="text-xs text-slate-500">{task.category}</span>
-              </div>
+              return (
+                <div
+                  key={chore.id}
+                  className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
+                    isCompleted
+                      ? 'bg-green-50 dark:bg-green-900/20'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <button
+                    onClick={() => handleToggleChore(chore)}
+                    className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-2xl transition-all flex-shrink-0 ${
+                      isCompleted
+                        ? 'bg-green-500 border-green-500 text-white'
+                        : 'border-slate-300 dark:border-slate-600 hover:border-sage-500 hover:bg-sage-50 dark:hover:bg-sage-900/20'
+                    }`}
+                  >
+                    {isCompleted ? '✓' : chore.emoji}
+                  </button>
 
-              <span className={`text-xs px-2 py-1 rounded-full ${priorityColors[task.priority]}`}>
-                {task.priority}
-              </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-medium ${isCompleted ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {chore.title}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${categoryConfig.color}`}>
+                        {categoryConfig.label}
+                      </span>
+                      {chore.points > 0 && (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 flex items-center gap-1">
+                          <Star className="w-3 h-3" /> {chore.points}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2">
-                <div className={`w-7 h-7 rounded-full ${task.assigneeColor} flex items-center justify-center text-white text-xs font-medium`}>
-                  {task.assignee[0]}
+                  {assignee && (
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
+                      style={{ backgroundColor: assignee.color }}
+                      title={assignee.name}
+                    >
+                      {assignee.name[0]}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => handleDeleteChore(chore.id)}
+                    className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
-                <span className="text-sm text-slate-600 hidden sm:inline">{task.assignee}</span>
+              )
+            })}
+          </div>
+        )}
+      </Card>
+
+      {/* Add Chore Modal */}
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Chore" size="md">
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <div className="flex-shrink-0">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Icon
+              </label>
+              <select
+                value={formData.emoji}
+                onChange={(e) => setFormData({ ...formData, emoji: e.target.value })}
+                className="w-16 h-12 text-2xl text-center rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700"
+              >
+                {CHORE_CATEGORIES.map(c => (
+                  <option key={c.id} value={c.emoji}>{c.emoji}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Chore Title *
+              </label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                placeholder="What needs to be done?"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Assign To
+              </label>
+              <select
+                value={formData.assigned_to}
+                onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+              >
+                <option value="">Unassigned</option>
+                {members.map(member => (
+                  <option key={member.id} value={member.id}>{member.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Stars
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  max="10"
+                  value={formData.points}
+                  onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) || 0 })}
+                  className="w-20 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                />
+                <Star className="w-5 h-5 text-amber-500" />
               </div>
             </div>
-          ))}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Category
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {CHORE_CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFormData({ ...formData, category: cat.id, emoji: cat.emoji })}
+                  className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                    formData.category === cat.id
+                      ? 'ring-2 ring-sage-500 ' + cat.color
+                      : cat.color + ' opacity-70 hover:opacity-100'
+                  }`}
+                >
+                  {cat.emoji} {cat.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Repeat
+            </label>
+            <select
+              value={formData.repeat_frequency}
+              onChange={(e) => setFormData({ ...formData, repeat_frequency: e.target.value as typeof formData.repeat_frequency })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            >
+              <option value="none">One time</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="secondary" onClick={() => setShowAddModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveChore} disabled={!formData.title.trim()}>
+              Save Chore
+            </Button>
+          </div>
         </div>
-      </Card>
+      </Modal>
     </div>
   )
 }

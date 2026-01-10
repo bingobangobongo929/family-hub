@@ -1,19 +1,30 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Sidebar from './Sidebar'
+import Screensaver from './Screensaver'
 import { RefreshCw } from 'lucide-react'
+import { DEFAULT_SETTINGS } from '@/lib/database.types'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const pathname = usePathname()
   const router = useRouter()
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
 
   const isLoginPage = pathname === '/login'
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
                                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'your-supabase-url'
+
+  // Load settings from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('family-hub-settings')
+    if (saved) {
+      setSettings(prev => ({ ...prev, ...JSON.parse(saved) }))
+    }
+  }, [])
 
   useEffect(() => {
     // Only redirect if Supabase is configured
@@ -26,11 +37,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isLoginPage, router, isSupabaseConfigured])
 
+  const handleScreensaverWake = useCallback(() => {
+    // Could add analytics or other wake handlers here
+  }, [])
+
   // Show loading spinner while checking auth
   if (loading && isSupabaseConfigured) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-cream-50 to-cream-100 dark:from-slate-900 dark:to-slate-800">
+        <RefreshCw className="w-8 h-8 animate-spin text-sage-500" />
       </div>
     )
   }
@@ -43,11 +58,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Demo mode (no Supabase) or logged in - show full app
   if (!isSupabaseConfigured || user) {
     return (
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-cream-50 dark:bg-slate-900">
         <Sidebar />
         <main className="flex-1 ml-64 p-8">
           {children}
         </main>
+        <Screensaver
+          mode={settings.screensaver_mode as 'clock' | 'photos' | 'gradient' | 'blank'}
+          enabled={settings.screensaver_enabled as boolean}
+          timeout={settings.screensaver_timeout as number}
+          sleepStart={settings.sleep_start as string}
+          sleepEnd={settings.sleep_end as string}
+          onWake={handleScreensaverWake}
+        />
       </div>
     )
   }

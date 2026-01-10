@@ -11,31 +11,31 @@ import {
   Users,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  Gift,
+  Settings,
+  Star
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
+import { useFamily } from '@/lib/family-context'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
   { href: '/routines', label: 'Routines', icon: Sun },
   { href: '/calendar', label: 'Calendar', icon: Calendar },
   { href: '/tasks', label: 'Tasks', icon: CheckSquare },
+  { href: '/rewards', label: 'Rewards', icon: Gift },
   { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
   { href: '/notes', label: 'Notes', icon: StickyNote },
-]
-
-const familyMembers = [
-  { name: 'Dad', color: 'bg-blue-500' },
-  { name: 'Mum', color: 'bg-pink-500' },
-  { name: 'Olivia', color: 'bg-purple-500', age: 3 },
-  { name: 'Ellie', color: 'bg-green-500', age: 1 },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { members } = useFamily()
 
   const handleSignOut = async () => {
     await signOut()
@@ -43,13 +43,13 @@ export default function Sidebar() {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 glass shadow-xl z-50 flex flex-col">
-      <div className="p-6 flex-1">
+      <div className="p-6 flex-1 overflow-y-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-500 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sage-500 to-sage-600 flex items-center justify-center">
               <Users className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-sage-600 to-sage-700 dark:from-sage-400 dark:to-sage-500 bg-clip-text text-transparent">
               Family Hub
             </h1>
           </div>
@@ -62,7 +62,7 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <nav className="space-y-2">
+        <nav className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
@@ -72,7 +72,7 @@ export default function Sidebar() {
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive
-                    ? 'bg-primary-500 text-white shadow-md'
+                    ? 'bg-sage-500 text-white shadow-md'
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
               >
@@ -83,17 +83,26 @@ export default function Sidebar() {
           })}
         </nav>
 
-        <div className="mt-8 pt-8 border-t border-slate-200 dark:border-slate-700">
-          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
-            Family Members
+        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+          <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+            Family
           </h3>
-          <div className="space-y-3">
-            {familyMembers.map((member) => (
-              <div key={member.name} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full ${member.color} flex items-center justify-center text-white text-sm font-medium`}>
-                  {member.name[0]}
+          <div className="space-y-2">
+            {members.map((member) => (
+              <div key={member.id} className="flex items-center gap-3 px-2 py-1.5">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                  style={{ backgroundColor: member.color }}
+                >
+                  {member.avatar || member.name[0]}
                 </div>
-                <span className="text-sm text-slate-600 dark:text-slate-300">{member.name}</span>
+                <span className="text-sm text-slate-600 dark:text-slate-300 flex-1">{member.name}</span>
+                {member.role === 'child' && (
+                  <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                    <Star className="w-3 h-3 fill-current" />
+                    {member.points}
+                  </span>
+                )}
               </div>
             ))}
           </div>

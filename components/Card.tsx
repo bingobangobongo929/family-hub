@@ -29,7 +29,7 @@ export function CardHeader({ title, icon, action }: CardHeaderProps) {
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-3">
         {icon && (
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sage-500 to-sage-600 flex items-center justify-center text-white">
             {icon}
           </div>
         )}
