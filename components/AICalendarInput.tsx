@@ -1,15 +1,25 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag } from 'lucide-react'
+import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useSettings } from '@/lib/settings-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
-import { MEMBER_COLORS } from '@/lib/database.types'
+import { MEMBER_COLORS, RecurrencePattern, RecurrenceFrequency, DAYS_OF_WEEK } from '@/lib/database.types'
 import CategorySelector from './CategorySelector'
+import { patternToRRule, describeRecurrence } from '@/lib/rrule'
 import MemberMultiSelect, { getMemberIdsByNames } from './MemberMultiSelect'
+
+interface AIRecurrencePattern {
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  interval?: number
+  days_of_week?: string[]
+  day_of_month?: number
+  until?: string
+  count?: number
+}
 
 interface ExtractedEvent {
   title: string
@@ -23,18 +33,63 @@ interface ExtractedEvent {
   suggested_member?: string // deprecated - kept for backwards compatibility
   suggested_members?: string[] // Multiple family member names
   suggested_category?: string // Category name to match
+  suggested_contacts?: string[] // Extended contacts (grandparents, friends, etc.)
+  recurrence_pattern?: AIRecurrencePattern // Pattern from AI
   // UI state
   selected?: boolean
   color?: string
   member_id?: string // deprecated
   member_ids?: string[] // Multiple member IDs
   category_id?: string | null
+  recurrence_rrule?: string // Converted RRULE for storage
+  recurrence_ui_pattern?: RecurrencePattern // For UI display
 }
 
 interface AICalendarInputProps {
   isOpen: boolean
   onClose: () => void
   onAddEvents: (events: ExtractedEvent[]) => void
+}
+
+// Convert AI recurrence pattern to UI RecurrencePattern
+function convertAIPatternToUIPattern(aiPattern: AIRecurrencePattern, startDate: string): RecurrencePattern {
+  const dayNameToNumber: Record<string, number> = {
+    'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+    'thursday': 4, 'friday': 5, 'saturday': 6,
+    'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6
+  }
+
+  const pattern: RecurrencePattern = {
+    frequency: aiPattern.frequency,
+    interval: aiPattern.interval || 1,
+    endType: 'never',
+  }
+
+  // Convert days of week from names to numbers
+  if (aiPattern.days_of_week && aiPattern.days_of_week.length > 0) {
+    pattern.daysOfWeek = aiPattern.days_of_week
+      .map(d => dayNameToNumber[d.toLowerCase()])
+      .filter(n => n !== undefined)
+  } else if (aiPattern.frequency === 'weekly') {
+    // Default to the start date's day of week
+    pattern.daysOfWeek = [new Date(startDate).getDay()]
+  }
+
+  // Day of month for monthly
+  if (aiPattern.day_of_month) {
+    pattern.dayOfMonth = aiPattern.day_of_month
+  }
+
+  // End conditions
+  if (aiPattern.until) {
+    pattern.endType = 'until'
+    pattern.endDate = aiPattern.until
+  } else if (aiPattern.count) {
+    pattern.endType = 'count'
+    pattern.occurrences = aiPattern.count
+  }
+
+  return pattern
 }
 
 export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICalendarInputProps) {
@@ -151,12 +206,23 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             }
           }
 
+          // Handle recurrence pattern
+          let recurrenceUiPattern: RecurrencePattern | undefined
+          let recurrenceRrule: string | undefined
+
+          if (event.recurrence_pattern) {
+            recurrenceUiPattern = convertAIPatternToUIPattern(event.recurrence_pattern, event.start_date)
+            recurrenceRrule = patternToRRule(recurrenceUiPattern, new Date(event.start_date))
+          }
+
           return {
             ...event,
             selected: true,
             color,
             member_ids: memberIds,
             category_id: categoryId,
+            recurrence_ui_pattern: recurrenceUiPattern,
+            recurrence_rrule: recurrenceRrule,
           }
         })
 
@@ -388,6 +454,13 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                           <div className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
                             <span>{event.location}</span>
+                          </div>
+                        )}
+
+                        {event.recurrence_ui_pattern && (
+                          <div className="flex items-center gap-1 text-teal-600 dark:text-teal-400">
+                            <Repeat className="w-3.5 h-3.5" />
+                            <span className="font-medium">{describeRecurrence(event.recurrence_ui_pattern)}</span>
                           </div>
                         )}
                       </div>

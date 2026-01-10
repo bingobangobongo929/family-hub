@@ -17,7 +17,8 @@ export interface FamilyMember {
   name: string
   color: string
   role: 'parent' | 'child' | 'pet'
-  avatar: string | null
+  avatar: string | null    // Emoji avatar
+  photo_url: string | null // Uploaded photo URL
   points: number
   sort_order: number
   created_at: string
@@ -94,11 +95,12 @@ export interface CalendarEvent {
   updated_at: string
   // Joined data
   member?: FamilyMember // Deprecated
-  members?: FamilyMember[] // Multiple members via event_members
+  members?: FamilyMember[] // Multiple board members via event_members
   category?: EventCategory
+  contacts?: Contact[] // Extended contacts via event_contacts
 }
 
-export type InsertCalendarEvent = Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'member' | 'members' | 'category'>
+export type InsertCalendarEvent = Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'member' | 'members' | 'category' | 'contacts'>
 export type UpdateCalendarEvent = Partial<InsertCalendarEvent>
 
 // ============================================
@@ -114,12 +116,70 @@ export interface Contact {
   relationship_group: RelationshipGroup
   notes: string | null
   color: string
+  photo_url: string | null  // Uploaded photo URL
   created_at: string
   updated_at: string
+  // Joined data
+  linked_members?: ContactMemberLink[]
 }
 
-export type InsertContact = Omit<Contact, 'id' | 'created_at' | 'updated_at'>
+export type InsertContact = Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'linked_members'>
 export type UpdateContact = Partial<InsertContact>
+
+// ============================================
+// CONTACT MEMBER LINKS (link contacts to board members)
+// ============================================
+export interface ContactMemberLink {
+  id: string
+  contact_id: string
+  member_id: string
+  relationship_type: string  // User-defined: "Mormor", "Grandma", "Uncle", etc.
+  created_at: string
+  // Joined data
+  member?: FamilyMember
+}
+
+export type InsertContactMemberLink = Omit<ContactMemberLink, 'id' | 'created_at' | 'member'>
+
+// ============================================
+// EVENT CONTACTS (tag contacts on calendar events)
+// ============================================
+export interface EventContact {
+  id: string
+  event_id: string
+  contact_id: string
+  created_at: string
+  // Joined data
+  contact?: Contact
+}
+
+export type InsertEventContact = Omit<EventContact, 'id' | 'created_at' | 'contact'>
+
+// ============================================
+// RECURRENCE PATTERNS (for recurring events)
+// ============================================
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'yearly'
+
+export interface RecurrencePattern {
+  frequency: RecurrenceFrequency
+  interval: number           // Every X days/weeks/months (default 1)
+  daysOfWeek?: number[]      // 0=Sun, 1=Mon, 2=Tue, etc. (for weekly)
+  dayOfMonth?: number        // 1-31 (for monthly)
+  endType: 'never' | 'until' | 'count'
+  endDate?: string           // ISO date string
+  occurrences?: number       // Number of occurrences (for 'count' endType)
+}
+
+// Day of week labels for UI
+export const DAYS_OF_WEEK = [
+  { id: 0, short: 'S', label: 'Sunday' },
+  { id: 1, short: 'M', label: 'Monday' },
+  { id: 2, short: 'T', label: 'Tuesday' },
+  { id: 3, short: 'W', label: 'Wednesday' },
+  { id: 4, short: 'T', label: 'Thursday' },
+  { id: 5, short: 'F', label: 'Friday' },
+  { id: 6, short: 'S', label: 'Saturday' },
+]
 
 export const RELATIONSHIP_GROUPS = [
   { id: 'family_us' as const, label: 'Our Family', emoji: '👨‍👩‍👧‍👦' },

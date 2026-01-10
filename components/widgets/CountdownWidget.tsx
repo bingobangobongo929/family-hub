@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { differenceInDays, parseISO, format } from 'date-fns'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { useContacts, ContactWithBirthday } from '@/lib/contacts-context'
+import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { RelationshipGroup } from '@/lib/database.types'
 
@@ -14,6 +15,7 @@ interface CountdownEvent {
   emoji: string
   type: 'birthday' | 'holiday' | 'event' | 'trip'
   color?: string
+  linkedRelationships?: string[] // e.g., ["Olivia's Mormor", "Ellie's Mormor"]
 }
 
 function getNextHoliday(month: number, day: number): string {
@@ -37,7 +39,8 @@ const HOLIDAYS: CountdownEvent[] = [
 export default function CountdownWidget() {
   const [now, setNow] = useState(new Date())
   const [ref, { size, isWide }] = useWidgetSize()
-  const { getUpcomingBirthdays } = useContacts()
+  const { getUpcomingBirthdays, getContactLinks } = useContacts()
+  const { getMember } = useFamily()
   const { countdownRelationshipGroups } = useSettings()
 
   useEffect(() => {
@@ -52,15 +55,27 @@ export default function CountdownWidget() {
 
   // Convert contact birthdays to countdown events
   const birthdayEvents: CountdownEvent[] = useMemo(() => {
-    return upcomingBirthdays.map(contact => ({
-      id: `birthday-${contact.id}`,
-      title: `${contact.name}'s Birthday`,
-      date: format(contact.nextBirthday, 'yyyy-MM-dd'),
-      emoji: '🎂',
-      type: 'birthday' as const,
-      color: contact.color,
-    }))
-  }, [upcomingBirthdays])
+    return upcomingBirthdays.map(contact => {
+      // Get linked relationships for this contact
+      const links = getContactLinks(contact.id)
+      const linkedRelationships = links
+        .map(link => {
+          const member = getMember(link.member_id)
+          return member ? `${member.name}'s ${link.relationship_type}` : null
+        })
+        .filter(Boolean) as string[]
+
+      return {
+        id: `birthday-${contact.id}`,
+        title: `${contact.name}'s Birthday`,
+        date: format(contact.nextBirthday, 'yyyy-MM-dd'),
+        emoji: '🎂',
+        type: 'birthday' as const,
+        color: contact.color,
+        linkedRelationships: linkedRelationships.length > 0 ? linkedRelationships : undefined,
+      }
+    })
+  }, [upcomingBirthdays, getContactLinks, getMember])
 
   // Combine birthdays and holidays
   const allCountdowns = useMemo(() => {
@@ -142,6 +157,11 @@ export default function CountdownWidget() {
           >
             <span className={gridEmoji}>{event.emoji}</span>
             <p className={`${gridName} opacity-90 mt-1 truncate w-full px-1 font-medium`}>{event.title.replace("'s Birthday", "")}</p>
+            {event.linkedRelationships && event.linkedRelationships.length > 0 && (
+              <p className="text-[10px] opacity-75 truncate w-full px-1">
+                ({event.linkedRelationships[0]})
+              </p>
+            )}
             <div className={`font-bold ${gridDays}`}>
               {event.daysLeft === 0 ? 'Today!' : event.daysLeft === 1 ? '1 day' : `${event.daysLeft}d`}
             </div>
@@ -160,6 +180,11 @@ export default function CountdownWidget() {
       <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} p-4 text-white shadow-lg`}>
         <span className={`${emojiSize} mb-1`}>{nextEvent.emoji}</span>
         <p className={`${titleSize} opacity-90 mb-1 font-medium`}>{nextEvent.title}</p>
+        {nextEvent.linkedRelationships && nextEvent.linkedRelationships.length > 0 && (
+          <p className="text-xs opacity-75 -mt-0.5 mb-1">
+            ({nextEvent.linkedRelationships.join(', ')})
+          </p>
+        )}
         <div className={`font-display ${countdownSize} font-bold`}>
           {nextEvent.daysLeft === 0 ? (
             <span>Today!</span>

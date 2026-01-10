@@ -11,16 +11,18 @@ interface FamilyContextType {
   getMember: (id: string | null) => FamilyMember | undefined
   refreshMembers: () => Promise<void>
   updateMemberPoints: (memberId: string, points: number) => Promise<void>
+  updateMemberPhoto: (memberId: string, photoUrl: string | null) => Promise<void>
+  updateMemberEmoji: (memberId: string, emoji: string) => Promise<void>
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined)
 
 // Demo family members when not logged in
 const DEMO_MEMBERS: FamilyMember[] = [
-  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, points: 0, sort_order: 0, created_at: '', updated_at: '' },
-  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, points: 0, sort_order: 1, created_at: '', updated_at: '' },
-  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, points: 47, sort_order: 2, created_at: '', updated_at: '' },
-  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, points: 23, sort_order: 3, created_at: '', updated_at: '' },
+  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, photo_url: null, points: 0, sort_order: 0, created_at: '', updated_at: '' },
+  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, photo_url: null, points: 0, sort_order: 1, created_at: '', updated_at: '' },
+  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, points: 47, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, points: 23, sort_order: 3, created_at: '', updated_at: '' },
 ]
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
@@ -88,8 +90,52 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     }
   }, [user, members, fetchMembers])
 
+  const updateMemberPhoto = useCallback(async (memberId: string, photoUrl: string | null) => {
+    if (!user) {
+      // Demo mode - update locally
+      setMembers(prev => prev.map(m =>
+        m.id === memberId ? { ...m, photo_url: photoUrl, avatar: photoUrl ? null : m.avatar } : m
+      ))
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('family_members')
+        .update({ photo_url: photoUrl, avatar: photoUrl ? null : undefined })
+        .eq('id', memberId)
+
+      if (error) throw error
+      await fetchMembers()
+    } catch (error) {
+      console.error('Error updating photo:', error)
+    }
+  }, [user, fetchMembers])
+
+  const updateMemberEmoji = useCallback(async (memberId: string, emoji: string) => {
+    if (!user) {
+      // Demo mode - update locally
+      setMembers(prev => prev.map(m =>
+        m.id === memberId ? { ...m, avatar: emoji, photo_url: emoji ? null : m.photo_url } : m
+      ))
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('family_members')
+        .update({ avatar: emoji, photo_url: emoji ? null : undefined })
+        .eq('id', memberId)
+
+      if (error) throw error
+      await fetchMembers()
+    } catch (error) {
+      console.error('Error updating emoji:', error)
+    }
+  }, [user, fetchMembers])
+
   return (
-    <FamilyContext.Provider value={{ members, loading, getMember, refreshMembers, updateMemberPoints }}>
+    <FamilyContext.Provider value={{ members, loading, getMember, refreshMembers, updateMemberPoints, updateMemberPhoto, updateMemberEmoji }}>
       {children}
     </FamilyContext.Provider>
   )

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar, Sparkles, Tag, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar, Sparkles, Tag, Users, Repeat } from 'lucide-react'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -15,7 +15,9 @@ import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
 import { useSettings } from '@/lib/settings-context'
-import { CalendarEvent, MEMBER_COLORS } from '@/lib/database.types'
+import { CalendarEvent, MEMBER_COLORS, RecurrencePattern } from '@/lib/database.types'
+import RecurrenceSelector, { RecurrenceBadge } from '@/components/RecurrenceSelector'
+import { patternToRRule, rruleToPattern, describeRecurrence } from '@/lib/rrule'
 
 type ViewMode = 'month' | 'week' | 'day'
 
@@ -55,6 +57,8 @@ export default function CalendarPage() {
     member_ids: [] as string[],
     category_id: null as string | null,
     location: '',
+    is_recurring: false,
+    recurrence_pattern: null as RecurrencePattern | null,
   })
 
   const fetchEvents = useCallback(async () => {
@@ -138,6 +142,8 @@ export default function CalendarPage() {
         member_ids: [],
         category_id: null,
         location: '',
+        is_recurring: false,
+        recurrence_pattern: null,
       })
       setShowAddModal(true)
     }
@@ -162,6 +168,8 @@ export default function CalendarPage() {
       member_ids: [],
       category_id: null,
       location: '',
+      is_recurring: false,
+      recurrence_pattern: null,
     })
     setShowAddModal(true)
   }
@@ -179,6 +187,11 @@ export default function CalendarPage() {
         ? `${formData.end_date}T${formData.end_time}:00`
         : null
 
+    // Generate RRULE if recurring
+    const recurrenceRule = formData.is_recurring && formData.recurrence_pattern
+      ? patternToRRule(formData.recurrence_pattern, new Date(startDateTime))
+      : null
+
     const eventData = {
       title: formData.title,
       description: formData.description || null,
@@ -189,6 +202,7 @@ export default function CalendarPage() {
       member_id: formData.member_ids.length === 1 ? formData.member_ids[0] : null, // Keep for backwards compat
       category_id: formData.category_id || null,
       location: formData.location || null,
+      recurrence_rule: recurrenceRule,
       source: 'manual' as const,
       user_id: user?.id || 'demo',
     }
@@ -199,7 +213,6 @@ export default function CalendarPage() {
         ...eventData,
         id: newEventId,
         source_id: null,
-        recurrence_rule: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
@@ -293,6 +306,7 @@ export default function CalendarPage() {
         member_id: memberIds.length === 1 ? memberIds[0] : null,
         category_id: event.category_id || null,
         location: event.location || null,
+        recurrence_rule: event.recurrence_rrule || null, // Include recurrence from AI
         source: 'manual' as const,
         user_id: user?.id || 'demo',
       }
@@ -303,7 +317,6 @@ export default function CalendarPage() {
           ...eventData,
           id: newEventId,
           source_id: null,
-          recurrence_rule: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
@@ -465,6 +478,7 @@ export default function CalendarPage() {
                   {dayEvents.slice(0, 3).map(event => {
                     const category = event.category_id ? getCategory(event.category_id) : null
                     const memberIds = eventMembers[event.id] || []
+                    const isRecurring = !!event.recurrence_rule
                     return (
                       <div
                         key={event.id}
@@ -472,6 +486,7 @@ export default function CalendarPage() {
                         className="text-xs p-1 rounded cursor-pointer hover:opacity-80 flex items-center gap-1"
                         style={{ backgroundColor: event.color + '20', color: event.color }}
                       >
+                        {isRecurring && <Repeat className="w-3 h-3 flex-shrink-0" />}
                         {category && <span className="flex-shrink-0">{category.emoji}</span>}
                         <span className="truncate flex-1">{event.title}</span>
                         {memberIds.length > 0 && (
@@ -525,6 +540,19 @@ export default function CalendarPage() {
                   )}
                 </span>
               </div>
+
+              {/* Recurrence */}
+              {selectedEvent.recurrence_rule && (
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                  <Repeat className="w-4 h-4" />
+                  <span>
+                    {(() => {
+                      const pattern = rruleToPattern(selectedEvent.recurrence_rule)
+                      return pattern ? describeRecurrence(pattern) : 'Repeating'
+                    })()}
+                  </span>
+                </div>
+              )}
 
               {selectedEvent.location && (
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
@@ -720,6 +748,41 @@ export default function CalendarPage() {
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
               placeholder="Where is this event?"
             />
+          </div>
+
+          {/* Recurrence */}
+          <div className="border-t pt-4 mt-4 border-slate-200 dark:border-slate-700">
+            <label className="flex items-center gap-3 cursor-pointer mb-3">
+              <input
+                type="checkbox"
+                checked={formData.is_recurring}
+                onChange={(e) => setFormData({
+                  ...formData,
+                  is_recurring: e.target.checked,
+                  recurrence_pattern: e.target.checked ? {
+                    frequency: 'weekly',
+                    interval: 1,
+                    daysOfWeek: [new Date(formData.start_date).getDay()],
+                    endType: 'never',
+                  } : null
+                })}
+                className="w-5 h-5 rounded border-slate-300 text-sage-500 focus:ring-sage-500"
+              />
+              <div className="flex items-center gap-2">
+                <Repeat className="w-4 h-4 text-slate-500" />
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Repeat this event</span>
+              </div>
+            </label>
+
+            {formData.is_recurring && (
+              <div className="ml-8">
+                <RecurrenceSelector
+                  value={formData.recurrence_pattern}
+                  onChange={(pattern) => setFormData({ ...formData, recurrence_pattern: pattern })}
+                  startDate={formData.start_date ? new Date(formData.start_date) : new Date()}
+                />
+              </div>
+            )}
           </div>
 
           <div>

@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
 import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS } from '@/lib/database.types'
+import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -29,7 +30,8 @@ export default function SettingsPage() {
     name: '',
     color: MEMBER_COLORS[0].color,
     role: 'child' as 'parent' | 'child' | 'pet',
-    avatar: ''
+    avatar: '',
+    photo_url: null as string | null
   })
 
   const fetchSettings = useCallback(async () => {
@@ -175,6 +177,7 @@ export default function SettingsPage() {
           color: memberForm.color,
           role: memberForm.role,
           avatar: memberForm.avatar || null,
+          photo_url: memberForm.photo_url,
           sort_order: members.length
         })
 
@@ -202,7 +205,8 @@ export default function SettingsPage() {
           name: memberForm.name,
           color: memberForm.color,
           role: memberForm.role,
-          avatar: memberForm.avatar || null
+          avatar: memberForm.avatar || null,
+          photo_url: memberForm.photo_url
         })
         .eq('id', editingMember.id)
 
@@ -238,7 +242,8 @@ export default function SettingsPage() {
       name: member.name,
       color: member.color,
       role: member.role,
-      avatar: member.avatar || ''
+      avatar: member.avatar || '',
+      photo_url: member.photo_url || null
     })
     setShowMemberModal(true)
   }
@@ -248,7 +253,8 @@ export default function SettingsPage() {
       name: '',
       color: MEMBER_COLORS[0].color,
       role: 'child',
-      avatar: ''
+      avatar: '',
+      photo_url: null
     })
   }
 
@@ -673,12 +679,13 @@ export default function SettingsPage() {
               className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl"
             >
               <GripVertical className="w-5 h-5 text-slate-400 cursor-move" />
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                style={{ backgroundColor: member.color }}
-              >
-                {member.avatar || member.name.charAt(0)}
-              </div>
+              <AvatarDisplay
+                photoUrl={member.photo_url}
+                emoji={member.avatar}
+                name={member.name}
+                color={member.color}
+                size="md"
+              />
               <div className="flex-1">
                 <p className="font-medium text-slate-800 dark:text-slate-100">{member.name}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{member.role}</p>
@@ -790,15 +797,23 @@ export default function SettingsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Avatar (emoji, optional)
+              Avatar
             </label>
-            <input
-              type="text"
-              value={memberForm.avatar}
-              onChange={(e) => setMemberForm({ ...memberForm, avatar: e.target.value })}
-              placeholder="e.g. 👨 👩 🧒 🐕"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-center text-2xl"
-            />
+            <div className="flex justify-center">
+              <PhotoUpload
+                photoUrl={memberForm.photo_url}
+                emoji={memberForm.avatar}
+                name={memberForm.name || 'New Member'}
+                color={memberForm.color}
+                onPhotoChange={(url) => setMemberForm({ ...memberForm, photo_url: url, avatar: url ? '' : memberForm.avatar })}
+                onEmojiChange={(emoji) => setMemberForm({ ...memberForm, avatar: emoji, photo_url: emoji ? null : memberForm.photo_url })}
+                bucket="avatars"
+                size="lg"
+              />
+            </div>
+            <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+              Tap to upload a photo or choose an emoji
+            </p>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">

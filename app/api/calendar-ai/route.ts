@@ -13,6 +13,15 @@ interface ExtractedEvent {
   suggested_member?: string // Name to match against family members (deprecated)
   suggested_members?: string[] // Multiple family member names
   suggested_category?: string // Category name to match
+  suggested_contacts?: string[] // Extended contacts (grandparents, friends, etc.)
+  recurrence_pattern?: {
+    frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
+    interval?: number // Every X days/weeks/months/years (default 1)
+    days_of_week?: string[] // For weekly: ["monday", "wednesday"]
+    day_of_month?: number // For monthly: 1-31
+    until?: string // End date YYYY-MM-DD (optional)
+    count?: number // Number of occurrences (optional)
+  }
 }
 
 interface AIResponse {
@@ -51,10 +60,27 @@ When extracting events, you should:
 2. Use 24-hour format for times (HH:MM)
 3. Use ISO format for dates (YYYY-MM-DD)
 4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
-5. If an event spans multiple days or is recurring, create separate events for each occurrence
+5. Detect RECURRING PATTERNS - phrases like "every Tuesday", "weekly swimming", "monthly checkup", "every other week" indicate recurrence
 6. Extract location if mentioned
-7. Identify which family members the event is for - there can be multiple members per event
+7. Identify TWO types of people:
+   - Board family members (core family who use the dashboard) - put in suggested_members
+   - Extended contacts (grandparents, friends, relatives outside the household) - put in suggested_contacts
 8. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
+
+RECURRENCE PATTERNS to detect:
+- "every Tuesday" → weekly on tuesday
+- "weekly swimming" → weekly
+- "every other Wednesday" → weekly, interval 2
+- "monthly checkup on the 15th" → monthly, day_of_month 15
+- "daily standup" → daily
+- "every Monday and Thursday" → weekly, days_of_week: ["monday", "thursday"]
+- "until December" → include until date
+
+PEOPLE DETECTION examples:
+- "Grandma picking up Olivia" → suggested_members: ["Olivia"], suggested_contacts: ["Grandma"]
+- "Playdate at Emma's house" → suggested_contacts: ["Emma"]
+- "Mormor babysitting the kids" → suggested_contacts: ["Mormor"]
+- "Swimming with Dad" → suggested_members: ["Dad"]
 
 ${context ? `Family context:\n${context}` : ''}
 
@@ -70,12 +96,25 @@ Return a JSON response with this structure:
       "end_time": "HH:MM",
       "all_day": false,
       "location": "Optional location",
-      "suggested_members": ["Name1", "Name2"],
-      "suggested_category": "Category name from list"
+      "suggested_members": ["FamilyMember1", "FamilyMember2"],
+      "suggested_contacts": ["Grandma", "Emma's mum"],
+      "suggested_category": "Category name from list",
+      "recurrence_pattern": {
+        "frequency": "weekly",
+        "interval": 1,
+        "days_of_week": ["tuesday", "thursday"],
+        "until": "2025-12-31"
+      }
     }
   ],
   "summary": "Brief summary of what was extracted"
 }
+
+Notes:
+- recurrence_pattern is optional - only include if the event repeats
+- days_of_week uses lowercase day names
+- interval defaults to 1 if not specified
+- until and count are optional end conditions
 
 Only return valid JSON, no markdown or extra text.`
 
@@ -162,9 +201,25 @@ When extracting events:
 2. Use 24-hour format for times (HH:MM)
 3. Use ISO format for dates (YYYY-MM-DD)
 4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
-5. Extract location if mentioned
-6. Identify which family members the event is for - there can be multiple members per event
-7. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
+5. Detect RECURRING PATTERNS - phrases like "every Tuesday", "weekly swimming", "monthly checkup" indicate recurrence
+6. Extract location if mentioned
+7. Identify TWO types of people:
+   - Board family members (core family) - put in suggested_members
+   - Extended contacts (grandparents, friends, relatives) - put in suggested_contacts
+8. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
+
+RECURRENCE PATTERNS to detect:
+- "every Tuesday" → weekly on tuesday
+- "weekly swimming" → weekly
+- "every other Wednesday" → weekly, interval 2
+- "monthly checkup on the 15th" → monthly, day_of_month 15
+- "daily standup" → daily
+- "every Monday and Thursday" → weekly, days_of_week: ["monday", "thursday"]
+
+PEOPLE DETECTION examples:
+- "Grandma picking up Olivia" → suggested_members: ["Olivia"], suggested_contacts: ["Grandma"]
+- "Playdate at Emma's house" → suggested_contacts: ["Emma"]
+- "Mormor babysitting" → suggested_contacts: ["Mormor"]
 
 ${context ? `Family context:\n${context}` : ''}
 
@@ -183,12 +238,21 @@ Return ONLY valid JSON with this structure (no markdown, no extra text):
       "end_time": "HH:MM",
       "all_day": false,
       "location": "Optional location",
-      "suggested_members": ["Name1", "Name2"],
-      "suggested_category": "Category name from list"
+      "suggested_members": ["FamilyMember1"],
+      "suggested_contacts": ["Grandma"],
+      "suggested_category": "Category name from list",
+      "recurrence_pattern": {
+        "frequency": "weekly",
+        "interval": 1,
+        "days_of_week": ["tuesday"],
+        "until": "2025-12-31"
+      }
     }
   ],
   "summary": "Brief summary of what was extracted"
-}`
+}
+
+Note: recurrence_pattern is optional - only include if the event repeats.`
 
   const parts: any[] = [{ text: prompt }]
 
