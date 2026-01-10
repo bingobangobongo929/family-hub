@@ -149,7 +149,7 @@ export default function ShoppingWidget() {
               <div key={category} className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <span>{config.emoji}</span>
-                  {config.label}
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
                 </p>
                 {categoryItems.slice(0, 3).map(item => (
                   <ShoppingItem
