@@ -272,7 +272,7 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   screensaver_mode: 'clock',
   sleep_start: '22:00',
   sleep_end: '06:00',
-  weather_location: 'Manchester, UK',
+  weather_location: 'Randers, Denmark',
   weather_unit: 'celsius',
 }
 
