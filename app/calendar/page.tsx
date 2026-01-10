@@ -2,29 +2,37 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar, Sparkles } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, MapPin, Clock, Trash2, Calendar, Sparkles, Tag, Users } from 'lucide-react'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import AICalendarInput from '@/components/AICalendarInput'
+import CategorySelector, { CategoryPill } from '@/components/CategorySelector'
+import MemberMultiSelect from '@/components/MemberMultiSelect'
+import MemberAvatarStack, { MemberDotStack } from '@/components/MemberAvatarStack'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useCategories } from '@/lib/categories-context'
+import { useSettings } from '@/lib/settings-context'
 import { CalendarEvent, MEMBER_COLORS } from '@/lib/database.types'
 
 type ViewMode = 'month' | 'week' | 'day'
 
 // Demo events for when not logged in
 const DEMO_EVENTS: CalendarEvent[] = [
-  { id: 'demo-1', user_id: 'demo', title: "Olivia's Playgroup", description: '', start_time: new Date().toISOString(), end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), all_day: false, color: '#8b5cf6', member_id: null, location: 'Community Centre', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
-  { id: 'demo-2', user_id: 'demo', title: 'Family Swim Class', description: '', start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), end_time: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(), all_day: false, color: '#ec4899', member_id: null, location: 'Leisure Centre', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
-  { id: 'demo-3', user_id: 'demo', title: 'Health Visitor', description: '', start_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), end_time: null, all_day: false, color: '#22c55e', member_id: null, location: 'Home', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
+  { id: 'demo-1', user_id: 'demo', title: "Olivia's Playgroup", description: '', start_time: new Date().toISOString(), end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(), all_day: false, color: '#8b5cf6', member_id: null, category_id: null, location: 'Community Centre', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
+  { id: 'demo-2', user_id: 'demo', title: 'Family Swim Class', description: '', start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), end_time: new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString(), all_day: false, color: '#ec4899', member_id: null, category_id: null, location: 'Leisure Centre', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
+  { id: 'demo-3', user_id: 'demo', title: 'Health Visitor', description: '', start_time: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), end_time: null, all_day: false, color: '#22c55e', member_id: null, category_id: null, location: 'Home', source: 'manual', source_id: null, recurrence_rule: null, created_at: '', updated_at: '' },
 ]
 
 export default function CalendarPage() {
   const { user } = useAuth()
   const { members, getMember } = useFamily()
+  const { categories, getCategory } = useCategories()
+  const { googleCalendarAutoPush } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
+  const [eventMembers, setEventMembers] = useState<Record<string, string[]>>({}) // event_id -> member_ids
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
@@ -44,13 +52,19 @@ export default function CalendarPage() {
     end_time: '',
     all_day: false,
     color: '#3b82f6',
-    member_id: '',
+    member_ids: [] as string[],
+    category_id: null as string | null,
     location: '',
   })
 
   const fetchEvents = useCallback(async () => {
     if (!user) {
       setEvents(DEMO_EVENTS)
+      setEventMembers({
+        'demo-1': ['demo-olivia'],
+        'demo-2': ['demo-dad', 'demo-mum', 'demo-olivia', 'demo-ellie'],
+        'demo-3': ['demo-ellie'],
+      })
       setLoading(false)
       return
     }
@@ -68,6 +82,24 @@ export default function CalendarPage() {
 
       if (error) throw error
       setEvents((data as CalendarEvent[]) || [])
+
+      // Fetch event members for all events
+      if (data && data.length > 0) {
+        const eventIds = data.map(e => e.id)
+        const { data: membersData } = await supabase
+          .from('event_members')
+          .select('event_id, member_id')
+          .in('event_id', eventIds)
+
+        if (membersData) {
+          const membersMap: Record<string, string[]> = {}
+          membersData.forEach(em => {
+            if (!membersMap[em.event_id]) membersMap[em.event_id] = []
+            membersMap[em.event_id].push(em.member_id)
+          })
+          setEventMembers(membersMap)
+        }
+      }
     } catch (error) {
       console.error('Error fetching events:', error)
     }
@@ -95,12 +127,17 @@ export default function CalendarPage() {
     const dayEvents = events.filter(e => isSameDay(parseISO(e.start_time), date))
     if (dayEvents.length === 0) {
       setFormData({
-        ...formData,
         title: '',
+        description: '',
         start_date: format(date, 'yyyy-MM-dd'),
         end_date: format(date, 'yyyy-MM-dd'),
         start_time: '09:00',
         end_time: '10:00',
+        all_day: false,
+        color: '#3b82f6',
+        member_ids: [],
+        category_id: null,
+        location: '',
       })
       setShowAddModal(true)
     }
@@ -122,7 +159,8 @@ export default function CalendarPage() {
       end_time: '10:00',
       all_day: false,
       color: '#3b82f6',
-      member_id: '',
+      member_ids: [],
+      category_id: null,
       location: '',
     })
     setShowAddModal(true)
@@ -148,32 +186,62 @@ export default function CalendarPage() {
       end_time: endDateTime ? new Date(endDateTime).toISOString() : null,
       all_day: formData.all_day,
       color: formData.color,
-      member_id: formData.member_id || null,
+      member_id: formData.member_ids.length === 1 ? formData.member_ids[0] : null, // Keep for backwards compat
+      category_id: formData.category_id || null,
       location: formData.location || null,
       source: 'manual' as const,
       user_id: user?.id || 'demo',
     }
 
     if (!user) {
+      const newEventId = `demo-${Date.now()}`
       const newEvent: CalendarEvent = {
         ...eventData,
-        id: `demo-${Date.now()}`,
+        id: newEventId,
         source_id: null,
         recurrence_rule: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }
       setEvents(prev => [...prev, newEvent])
+      if (formData.member_ids.length > 0) {
+        setEventMembers(prev => ({ ...prev, [newEventId]: formData.member_ids }))
+      }
       setShowAddModal(false)
       return
     }
 
     try {
-      const { error } = await supabase
+      const { data: insertedEvent, error } = await supabase
         .from('calendar_events')
         .insert(eventData)
+        .select()
+        .single()
 
       if (error) throw error
+
+      // Insert event_members for multi-member support
+      if (formData.member_ids.length > 0 && insertedEvent) {
+        const eventMembersData = formData.member_ids.map(memberId => ({
+          event_id: insertedEvent.id,
+          member_id: memberId,
+        }))
+        await supabase.from('event_members').insert(eventMembersData)
+      }
+
+      // Auto-push to Google Calendar if enabled
+      if (googleCalendarAutoPush && insertedEvent) {
+        try {
+          await fetch('/api/google-calendar/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: user.id, event: insertedEvent }),
+          })
+        } catch (gcalError) {
+          console.error('Failed to sync to Google Calendar:', gcalError)
+        }
+      }
+
       await fetchEvents()
       setShowAddModal(false)
     } catch (error) {
@@ -213,6 +281,8 @@ export default function CalendarPage() {
         ? null
         : `${event.end_date || event.start_date}T${event.end_time}:00`
 
+      const memberIds: string[] = event.member_ids || []
+
       const eventData = {
         title: event.title,
         description: event.description || null,
@@ -220,25 +290,56 @@ export default function CalendarPage() {
         end_time: endDateTime ? new Date(endDateTime).toISOString() : null,
         all_day: event.all_day,
         color: event.color || '#3b82f6',
-        member_id: event.member_id || null,
+        member_id: memberIds.length === 1 ? memberIds[0] : null,
+        category_id: event.category_id || null,
         location: event.location || null,
         source: 'manual' as const,
         user_id: user?.id || 'demo',
       }
 
       if (!user) {
+        const newEventId = `demo-${Date.now()}-${Math.random()}`
         const newEvent: CalendarEvent = {
           ...eventData,
-          id: `demo-${Date.now()}-${Math.random()}`,
+          id: newEventId,
           source_id: null,
           recurrence_rule: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
         setEvents(prev => [...prev, newEvent])
+        if (memberIds.length > 0) {
+          setEventMembers(prev => ({ ...prev, [newEventId]: memberIds }))
+        }
       } else {
         try {
-          await supabase.from('calendar_events').insert(eventData)
+          const { data: insertedEvent } = await supabase
+            .from('calendar_events')
+            .insert(eventData)
+            .select()
+            .single()
+
+          // Insert event_members for multi-member support
+          if (memberIds.length > 0 && insertedEvent) {
+            const eventMembersData = memberIds.map(memberId => ({
+              event_id: insertedEvent.id,
+              member_id: memberId,
+            }))
+            await supabase.from('event_members').insert(eventMembersData)
+          }
+
+          // Auto-push to Google Calendar if enabled
+          if (googleCalendarAutoPush && insertedEvent) {
+            try {
+              await fetch('/api/google-calendar/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: user.id, event: insertedEvent }),
+              })
+            } catch (gcalError) {
+              console.error('Failed to sync to Google Calendar:', gcalError)
+            }
+          }
         } catch (error) {
           console.error('Error saving AI event:', error)
         }
@@ -361,16 +462,24 @@ export default function CalendarPage() {
                   {format(day, 'd')}
                 </div>
                 <div className="space-y-1">
-                  {dayEvents.slice(0, 3).map(event => (
-                    <div
-                      key={event.id}
-                      onClick={(e) => handleEventClick(event, e)}
-                      className="text-xs p-1 rounded truncate cursor-pointer hover:opacity-80"
-                      style={{ backgroundColor: event.color + '20', color: event.color }}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
+                  {dayEvents.slice(0, 3).map(event => {
+                    const category = event.category_id ? getCategory(event.category_id) : null
+                    const memberIds = eventMembers[event.id] || []
+                    return (
+                      <div
+                        key={event.id}
+                        onClick={(e) => handleEventClick(event, e)}
+                        className="text-xs p-1 rounded cursor-pointer hover:opacity-80 flex items-center gap-1"
+                        style={{ backgroundColor: event.color + '20', color: event.color }}
+                      >
+                        {category && <span className="flex-shrink-0">{category.emoji}</span>}
+                        <span className="truncate flex-1">{event.title}</span>
+                        {memberIds.length > 0 && (
+                          <MemberDotStack memberIds={memberIds} maxDisplay={3} />
+                        )}
+                      </div>
+                    )
+                  })}
                   {dayEvents.length > 3 && (
                     <div className="text-xs text-slate-500 dark:text-slate-400 pl-1">
                       +{dayEvents.length - 3} more
@@ -396,10 +505,9 @@ export default function CalendarPage() {
                 <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
                   {selectedEvent.title}
                 </h3>
-                {selectedEvent.member_id && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {getMember(selectedEvent.member_id)?.name}
-                  </p>
+                {/* Category */}
+                {selectedEvent.category_id && (
+                  <CategoryPill categoryId={selectedEvent.category_id} className="mt-1" />
                 )}
               </div>
             </div>
@@ -422,6 +530,17 @@ export default function CalendarPage() {
                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                   <MapPin className="w-4 h-4" />
                   <span>{selectedEvent.location}</span>
+                </div>
+              )}
+
+              {/* Members */}
+              {eventMembers[selectedEvent.id]?.length > 0 && (
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                  <Users className="w-4 h-4" />
+                  <MemberAvatarStack memberIds={eventMembers[selectedEvent.id]} size="sm" />
+                  <span className="text-xs text-slate-500">
+                    {eventMembers[selectedEvent.id].map(id => getMember(id)?.name).filter(Boolean).join(', ')}
+                  </span>
                 </div>
               )}
 
@@ -532,25 +651,43 @@ export default function CalendarPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Family Member
+              Category
             </label>
-            <select
-              value={formData.member_id}
-              onChange={(e) => {
-                const member = members.find(m => m.id === e.target.value)
+            <CategorySelector
+              value={formData.category_id}
+              onChange={(categoryId) => {
+                const category = categories.find(c => c.id === categoryId)
                 setFormData({
                   ...formData,
-                  member_id: e.target.value,
-                  color: member?.color || formData.color
+                  category_id: categoryId,
+                  // Update color from category if no members selected
+                  color: (formData.member_ids.length === 0 && category)
+                    ? category.color
+                    : formData.color
                 })
               }}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-            >
-              <option value="">Everyone</option>
-              {members.map(member => (
-                <option key={member.id} value={member.id}>{member.name}</option>
-              ))}
-            </select>
+              placeholder="Select category"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Family Members
+            </label>
+            <MemberMultiSelect
+              value={formData.member_ids}
+              onChange={(memberIds) => {
+                const firstMember = memberIds.length > 0
+                  ? members.find(m => m.id === memberIds[0])
+                  : null
+                setFormData({
+                  ...formData,
+                  member_ids: memberIds,
+                  color: firstMember?.color || formData.color
+                })
+              }}
+              placeholder="Select members (optional)"
+            />
           </div>
 
           <div>
@@ -564,7 +701,7 @@ export default function CalendarPage() {
                   type="button"
                   onClick={() => setFormData({ ...formData, color: c.color })}
                   className={`w-8 h-8 rounded-full transition-transform ${
-                    formData.color === c.color ? 'scale-110 ring-2 ring-offset-2 ring-slate-400' : ''
+                    formData.color === c.color ? 'scale-110 ring-2 ring-offset-2 ring-slate-400 dark:ring-slate-500' : ''
                   }`}
                   style={{ backgroundColor: c.color }}
                 />

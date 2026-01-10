@@ -16,10 +16,14 @@ Family Hub is a family dashboard application designed for touchscreen displays (
 ```
 family-hub/
 ├── app/                    # Next.js App Router pages
-│   ├── layout.tsx          # Root layout with fonts
+│   ├── layout.tsx          # Root layout with fonts and providers
 │   ├── page.tsx            # Main dashboard with widget grid
 │   ├── globals.css         # Global styles and CSS variables
-│   ├── calendar/           # Calendar page
+│   ├── api/
+│   │   ├── calendar-ai/    # AI event extraction API (Claude/Gemini)
+│   │   └── google-calendar/ # Google Calendar OAuth & sync
+│   ├── calendar/           # Calendar page with AI smart add
+│   ├── contacts/           # Contacts & birthdays management
 │   ├── tasks/              # Chores/tasks page
 │   ├── shopping/           # Shopping list page
 │   ├── notes/              # Notes page
@@ -29,13 +33,17 @@ family-hub/
 ├── components/
 │   ├── AppLayout.tsx       # Main app wrapper with sidebar
 │   ├── Sidebar.tsx         # Navigation sidebar
+│   ├── AICalendarInput.tsx # AI-powered event extraction modal
+│   ├── CategorySelector.tsx # Event category dropdown
+│   ├── MemberMultiSelect.tsx # Multi-member chip selector
+│   ├── MemberAvatarStack.tsx # Stacked member avatars display
 │   └── widgets/            # All dashboard widgets
 │       ├── index.tsx       # Widget registry and config
 │       ├── ClockWidget.tsx
 │       ├── WeatherWidget.tsx
 │       ├── ScheduleWidget.tsx
 │       ├── ChoresWidget.tsx
-│       ├── CountdownWidget.tsx
+│       ├── CountdownWidget.tsx # Uses contacts for birthdays
 │       ├── NotesWidget.tsx
 │       ├── StarsWidget.tsx
 │       ├── MealPlanWidget.tsx
@@ -50,7 +58,13 @@ family-hub/
 │   ├── auth-context.tsx    # Authentication context
 │   ├── family-context.tsx  # Family members context
 │   ├── settings-context.tsx # App settings context
+│   ├── categories-context.tsx # Event categories context
+│   ├── contacts-context.tsx # Contacts & birthdays context
 │   └── useWidgetSize.ts    # Widget size detection hook
+├── supabase/
+│   └── migrations/         # Database migration files
+│       ├── 001_initial.sql
+│       └── 002_calendar_enhancements.sql
 └── tailwind.config.ts      # Tailwind with custom theme
 ```
 
@@ -149,8 +163,13 @@ NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_ANON_KEY=
 ### Key Database Tables
 - `family_members` - Family member profiles with colors and roles
 - `chores` - Chore definitions with assignments and points
-- `calendar_events` - Calendar events with member associations
+- `calendar_events` - Calendar events with category and member associations
+- `event_categories` - Customizable event categories with emoji and color
+- `event_members` - Junction table for multiple members per event
+- `contacts` - External contacts with birthdays and relationship groups
 - `notes` - Pinned notes
+- `app_settings` - User settings (AI model, auto-push, etc.)
+- `user_integrations` - OAuth tokens for Google Calendar
 - `shopping_list_items` - Shopping list (Recipe Vault DB)
 
 ## Contexts
@@ -166,7 +185,22 @@ NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_ANON_KEY=
 
 ### SettingsContext (`useSettings`)
 - `rewardsEnabled` - Toggle for rewards/stars system
-- `temperatureUnit` - 'celsius' | 'fahrenheit'
+- `aiModel` - 'claude' | 'gemini' for AI event extraction
+- `googleCalendarAutoPush` - Auto-sync events to Google Calendar
+- `showBirthdaysOnCalendar` - Display contact birthdays on calendar
+- `countdownRelationshipGroups` - Which contacts appear in birthday widget
+
+### CategoriesContext (`useCategories`)
+- `categories` - Array of event categories
+- `getCategory(id)` - Get category by ID
+- `getCategoryByName(name)` - Get category by name (for AI matching)
+- `addCategory`, `updateCategory`, `archiveCategory` - CRUD operations
+
+### ContactsContext (`useContacts`)
+- `contacts` - Array of contacts
+- `getContactsByGroup(group)` - Filter contacts by relationship group
+- `getUpcomingBirthdays(days, groups)` - Get birthdays within N days
+- `addContact`, `updateContact`, `deleteContact` - CRUD operations
 
 ## Demo Mode
 When no user is authenticated, widgets display demo data (defined as `DEMO_*` constants in each widget). This allows the app to be showcased without a database connection.
@@ -211,3 +245,38 @@ Primary target is touchscreen tablets/displays, but fully functional with mouse/
 - Updated all 13 widgets with consistent styling
 - Changed widget minimum size from 2x2 to 1x1
 - Added custom shadow system
+
+## Recent Changes (January 2026)
+### AI Calendar Enhancements
+- **Smart Add**: AI-powered event extraction from text or images (screenshots)
+- **AI Model Selection**: Choose between Claude Sonnet 4.5 or Gemini 3 Flash in settings
+- **Category System**: 14 default categories (Doctors, School, Birthday, etc.) with emoji and color
+- **Multi-Member Events**: Assign multiple family members to a single event
+- **Google Calendar Auto-Push**: Automatically sync new events to Google Calendar
+
+### Contacts & Birthdays
+- New `/contacts` page for managing birthdays and external contacts
+- Relationship groups: Our Family, Grandparents, Siblings, Aunts/Uncles, Cousins, Friends, Other
+- CountdownWidget now uses contacts for birthday countdowns
+- Settings to filter which groups appear in birthday countdown widget
+
+### New Components
+- `CategorySelector` - Dropdown with emoji and color display
+- `MemberMultiSelect` - Multi-select chip component for family members
+- `MemberAvatarStack` - Stacked avatar display for multiple members
+- `CategoryPill` - Compact category indicator with emoji
+
+### Database Migration (002_calendar_enhancements.sql)
+Run in Supabase SQL Editor to add:
+- `event_categories` table with default categories seeding
+- `event_members` junction table for multi-member support
+- `contacts` table with relationship groups
+- `category_id` column on `calendar_events`
+
+### New Environment Variables
+```env
+ANTHROPIC_API_KEY=         # For Claude AI
+GOOGLE_AI_API_KEY=         # For Gemini AI
+GOOGLE_CLIENT_ID=          # For Google Calendar OAuth
+GOOGLE_CLIENT_SECRET=      # For Google Calendar OAuth
+```

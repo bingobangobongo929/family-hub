@@ -10,7 +10,9 @@ interface ExtractedEvent {
   end_time?: string
   all_day: boolean
   location?: string
-  suggested_member?: string // Name to match against family members
+  suggested_member?: string // Name to match against family members (deprecated)
+  suggested_members?: string[] // Multiple family member names
+  suggested_category?: string // Category name to match
 }
 
 interface AIResponse {
@@ -18,6 +20,17 @@ interface AIResponse {
   summary: string
   raw_text?: string
 }
+
+// Model identifiers
+const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
+const GEMINI_MODEL = 'gemini-3-flash-preview'
+
+// Available categories for AI to suggest
+const CATEGORY_NAMES = [
+  'Doctors/Hospital', 'Guest Daycare', 'Car Service', 'Birthday', 'School',
+  'Activities/Lessons', 'Playdates', 'Family Gathering', 'Holiday/Vacation',
+  'Work', 'Pet', 'Home Maintenance', 'Reminder', 'Misc'
+]
 
 // Claude API call
 async function processWithClaude(
@@ -40,7 +53,8 @@ When extracting events, you should:
 4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
 5. If an event spans multiple days or is recurring, create separate events for each occurrence
 6. Extract location if mentioned
-7. Identify which family member the event is for if mentioned
+7. Identify which family members the event is for - there can be multiple members per event
+8. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
 
 ${context ? `Family context:\n${context}` : ''}
 
@@ -56,7 +70,8 @@ Return a JSON response with this structure:
       "end_time": "HH:MM",
       "all_day": false,
       "location": "Optional location",
-      "suggested_member": "Name if specific to someone"
+      "suggested_members": ["Name1", "Name2"],
+      "suggested_category": "Category name from list"
     }
   ],
   "summary": "Brief summary of what was extracted"
@@ -94,7 +109,7 @@ Only return valid JSON, no markdown or extra text.`
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
-      model: 'claude-3-5-sonnet-20241022',
+      model: CLAUDE_MODEL,
       max_tokens: 1024,
       system: systemPrompt,
       messages,
@@ -148,7 +163,8 @@ When extracting events:
 3. Use ISO format for dates (YYYY-MM-DD)
 4. For relative dates like "tomorrow" or "next Tuesday", calculate the actual date
 5. Extract location if mentioned
-6. Identify which family member the event is for if mentioned
+6. Identify which family members the event is for - there can be multiple members per event
+7. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
 
 ${context ? `Family context:\n${context}` : ''}
 
@@ -167,7 +183,8 @@ Return ONLY valid JSON with this structure (no markdown, no extra text):
       "end_time": "HH:MM",
       "all_day": false,
       "location": "Optional location",
-      "suggested_member": "Name if specific to someone"
+      "suggested_members": ["Name1", "Name2"],
+      "suggested_category": "Category name from list"
     }
   ],
   "summary": "Brief summary of what was extracted"
@@ -188,7 +205,7 @@ Return ONLY valid JSON with this structure (no markdown, no extra text):
   }
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: {

@@ -1,12 +1,15 @@
 'use client'
 
 import { useState, useRef, useCallback } from 'react'
-import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, User, Check, Plus, AlertCircle } from 'lucide-react'
+import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useSettings } from '@/lib/settings-context'
 import { useFamily } from '@/lib/family-context'
+import { useCategories } from '@/lib/categories-context'
 import { MEMBER_COLORS } from '@/lib/database.types'
+import CategorySelector from './CategorySelector'
+import MemberMultiSelect, { getMemberIdsByNames } from './MemberMultiSelect'
 
 interface ExtractedEvent {
   title: string
@@ -17,11 +20,15 @@ interface ExtractedEvent {
   end_time?: string
   all_day: boolean
   location?: string
-  suggested_member?: string
+  suggested_member?: string // deprecated - kept for backwards compatibility
+  suggested_members?: string[] // Multiple family member names
+  suggested_category?: string // Category name to match
   // UI state
   selected?: boolean
   color?: string
-  member_id?: string
+  member_id?: string // deprecated
+  member_ids?: string[] // Multiple member IDs
+  category_id?: string | null
 }
 
 interface AICalendarInputProps {
@@ -33,6 +40,7 @@ interface AICalendarInputProps {
 export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICalendarInputProps) {
   const { aiModel } = useSettings()
   const { members } = useFamily()
+  const { categories, getCategoryByName } = useCategories()
   const [inputText, setInputText] = useState('')
   const [image, setImage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -104,19 +112,42 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
       const data = await response.json()
 
       if (data.events && data.events.length > 0) {
-        // Match suggested members to actual family members and assign colors
+        // Match suggested members and categories to actual data
         const processedEvents = data.events.map((event: ExtractedEvent) => {
-          let memberId = ''
+          let memberIds: string[] = []
           let color = '#3b82f6' // Default blue
+          let categoryId: string | null = null
 
-          if (event.suggested_member) {
+          // Handle multi-member suggestions (new)
+          if (event.suggested_members && event.suggested_members.length > 0) {
+            memberIds = getMemberIdsByNames(event.suggested_members, members)
+            // Use first member's color if available
+            if (memberIds.length > 0) {
+              const firstMember = members.find(m => m.id === memberIds[0])
+              if (firstMember) color = firstMember.color
+            }
+          }
+          // Fallback to old single member field
+          else if (event.suggested_member) {
             const matchedMember = members.find(m =>
               m.name.toLowerCase().includes(event.suggested_member!.toLowerCase()) ||
               event.suggested_member!.toLowerCase().includes(m.name.toLowerCase())
             )
             if (matchedMember) {
-              memberId = matchedMember.id
+              memberIds = [matchedMember.id]
               color = matchedMember.color
+            }
+          }
+
+          // Match suggested category
+          if (event.suggested_category) {
+            const matchedCategory = getCategoryByName(event.suggested_category)
+            if (matchedCategory) {
+              categoryId = matchedCategory.id
+              // Use category color if no members selected
+              if (memberIds.length === 0) {
+                color = matchedCategory.color
+              }
             }
           }
 
@@ -124,7 +155,8 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             ...event,
             selected: true,
             color,
-            member_id: memberId,
+            member_ids: memberIds,
+            category_id: categoryId,
           }
         })
 
@@ -184,7 +216,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
           <Sparkles className="w-4 h-4" />
-          <span>Using {aiModel === 'claude' ? 'Claude 3.5 Sonnet' : 'Gemini Flash'}</span>
+          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 3 Flash'}</span>
         </div>
 
         {step === 'input' ? (
@@ -359,39 +391,62 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                         )}
                       </div>
 
-                      {/* Member & Color Selection */}
-                      <div className="flex items-center gap-4 mt-3">
+                      {/* Category & Member Selection */}
+                      <div className="flex flex-col gap-3 mt-3">
+                        {/* Category */}
                         <div className="flex items-center gap-2">
-                          <User className="w-3.5 h-3.5 text-slate-400" />
-                          <select
-                            value={event.member_id || ''}
-                            onChange={(e) => {
-                              const member = members.find(m => m.id === e.target.value)
+                          <Tag className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <CategorySelector
+                            value={event.category_id || null}
+                            onChange={(categoryId) => {
+                              const category = categories.find(c => c.id === categoryId)
                               handleUpdateEvent(index, {
-                                member_id: e.target.value,
-                                color: member?.color || event.color,
+                                category_id: categoryId,
+                                // Update color from category if no members selected
+                                color: (event.member_ids?.length === 0 && category)
+                                  ? category.color
+                                  : event.color,
                               })
                             }}
-                            className="text-sm bg-transparent border-none p-0 focus:ring-0 text-slate-600 dark:text-slate-400"
-                          >
-                            <option value="">Everyone</option>
-                            {members.map(m => (
-                              <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                          </select>
+                            placeholder="Select category"
+                            className="flex-1"
+                          />
                         </div>
 
-                        <div className="flex items-center gap-1">
-                          {MEMBER_COLORS.slice(0, 6).map(c => (
-                            <button
-                              key={c.id}
-                              onClick={() => handleUpdateEvent(index, { color: c.color })}
-                              className={`w-5 h-5 rounded-full transition-transform ${
-                                event.color === c.color ? 'scale-125 ring-2 ring-offset-1 ring-slate-300' : ''
-                              }`}
-                              style={{ backgroundColor: c.color }}
-                            />
-                          ))}
+                        {/* Members */}
+                        <div className="flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                          <MemberMultiSelect
+                            value={event.member_ids || []}
+                            onChange={(memberIds) => {
+                              const firstMember = memberIds.length > 0
+                                ? members.find(m => m.id === memberIds[0])
+                                : null
+                              handleUpdateEvent(index, {
+                                member_ids: memberIds,
+                                color: firstMember?.color || event.color,
+                              })
+                            }}
+                            placeholder="Select members"
+                            className="flex-1"
+                          />
+                        </div>
+
+                        {/* Color Selection */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-slate-400">Color:</span>
+                          <div className="flex items-center gap-1">
+                            {MEMBER_COLORS.slice(0, 8).map(c => (
+                              <button
+                                key={c.id}
+                                onClick={() => handleUpdateEvent(index, { color: c.color })}
+                                className={`w-5 h-5 rounded-full transition-transform ${
+                                  event.color === c.color ? 'scale-125 ring-2 ring-offset-1 ring-slate-300 dark:ring-slate-600' : ''
+                                }`}
+                                style={{ backgroundColor: c.color }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>

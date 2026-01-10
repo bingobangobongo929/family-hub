@@ -10,6 +10,9 @@ interface SettingsContextType {
   updateSetting: (key: string, value: any) => Promise<void>
   rewardsEnabled: boolean
   aiModel: 'claude' | 'gemini'
+  googleCalendarAutoPush: boolean
+  showBirthdaysOnCalendar: boolean
+  countdownRelationshipGroups: string[]
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -105,6 +108,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         updateSetting,
         rewardsEnabled: settings.rewards_enabled as boolean,
         aiModel: (settings.ai_model as 'claude' | 'gemini') || 'claude',
+        googleCalendarAutoPush: settings.google_calendar_auto_push as boolean ?? false,
+        showBirthdaysOnCalendar: settings.show_birthdays_on_calendar as boolean ?? true,
+        countdownRelationshipGroups: (settings.countdown_relationship_groups as string[]) || ['family_us', 'grandparents', 'friends'],
       }}
     >
       {children}

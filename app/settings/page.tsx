@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
-import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
+import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS } from '@/lib/database.types'
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -360,13 +360,13 @@ export default function SettingsPage() {
             </div>
             <div className="flex gap-2">
               {[
-                { id: 'claude', label: 'Claude' },
-                { id: 'gemini', label: 'Gemini' }
+                { id: 'claude', label: 'Claude Sonnet 4.5' },
+                { id: 'gemini', label: 'Gemini 3 Flash' }
               ].map(opt => (
                 <button
                   key={opt.id}
                   onClick={() => updateSetting('ai_model', opt.id)}
-                  className={`px-4 py-2 rounded-xl transition-all ${
+                  className={`px-4 py-2 rounded-xl transition-all text-sm ${
                     settings.ai_model === opt.id
                       ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
@@ -446,6 +446,85 @@ export default function SettingsPage() {
               Sign in to connect Google Calendar
             </p>
           )}
+
+          {/* Auto-push to Google */}
+          {googleConnected && (
+            <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-100">Auto-Push to Google</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Automatically sync new events to Google Calendar</p>
+              </div>
+              <button
+                onClick={() => updateSetting('google_calendar_auto_push', !settings.google_calendar_auto_push)}
+                className={`relative w-14 h-8 rounded-full transition-colors ${
+                  settings.google_calendar_auto_push ? 'bg-sage-500' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    settings.google_calendar_auto_push ? 'translate-x-6' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Birthday Settings */}
+      <Card className="mb-6">
+        <CardHeader title="Birthday Settings" icon={<Cake className="w-5 h-5" />} />
+        <div className="mt-4 space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-100">Show Birthdays on Calendar</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Display contact birthdays as calendar events</p>
+            </div>
+            <button
+              onClick={() => updateSetting('show_birthdays_on_calendar', !settings.show_birthdays_on_calendar)}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                settings.show_birthdays_on_calendar ? 'bg-sage-500' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                  settings.show_birthdays_on_calendar ? 'translate-x-6' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          <div>
+            <div className="mb-3">
+              <p className="font-medium text-slate-800 dark:text-slate-100">Countdown Widget Groups</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Select which contact groups appear in the birthday countdown widget</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {RELATIONSHIP_GROUPS.map(group => {
+                const isSelected = ((settings.countdown_relationship_groups as string[]) || []).includes(group.id)
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => {
+                      const current = (settings.countdown_relationship_groups as string[]) || []
+                      const updated = isSelected
+                        ? current.filter(g => g !== group.id)
+                        : [...current, group.id]
+                      updateSetting('countdown_relationship_groups', updated)
+                    }}
+                    className={`px-3 py-2 rounded-xl transition-all text-sm flex items-center gap-2 ${
+                      isSelected
+                        ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300 ring-2 ring-sage-500/30'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    <span>{group.emoji}</span>
+                    <span>{group.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
       </Card>
 

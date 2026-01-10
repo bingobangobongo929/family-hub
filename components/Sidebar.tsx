@@ -14,7 +14,8 @@ import {
   Moon,
   Gift,
   Settings,
-  Star
+  Star,
+  UserCircle
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -29,6 +30,7 @@ const navItems = [
   { href: '/rewards', label: 'Rewards', icon: Gift, requiresRewards: true },
   { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
   { href: '/notes', label: 'Notes', icon: StickyNote },
+  { href: '/contacts', label: 'Contacts', icon: UserCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

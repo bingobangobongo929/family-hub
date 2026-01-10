@@ -28,6 +28,51 @@ export type InsertFamilyMember = Omit<FamilyMember, 'id' | 'created_at' | 'updat
 export type UpdateFamilyMember = Partial<InsertFamilyMember>
 
 // ============================================
+// EVENT CATEGORIES
+// ============================================
+export interface EventCategory {
+  id: string
+  user_id: string
+  name: string
+  emoji: string
+  color: string
+  is_archived: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type InsertEventCategory = Omit<EventCategory, 'id' | 'created_at' | 'updated_at'>
+export type UpdateEventCategory = Partial<InsertEventCategory>
+
+export const DEFAULT_EVENT_CATEGORIES = [
+  { name: 'Doctors/Hospital', emoji: '🏥', color: '#ef4444' },
+  { name: 'Guest Daycare', emoji: '👶', color: '#f97316' },
+  { name: 'Car Service', emoji: '🚗', color: '#6b7280' },
+  { name: 'Birthday', emoji: '🎂', color: '#ec4899' },
+  { name: 'School', emoji: '🎒', color: '#3b82f6' },
+  { name: 'Activities/Lessons', emoji: '🎭', color: '#8b5cf6' },
+  { name: 'Playdates', emoji: '🎈', color: '#22c55e' },
+  { name: 'Family Gathering', emoji: '👨‍👩‍👧‍👦', color: '#f59e0b' },
+  { name: 'Holiday/Vacation', emoji: '✈️', color: '#06b6d4' },
+  { name: 'Work', emoji: '💼', color: '#64748b' },
+  { name: 'Pet', emoji: '🐾', color: '#a855f7' },
+  { name: 'Home Maintenance', emoji: '🔧', color: '#78716c' },
+  { name: 'Reminder', emoji: '⏰', color: '#eab308' },
+  { name: 'Misc', emoji: '📌', color: '#94a3b8' },
+]
+
+// ============================================
+// EVENT MEMBERS (Junction Table)
+// ============================================
+export interface EventMember {
+  id: string
+  event_id: string
+  member_id: string
+  created_at: string
+}
+
+// ============================================
 // CALENDAR EVENTS
 // ============================================
 export interface CalendarEvent {
@@ -39,7 +84,8 @@ export interface CalendarEvent {
   end_time: string | null
   all_day: boolean
   color: string
-  member_id: string | null
+  member_id: string | null // Deprecated - use event_members junction table
+  category_id: string | null
   location: string | null
   source: 'manual' | 'google' | 'apple' | 'outlook'
   source_id: string | null
@@ -47,11 +93,43 @@ export interface CalendarEvent {
   created_at: string
   updated_at: string
   // Joined data
-  member?: FamilyMember
+  member?: FamilyMember // Deprecated
+  members?: FamilyMember[] // Multiple members via event_members
+  category?: EventCategory
 }
 
-export type InsertCalendarEvent = Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'member'>
+export type InsertCalendarEvent = Omit<CalendarEvent, 'id' | 'created_at' | 'updated_at' | 'member' | 'members' | 'category'>
 export type UpdateCalendarEvent = Partial<InsertCalendarEvent>
+
+// ============================================
+// CONTACTS (for birthdays and external people)
+// ============================================
+export type RelationshipGroup = 'family_us' | 'grandparents' | 'siblings' | 'aunts_uncles' | 'cousins' | 'friends' | 'other'
+
+export interface Contact {
+  id: string
+  user_id: string
+  name: string
+  date_of_birth: string | null
+  relationship_group: RelationshipGroup
+  notes: string | null
+  color: string
+  created_at: string
+  updated_at: string
+}
+
+export type InsertContact = Omit<Contact, 'id' | 'created_at' | 'updated_at'>
+export type UpdateContact = Partial<InsertContact>
+
+export const RELATIONSHIP_GROUPS = [
+  { id: 'family_us' as const, label: 'Our Family', emoji: '👨‍👩‍👧‍👦' },
+  { id: 'grandparents' as const, label: 'Grandparents', emoji: '👴' },
+  { id: 'siblings' as const, label: 'Siblings', emoji: '👫' },
+  { id: 'aunts_uncles' as const, label: 'Aunts & Uncles', emoji: '👨‍👩‍👧' },
+  { id: 'cousins' as const, label: 'Cousins', emoji: '🧒' },
+  { id: 'friends' as const, label: 'Friends', emoji: '🤝' },
+  { id: 'other' as const, label: 'Other', emoji: '👤' },
+]
 
 // ============================================
 // CHORES / TASKS
@@ -280,6 +358,9 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   dashboard_gradient: 'warm',
   rewards_enabled: false, // Star/points reward system for kids
   ai_model: 'claude', // 'claude' or 'gemini' for calendar AI
+  google_calendar_auto_push: false, // Auto-push events to Google Calendar
+  countdown_relationship_groups: ['family_us', 'grandparents', 'friends'], // Filter for birthday widget
+  show_birthdays_on_calendar: true, // Show birthday events on calendar
 }
 
 // Preset gradient options for dashboard backgrounds

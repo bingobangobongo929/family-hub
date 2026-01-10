@@ -5,6 +5,8 @@ import { AuthProvider } from '@/lib/auth-context'
 import { ThemeProvider } from '@/lib/theme-context'
 import { FamilyProvider } from '@/lib/family-context'
 import { SettingsProvider } from '@/lib/settings-context'
+import { CategoriesProvider } from '@/lib/categories-context'
+import { ContactsProvider } from '@/lib/contacts-context'
 import AppLayout from '@/components/AppLayout'
 
 const inter = Inter({
@@ -37,9 +39,13 @@ export default function RootLayout({
           <AuthProvider>
             <FamilyProvider>
               <SettingsProvider>
-                <AppLayout>
-                  {children}
-                </AppLayout>
+                <CategoriesProvider>
+                  <ContactsProvider>
+                    <AppLayout>
+                      {children}
+                    </AppLayout>
+                  </ContactsProvider>
+                </CategoriesProvider>
               </SettingsProvider>
             </FamilyProvider>
           </AuthProvider>

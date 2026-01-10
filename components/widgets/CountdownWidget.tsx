@@ -1,8 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { differenceInDays, parseISO, format } from 'date-fns'
 import { useWidgetSize } from '@/lib/useWidgetSize'
+import { useContacts, ContactWithBirthday } from '@/lib/contacts-context'
+import { useSettings } from '@/lib/settings-context'
+import { RelationshipGroup } from '@/lib/database.types'
 
 interface CountdownEvent {
   id: string
@@ -10,17 +13,8 @@ interface CountdownEvent {
   date: string
   emoji: string
   type: 'birthday' | 'holiday' | 'event' | 'trip'
+  color?: string
 }
-
-// Family birthdays and events
-const DEMO_COUNTDOWNS: CountdownEvent[] = [
-  { id: '1', title: "Olivia's Birthday", date: getNextBirthday(12, 23), emoji: '🎂', type: 'birthday' },
-  { id: '2', title: "Ellie's Birthday", date: getNextBirthday(9, 12), emoji: '🎂', type: 'birthday' },
-  { id: '3', title: "Mum's Birthday", date: getNextBirthday(3, 28), emoji: '🎁', type: 'birthday' },
-  { id: '4', title: "Dad's Birthday", date: getNextBirthday(5, 21), emoji: '🎁', type: 'birthday' },
-  { id: '5', title: 'Christmas', date: getNextHoliday(12, 25), emoji: '🎄', type: 'holiday' },
-  { id: '6', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
-]
 
 function getNextHoliday(month: number, day: number): string {
   const now = new Date()
@@ -32,33 +26,52 @@ function getNextHoliday(month: number, day: number): string {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-function getNextBirthday(month: number, day: number): string {
-  const now = new Date()
-  let year = now.getFullYear()
-  const birthday = new Date(year, month - 1, day)
-  if (birthday < now) {
-    year++
-  }
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-}
+// Fixed holidays
+const HOLIDAYS: CountdownEvent[] = [
+  { id: 'christmas', title: 'Christmas', date: getNextHoliday(12, 25), emoji: '🎄', type: 'holiday' },
+  { id: 'easter-2025', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
+  { id: 'easter-2026', title: 'Easter', date: '2026-04-05', emoji: '🐰', type: 'holiday' },
+  { id: 'new-year', title: 'New Year', date: getNextHoliday(1, 1), emoji: '🎆', type: 'holiday' },
+]
 
 export default function CountdownWidget() {
-  const [countdowns] = useState<CountdownEvent[]>(DEMO_COUNTDOWNS)
   const [now, setNow] = useState(new Date())
-  const [ref, { size, isWide, isTall }] = useWidgetSize()
+  const [ref, { size, isWide }] = useWidgetSize()
+  const { getUpcomingBirthdays } = useContacts()
+  const { countdownRelationshipGroups } = useSettings()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
 
-  // Get the nearest upcoming event
-  const sortedCountdowns = [...countdowns]
-    .map(c => ({ ...c, daysLeft: differenceInDays(parseISO(c.date), now) }))
-    .filter(c => c.daysLeft >= 0)
-    .sort((a, b) => a.daysLeft - b.daysLeft)
+  // Get birthdays from contacts based on settings
+  const upcomingBirthdays = useMemo(() => {
+    return getUpcomingBirthdays(365, countdownRelationshipGroups as RelationshipGroup[])
+  }, [getUpcomingBirthdays, countdownRelationshipGroups])
 
-  const nextEvent = sortedCountdowns[0]
+  // Convert contact birthdays to countdown events
+  const birthdayEvents: CountdownEvent[] = useMemo(() => {
+    return upcomingBirthdays.map(contact => ({
+      id: `birthday-${contact.id}`,
+      title: `${contact.name}'s Birthday`,
+      date: format(contact.nextBirthday, 'yyyy-MM-dd'),
+      emoji: '🎂',
+      type: 'birthday' as const,
+      color: contact.color,
+    }))
+  }, [upcomingBirthdays])
+
+  // Combine birthdays and holidays
+  const allCountdowns = useMemo(() => {
+    const combined = [...birthdayEvents, ...HOLIDAYS]
+    return combined
+      .map(c => ({ ...c, daysLeft: differenceInDays(parseISO(c.date), now) }))
+      .filter(c => c.daysLeft >= 0)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+  }, [birthdayEvents, now])
+
+  const nextEvent = allCountdowns[0]
 
   // Number of secondary events based on size
   const secondaryCount = {
@@ -68,7 +81,7 @@ export default function CountdownWidget() {
     xlarge: 5,
   }[size]
 
-  const otherEvents = sortedCountdowns.slice(1, 1 + secondaryCount)
+  const otherEvents = allCountdowns.slice(1, 1 + secondaryCount)
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -111,7 +124,7 @@ export default function CountdownWidget() {
 
   // Wide layout - show multiple countdowns in grid
   if (isWide && (size === 'large' || size === 'xlarge')) {
-    const displayEvents = sortedCountdowns.slice(0, 4)
+    const displayEvents = allCountdowns.slice(0, 4)
     const useGrid = displayEvents.length === 4
 
     // Scale text based on size
