@@ -12,12 +12,25 @@ interface CountdownEvent {
   type: 'birthday' | 'holiday' | 'event' | 'trip'
 }
 
-// Demo countdowns
+// Family birthdays and events
 const DEMO_COUNTDOWNS: CountdownEvent[] = [
-  { id: '1', title: "Olivia's Birthday", date: getNextBirthday(3, 15), emoji: '🎂', type: 'birthday' },
-  { id: '2', title: 'Summer Holiday', date: '2025-07-15', emoji: '✈️', type: 'trip' },
-  { id: '3', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
+  { id: '1', title: "Olivia's Birthday", date: getNextBirthday(12, 23), emoji: '🎂', type: 'birthday' },
+  { id: '2', title: "Ellie's Birthday", date: getNextBirthday(9, 12), emoji: '🎂', type: 'birthday' },
+  { id: '3', title: "Mum's Birthday", date: getNextBirthday(3, 28), emoji: '🎁', type: 'birthday' },
+  { id: '4', title: "Dad's Birthday", date: getNextBirthday(5, 21), emoji: '🎁', type: 'birthday' },
+  { id: '5', title: 'Christmas', date: getNextHoliday(12, 25), emoji: '🎄', type: 'holiday' },
+  { id: '6', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
 ]
+
+function getNextHoliday(month: number, day: number): string {
+  const now = new Date()
+  let year = now.getFullYear()
+  const holiday = new Date(year, month - 1, day)
+  if (holiday < now) {
+    year++
+  }
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
 
 function getNextBirthday(month: number, day: number): string {
   const now = new Date()
