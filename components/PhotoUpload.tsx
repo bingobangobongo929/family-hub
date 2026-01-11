@@ -84,6 +84,13 @@ export default function PhotoUpload({
 
       if (signedError) throw signedError
 
+      console.log('Signed URL response:', signedData)
+
+      if (!signedData?.signedUrl) {
+        throw new Error('No signed URL returned')
+      }
+
+      console.log('Setting photo URL:', signedData.signedUrl)
       onPhotoChange(signedData.signedUrl)
       onEmojiChange('') // Clear emoji when photo is set
       setShowOptions(false)
