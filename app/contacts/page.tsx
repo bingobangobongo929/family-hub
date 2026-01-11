@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Plus, Trash2, Edit2, Cake, X } from 'lucide-react'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
+import ContactMemberLink, { ContactMemberLinkDisplay } from '@/components/ContactMemberLink'
 import { useContacts } from '@/lib/contacts-context'
 import { Contact, RelationshipGroup, RELATIONSHIP_GROUPS, MEMBER_COLORS } from '@/lib/database.types'
 
 export default function ContactsPage() {
-  const { contacts, addContact, updateContact, deleteContact, getContactsByGroup, getUpcomingBirthdays } = useContacts()
+  const { contacts, addContact, updateContact, deleteContact, getContactsByGroup, getUpcomingBirthdays, linkContactToMember, unlinkContactFromMember, getContactLinks } = useContacts()
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [formData, setFormData] = useState({
@@ -20,6 +21,7 @@ export default function ContactsPage() {
     notes: '',
     color: '#3b82f6',
   })
+  const [memberLinks, setMemberLinks] = useState<{ memberId: string; relationshipType: string }[]>([])
 
   const upcomingBirthdays = getUpcomingBirthdays(60)
 
@@ -31,6 +33,7 @@ export default function ContactsPage() {
       notes: '',
       color: '#3b82f6',
     })
+    setMemberLinks([])
     setEditingContact(null)
   }
 
@@ -48,6 +51,9 @@ export default function ContactsPage() {
       notes: contact.notes || '',
       color: contact.color,
     })
+    // Load existing member links
+    const existingLinks = getContactLinks(contact.id)
+    setMemberLinks(existingLinks.map(l => ({ memberId: l.member_id, relationshipType: l.relationship_type })))
     setShowAddModal(true)
   }
 
@@ -63,10 +69,35 @@ export default function ContactsPage() {
       photo_url: null,
     }
 
+    let contactId: string
+
     if (editingContact) {
       await updateContact(editingContact.id, contactData)
+      contactId = editingContact.id
+
+      // Update member links - first get existing links
+      const existingLinks = getContactLinks(contactId)
+
+      // Remove links that are no longer present
+      for (const existing of existingLinks) {
+        if (!memberLinks.some(l => l.memberId === existing.member_id)) {
+          await unlinkContactFromMember(contactId, existing.member_id)
+        }
+      }
+
+      // Add or update links
+      for (const link of memberLinks) {
+        await linkContactToMember(contactId, link.memberId, link.relationshipType)
+      }
     } else {
-      await addContact(contactData)
+      const newContact = await addContact(contactData)
+      if (newContact) {
+        contactId = newContact.id
+        // Add member links for new contact
+        for (const link of memberLinks) {
+          await linkContactToMember(contactId, link.memberId, link.relationshipType)
+        }
+      }
     }
 
     setShowAddModal(false)
@@ -180,6 +211,10 @@ export default function ContactsPage() {
                           {format(parseISO(contact.date_of_birth), 'MMM d')} ({calculateAge(contact.date_of_birth)} yrs)
                         </p>
                       )}
+                      <ContactMemberLinkDisplay
+                        links={getContactLinks(contact.id).map(l => ({ memberId: l.member_id, relationshipType: l.relationship_type }))}
+                        className="mt-1"
+                      />
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -303,6 +338,12 @@ export default function ContactsPage() {
               placeholder="Any notes about this contact..."
             />
           </div>
+
+          {/* Member Links */}
+          <ContactMemberLink
+            links={memberLinks}
+            onChange={setMemberLinks}
+          />
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" onClick={() => {
