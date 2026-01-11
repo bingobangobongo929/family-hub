@@ -77,12 +77,14 @@ export default function PhotoUpload({
 
       if (uploadError) throw uploadError
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
+      // Get signed URL for private bucket (valid for 1 year)
+      const { data: signedData, error: signedError } = await supabase.storage
         .from(bucket)
-        .getPublicUrl(fileName)
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365) // 1 year
 
-      onPhotoChange(publicUrl)
+      if (signedError) throw signedError
+
+      onPhotoChange(signedData.signedUrl)
       onEmojiChange('') // Clear emoji when photo is set
       setShowOptions(false)
     } catch (err) {
