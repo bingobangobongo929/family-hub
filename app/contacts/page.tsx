@@ -60,6 +60,7 @@ export default function ContactsPage() {
       relationship_group: formData.relationship_group,
       notes: formData.notes.trim() || null,
       color: formData.color,
+      photo_url: null,
     }
 
     if (editingContact) {
