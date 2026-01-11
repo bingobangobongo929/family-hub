@@ -7,6 +7,7 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import ContactMemberLink, { ContactMemberLinkDisplay } from '@/components/ContactMemberLink'
+import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 import { useContacts } from '@/lib/contacts-context'
 import { Contact, RelationshipGroup, RELATIONSHIP_GROUPS, MEMBER_COLORS } from '@/lib/database.types'
 
@@ -20,6 +21,8 @@ export default function ContactsPage() {
     relationship_group: 'friends' as RelationshipGroup,
     notes: '',
     color: '#3b82f6',
+    photo_url: null as string | null,
+    avatar: '',
   })
   const [memberLinks, setMemberLinks] = useState<{ memberId: string; relationshipType: string }[]>([])
 
@@ -32,6 +35,8 @@ export default function ContactsPage() {
       relationship_group: 'friends',
       notes: '',
       color: '#3b82f6',
+      photo_url: null,
+      avatar: '',
     })
     setMemberLinks([])
     setEditingContact(null)
@@ -50,6 +55,8 @@ export default function ContactsPage() {
       relationship_group: contact.relationship_group,
       notes: contact.notes || '',
       color: contact.color,
+      photo_url: contact.photo_url || null,
+      avatar: contact.avatar || '',
     })
     // Load existing member links
     const existingLinks = getContactLinks(contact.id)
@@ -66,7 +73,8 @@ export default function ContactsPage() {
       relationship_group: formData.relationship_group,
       notes: formData.notes.trim() || null,
       color: formData.color,
-      photo_url: null,
+      photo_url: formData.photo_url,
+      avatar: formData.avatar || null,
     }
 
     let contactId: string
@@ -150,11 +158,14 @@ export default function ContactsPage() {
                 key={contact.id}
                 className="flex-shrink-0 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 min-w-[140px]"
               >
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold mb-2"
-                  style={{ backgroundColor: contact.color }}
-                >
-                  {contact.name[0]}
+                <div className="mb-2">
+                  <AvatarDisplay
+                    photoUrl={contact.photo_url}
+                    emoji={contact.avatar}
+                    name={contact.name}
+                    color={contact.color}
+                    size="md"
+                  />
                 </div>
                 <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                   {contact.name}
@@ -195,12 +206,13 @@ export default function ContactsPage() {
                     key={contact.id}
                     className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
-                    <div
-                      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0"
-                      style={{ backgroundColor: contact.color }}
-                    >
-                      {contact.name[0]}
-                    </div>
+                    <AvatarDisplay
+                      photoUrl={contact.photo_url}
+                      emoji={contact.avatar}
+                      name={contact.name}
+                      color={contact.color}
+                      size="md"
+                    />
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                         {contact.name}
@@ -317,13 +329,34 @@ export default function ContactsPage() {
                   key={c.id}
                   type="button"
                   onClick={() => setFormData({ ...formData, color: c.color })}
-                  className={`w-8 h-8 rounded-full transition-transform ${
-                    formData.color === c.color ? 'scale-110 ring-2 ring-offset-2 ring-slate-400 dark:ring-slate-500' : ''
+                  className={`w-6 h-6 rounded-full transition-transform ${
+                    formData.color === c.color ? 'scale-110 ring-2 ring-offset-1 ring-slate-400 dark:ring-slate-500' : ''
                   }`}
                   style={{ backgroundColor: c.color }}
                 />
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Avatar
+            </label>
+            <div className="flex justify-center">
+              <PhotoUpload
+                photoUrl={formData.photo_url}
+                emoji={formData.avatar}
+                name={formData.name || 'New Contact'}
+                color={formData.color}
+                onPhotoChange={(url) => setFormData({ ...formData, photo_url: url, avatar: url ? '' : formData.avatar })}
+                onEmojiChange={(emoji) => setFormData({ ...formData, avatar: emoji, photo_url: emoji ? null : formData.photo_url })}
+                bucket="contact-photos"
+                size="lg"
+              />
+            </div>
+            <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
+              Tap to upload a photo or choose an emoji
+            </p>
           </div>
 
           <div>

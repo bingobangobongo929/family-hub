@@ -117,6 +117,7 @@ export interface Contact {
   notes: string | null
   color: string
   photo_url: string | null  // Uploaded photo URL
+  avatar: string | null     // Emoji avatar
   created_at: string
   updated_at: string
   // Joined data
@@ -510,4 +511,16 @@ export const MEMBER_COLORS = [
   { id: 'red', color: '#ef4444', label: 'Red' },
   { id: 'teal', color: '#14b8a6', label: 'Teal' },
   { id: 'amber', color: '#f59e0b', label: 'Amber' },
+  { id: 'indigo', color: '#6366f1', label: 'Indigo' },
+  { id: 'cyan', color: '#06b6d4', label: 'Cyan' },
+  { id: 'lime', color: '#84cc16', label: 'Lime' },
+  { id: 'rose', color: '#f43f5e', label: 'Rose' },
+  { id: 'violet', color: '#7c3aed', label: 'Violet' },
+  { id: 'sky', color: '#0ea5e9', label: 'Sky' },
+  { id: 'emerald', color: '#10b981', label: 'Emerald' },
+  { id: 'fuchsia', color: '#d946ef', label: 'Fuchsia' },
+  { id: 'slate', color: '#64748b', label: 'Slate' },
+  { id: 'stone', color: '#78716c', label: 'Stone' },
+  { id: 'coral', color: '#ff6b6b', label: 'Coral' },
+  { id: 'mint', color: '#4ecdc4', label: 'Mint' },
 ]
