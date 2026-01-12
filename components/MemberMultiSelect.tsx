@@ -160,6 +160,13 @@ export default function MemberMultiSelect({
 // Helper to get member IDs by name (for AI suggestions)
 export function getMemberIdsByNames(memberNames: string[], members: FamilyMember[]): string[] {
   return memberNames
-    .map(name => members.find(m => m.name.toLowerCase() === name.toLowerCase())?.id)
-    .filter(Boolean) as string[]
+    .map(name => {
+      const nameLower = name.toLowerCase().trim()
+      // Try exact match first, then partial match
+      const match = members.find(m => m.name.toLowerCase().trim() === nameLower) ||
+                   members.find(m => m.name.toLowerCase().trim().includes(nameLower) ||
+                                    nameLower.includes(m.name.toLowerCase().trim()))
+      return match?.id
+    })
+    .filter((id): id is string => id !== undefined)
 }

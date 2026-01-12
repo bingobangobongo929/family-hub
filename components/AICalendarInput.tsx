@@ -240,18 +240,35 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             }
           }
 
-          // Match suggested contacts
+          // Match suggested contacts - use flexible matching
           let contactIds: string[] = []
           if (event.suggested_contacts && event.suggested_contacts.length > 0) {
-            contactIds = event.suggested_contacts
-              .map(name => {
-                const matchedContact = contacts.find(c =>
-                  c.name.toLowerCase().includes(name.toLowerCase()) ||
-                  name.toLowerCase().includes(c.name.toLowerCase())
-                )
-                return matchedContact?.id
+            for (const suggestedName of event.suggested_contacts) {
+              const nameLower = suggestedName.toLowerCase().trim()
+
+              // Try to find a matching contact with flexible matching
+              const matchedContact = contacts.find(c => {
+                const contactName = c.name.toLowerCase().trim()
+
+                // Exact match
+                if (contactName === nameLower) return true
+
+                // Partial match (contact name contains suggested or vice versa)
+                if (contactName.includes(nameLower) || nameLower.includes(contactName)) return true
+
+                // Word-based match (e.g., "Grandma Rose" matches "Grandma")
+                const contactWords = contactName.split(/\s+/)
+                const suggestedWords = nameLower.split(/\s+/)
+                if (contactWords.some(w => suggestedWords.includes(w))) return true
+                if (suggestedWords.some(w => contactWords.includes(w))) return true
+
+                return false
               })
-              .filter((id): id is string => id !== undefined)
+
+              if (matchedContact && !contactIds.includes(matchedContact.id)) {
+                contactIds.push(matchedContact.id)
+              }
+            }
           }
 
           // Handle recurrence pattern
