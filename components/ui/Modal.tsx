@@ -1,6 +1,7 @@
 'use client'
 
-import { ReactNode, useEffect } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 interface ModalProps {
@@ -12,6 +13,12 @@ interface ModalProps {
 }
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden'
@@ -33,7 +40,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
     return () => window.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
   const sizeClasses = {
     sm: 'max-w-sm',
@@ -46,7 +53,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
     full: 'max-w-[90vw]',
   }
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
@@ -70,4 +77,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
       </div>
     </div>
   )
+
+  // Use portal to render modal at document body level
+  return createPortal(modalContent, document.body)
 }
