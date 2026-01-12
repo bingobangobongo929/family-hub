@@ -1,7 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { format, parseISO, isToday, isTomorrow, isThisWeek, isNextWeek, startOfWeek, endOfWeek, addWeeks, differenceInHours, isBefore, isAfter, startOfDay, addDays } from 'date-fns'
+import { format, parseISO, isToday, isTomorrow, isThisWeek, startOfWeek, endOfWeek, addWeeks, differenceInHours, isAfter, startOfDay, addDays, isWithinInterval } from 'date-fns'
+
+// Helper function since date-fns doesn't export isNextWeek
+function isNextWeek(date: Date, options?: { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }): boolean {
+  const now = new Date()
+  const nextWeekStart = startOfWeek(addWeeks(now, 1), options)
+  const nextWeekEnd = endOfWeek(addWeeks(now, 1), options)
+  return isWithinInterval(date, { start: nextWeekStart, end: nextWeekEnd })
+}
 import { Calendar, Clock, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
