@@ -292,21 +292,44 @@ Note: recurrence_pattern is optional - only include if the event repeats.`
   }
 
   const data = await response.json()
-  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+  console.log('Gemini raw response:', JSON.stringify(data, null, 2))
+
+  // Check for blocked or empty responses
+  if (data.candidates?.[0]?.finishReason === 'SAFETY') {
+    throw new Error('Response blocked by safety filters')
+  }
+
+  const textContent = data.candidates?.[0]?.content?.parts?.[0]?.text
+
+  if (!textContent) {
+    console.error('No text content in Gemini response:', data)
+    throw new Error('No response from Gemini - check API key and model')
+  }
+
+  console.log('Gemini text content:', textContent)
 
   try {
-    // Clean up potential markdown formatting
-    const cleaned = textContent.replace(/```json\n?|\n?```/g, '').trim()
+    // Clean up potential markdown formatting (```json ... ```)
+    let cleaned = textContent
+    // Remove markdown code blocks
+    cleaned = cleaned.replace(/```json\s*/gi, '').replace(/```\s*/g, '')
+    // Remove any leading/trailing whitespace
+    cleaned = cleaned.trim()
+
+    console.log('Cleaned JSON:', cleaned)
+
     const parsed = JSON.parse(cleaned)
     return {
       events: parsed.events || [],
       summary: parsed.summary || 'Events extracted',
       raw_text: textContent,
     }
-  } catch {
+  } catch (parseError) {
+    console.error('JSON parse error:', parseError)
+    console.error('Raw text was:', textContent)
     return {
       events: [],
-      summary: 'Could not extract events from input',
+      summary: 'Could not parse AI response',
       raw_text: textContent,
     }
   }
