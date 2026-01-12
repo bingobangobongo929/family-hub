@@ -115,32 +115,35 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
   const funFact = getFunFact()
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-8">
+      {/* Backdrop with blur */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-md"
         onClick={onClose}
       />
 
-      {/* Modal */}
+      {/* Modal - 2:3 aspect ratio, sized for large touchscreen */}
       <div
-        className="relative w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col"
         style={{
-          background: `linear-gradient(180deg, ${member.color}15 0%, transparent 40%)`,
+          width: 'min(420px, 90vw)',
+          height: 'min(630px, 85vh)',
+          aspectRatio: '2/3',
+          background: `linear-gradient(180deg, ${member.color}20 0%, transparent 50%), ${typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff'}`,
         }}
       >
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 rounded-full bg-white/80 dark:bg-slate-700/80 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors z-10"
+          className="absolute top-5 right-5 p-3 rounded-full bg-white/80 dark:bg-slate-700/80 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors z-10"
         >
-          <X className="w-5 h-5" />
+          <X className="w-6 h-6" />
         </button>
 
         {/* Header with avatar */}
-        <div className="pt-8 pb-4 px-6 flex flex-col items-center">
+        <div className="pt-10 pb-6 px-8 flex flex-col items-center">
           <div
-            className="w-28 h-28 rounded-full ring-4 ring-white dark:ring-slate-700 shadow-xl overflow-hidden flex items-center justify-center text-5xl"
+            className="w-36 h-36 rounded-full ring-4 ring-white dark:ring-slate-700 shadow-xl overflow-hidden flex items-center justify-center text-6xl"
             style={{ backgroundColor: member.photo_url ? 'transparent' : member.color }}
           >
             {member.photo_url ? (
@@ -148,22 +151,22 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
             ) : member.avatar ? (
               <span>{member.avatar}</span>
             ) : (
-              <span className="text-white font-bold">{member.name.charAt(0).toUpperCase()}</span>
+              <span className="text-white font-bold text-5xl">{member.name.charAt(0).toUpperCase()}</span>
             )}
           </div>
 
-          <h2 className="mt-4 text-2xl font-bold text-slate-800 dark:text-slate-100">
+          <h2 className="mt-5 text-3xl font-bold text-slate-800 dark:text-slate-100">
             {member.name}
           </h2>
 
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-lg">{getRoleEmoji()}</span>
-            <span className="text-slate-500 dark:text-slate-400 capitalize">{member.role}</span>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-2xl">{getRoleEmoji()}</span>
+            <span className="text-lg text-slate-500 dark:text-slate-400 capitalize">{member.role}</span>
           </div>
 
           {/* Fun badge */}
           <div
-            className="mt-3 px-4 py-1.5 rounded-full text-sm font-medium"
+            className="mt-4 px-5 py-2 rounded-full text-base font-medium"
             style={{
               backgroundColor: `${member.color}20`,
               color: member.color,
@@ -173,20 +176,20 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
           </div>
         </div>
 
-        {/* Content */}
-        <div className="px-6 pb-6 space-y-4">
+        {/* Content - scrollable area */}
+        <div className="flex-1 overflow-y-auto px-8 pb-8 space-y-5">
           {/* Birthday Card */}
           {birthdayInfo && (
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-100 dark:border-pink-900/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center">
-                  <Cake className="w-5 h-5 text-pink-500" />
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 border border-pink-100 dark:border-pink-900/30">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-pink-100 dark:bg-pink-900/50 flex items-center justify-center">
+                  <Cake className="w-7 h-7 text-pink-500" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-pink-600 dark:text-pink-400 font-medium">
+                  <p className="text-base text-pink-600 dark:text-pink-400 font-medium">
                     {birthdayInfo.dateFormatted}
                   </p>
-                  <p className="text-xs text-pink-500/70 dark:text-pink-400/70">
+                  <p className="text-sm text-pink-500/70 dark:text-pink-400/70">
                     {birthdayInfo.daysUntil === 0 ? (
                       <span className="font-bold">Today! 🎉</span>
                     ) : birthdayInfo.daysUntil === 1 ? (
@@ -197,8 +200,8 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{birthdayInfo.age}</p>
-                  <p className="text-xs text-pink-500/70 dark:text-pink-400/70">years old</p>
+                  <p className="text-3xl font-bold text-pink-600 dark:text-pink-400">{birthdayInfo.age}</p>
+                  <p className="text-sm text-pink-500/70 dark:text-pink-400/70">years old</p>
                 </div>
               </div>
             </div>
@@ -206,58 +209,58 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
 
           {/* Points Card - Only for children with rewards enabled */}
           {member.role === 'child' && rewardsEnabled && (
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-100 dark:border-amber-900/30">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                  <Star className="w-5 h-5 text-amber-500 fill-current" />
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-100 dark:border-amber-900/30">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                  <Star className="w-7 h-7 text-amber-500 fill-current" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                  <p className="text-base text-amber-600 dark:text-amber-400 font-medium">
                     Star Points
                   </p>
-                  <p className="text-xs text-amber-500/70 dark:text-amber-400/70">
+                  <p className="text-sm text-amber-500/70 dark:text-amber-400/70">
                     Earned from chores
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{member.points}</p>
-                  <p className="text-xs text-amber-500/70 dark:text-amber-400/70">stars</p>
+                  <p className="text-3xl font-bold text-amber-600 dark:text-amber-400">{member.points}</p>
+                  <p className="text-sm text-amber-500/70 dark:text-amber-400/70">stars</p>
                 </div>
               </div>
             </div>
           )}
 
           {/* Upcoming Events */}
-          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Calendar className="w-4 h-4 text-teal-500" />
-              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <div className="p-5 rounded-2xl bg-slate-50 dark:bg-slate-700/50">
+            <div className="flex items-center gap-2 mb-4">
+              <Calendar className="w-5 h-5 text-teal-500" />
+              <p className="text-base font-medium text-slate-700 dark:text-slate-300">
                 Coming Up
               </p>
             </div>
 
             {loading ? (
-              <div className="py-4 text-center">
-                <div className="w-6 h-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="py-6 text-center">
+                <div className="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto" />
               </div>
             ) : upcomingEvents.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {upcomingEvents.map(event => (
                   <div
                     key={event.id}
-                    className="flex items-center gap-3 p-2 rounded-xl bg-white dark:bg-slate-800"
+                    className="flex items-center gap-4 p-3 rounded-xl bg-white dark:bg-slate-800"
                   >
                     <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center text-lg"
                       style={{ backgroundColor: `${event.color}20`, color: event.color }}
                     >
                       {event.category?.emoji || '📅'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                      <p className="text-base font-medium text-slate-700 dark:text-slate-200 truncate">
                         {event.title}
                       </p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-sm text-slate-400">
                         {format(parseISO(event.start_time), 'EEE, MMM d')}
                         {!event.all_day && ` at ${format(parseISO(event.start_time), 'h:mm a')}`}
                       </p>
@@ -266,7 +269,7 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-2">
+              <p className="text-base text-slate-400 dark:text-slate-500 text-center py-4">
                 No upcoming events
               </p>
             )}
