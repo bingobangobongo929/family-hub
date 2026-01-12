@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, GripVertical, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -15,7 +15,7 @@ import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
-  const { members, refreshMembers } = useFamily()
+  const { members, refreshMembers, reorderMembers } = useFamily()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [showMemberModal, setShowMemberModal] = useState(false)
@@ -31,7 +31,8 @@ export default function SettingsPage() {
     color: MEMBER_COLORS[0].color,
     role: 'child' as 'parent' | 'child' | 'pet',
     avatar: '',
-    photo_url: null as string | null
+    photo_url: null as string | null,
+    date_of_birth: ''
   })
 
   const fetchSettings = useCallback(async () => {
@@ -178,6 +179,7 @@ export default function SettingsPage() {
           role: memberForm.role,
           avatar: memberForm.avatar || null,
           photo_url: memberForm.photo_url,
+          date_of_birth: memberForm.date_of_birth || null,
           sort_order: members.length
         })
 
@@ -206,7 +208,8 @@ export default function SettingsPage() {
           color: memberForm.color,
           role: memberForm.role,
           avatar: memberForm.avatar || null,
-          photo_url: memberForm.photo_url
+          photo_url: memberForm.photo_url,
+          date_of_birth: memberForm.date_of_birth || null
         })
         .eq('id', editingMember.id)
 
@@ -243,7 +246,8 @@ export default function SettingsPage() {
       color: member.color,
       role: member.role,
       avatar: member.avatar || '',
-      photo_url: member.photo_url || null
+      photo_url: member.photo_url || null,
+      date_of_birth: member.date_of_birth || ''
     })
     setShowMemberModal(true)
   }
@@ -254,7 +258,8 @@ export default function SettingsPage() {
       color: MEMBER_COLORS[0].color,
       role: 'child',
       avatar: '',
-      photo_url: null
+      photo_url: null,
+      date_of_birth: ''
     })
   }
 
@@ -678,7 +683,30 @@ export default function SettingsPage() {
               key={member.id}
               className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl"
             >
-              <GripVertical className="w-5 h-5 text-slate-400 cursor-move" />
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={() => reorderMembers(member.id, 'up')}
+                  disabled={index === 0}
+                  className={`p-1 rounded transition-colors ${
+                    index === 0
+                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                      : 'text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30'
+                  }`}
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => reorderMembers(member.id, 'down')}
+                  disabled={index === members.length - 1}
+                  className={`p-1 rounded transition-colors ${
+                    index === members.length - 1
+                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                      : 'text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30'
+                  }`}
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+              </div>
               <AvatarDisplay
                 photoUrl={member.photo_url}
                 emoji={member.avatar}
@@ -774,6 +802,18 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Birthday
+            </label>
+            <input
+              type="date"
+              value={memberForm.date_of_birth}
+              onChange={(e) => setMemberForm({ ...memberForm, date_of_birth: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            />
           </div>
 
           <div>

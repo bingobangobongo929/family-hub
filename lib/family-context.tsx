@@ -13,16 +13,17 @@ interface FamilyContextType {
   updateMemberPoints: (memberId: string, points: number) => Promise<void>
   updateMemberPhoto: (memberId: string, photoUrl: string | null) => Promise<void>
   updateMemberEmoji: (memberId: string, emoji: string) => Promise<void>
+  reorderMembers: (memberId: string, direction: 'up' | 'down') => Promise<void>
 }
 
 const FamilyContext = createContext<FamilyContextType | undefined>(undefined)
 
 // Demo family members when not logged in
 const DEMO_MEMBERS: FamilyMember[] = [
-  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, photo_url: null, points: 0, sort_order: 0, created_at: '', updated_at: '' },
-  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, photo_url: null, points: 0, sort_order: 1, created_at: '', updated_at: '' },
-  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, points: 47, sort_order: 2, created_at: '', updated_at: '' },
-  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, points: 23, sort_order: 3, created_at: '', updated_at: '' },
+  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1985-06-15', points: 0, sort_order: 0, created_at: '', updated_at: '' },
+  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1987-03-22', points: 0, sort_order: 1, created_at: '', updated_at: '' },
+  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', points: 47, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', points: 23, sort_order: 3, created_at: '', updated_at: '' },
 ]
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
@@ -134,8 +135,47 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchMembers])
 
+  const reorderMembers = useCallback(async (memberId: string, direction: 'up' | 'down') => {
+    const currentIndex = members.findIndex(m => m.id === memberId)
+    if (currentIndex === -1) return
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= members.length) return
+
+    const currentMember = members[currentIndex]
+    const targetMember = members[targetIndex]
+
+    if (!user) {
+      // Demo mode - update locally
+      setMembers(prev => {
+        const newMembers = [...prev]
+        newMembers[currentIndex] = { ...targetMember, sort_order: currentMember.sort_order }
+        newMembers[targetIndex] = { ...currentMember, sort_order: targetMember.sort_order }
+        return newMembers.sort((a, b) => a.sort_order - b.sort_order)
+      })
+      return
+    }
+
+    try {
+      // Swap sort_order values in database
+      await Promise.all([
+        supabase
+          .from('family_members')
+          .update({ sort_order: targetMember.sort_order })
+          .eq('id', currentMember.id),
+        supabase
+          .from('family_members')
+          .update({ sort_order: currentMember.sort_order })
+          .eq('id', targetMember.id)
+      ])
+      await fetchMembers()
+    } catch (error) {
+      console.error('Error reordering members:', error)
+    }
+  }, [user, members, fetchMembers])
+
   return (
-    <FamilyContext.Provider value={{ members, loading, getMember, refreshMembers, updateMemberPoints, updateMemberPhoto, updateMemberEmoji }}>
+    <FamilyContext.Provider value={{ members, loading, getMember, refreshMembers, updateMemberPoints, updateMemberPhoto, updateMemberEmoji, reorderMembers }}>
       {children}
     </FamilyContext.Provider>
   )

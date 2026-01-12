@@ -19,6 +19,7 @@ export interface FamilyMember {
   role: 'parent' | 'child' | 'pet'
   avatar: string | null    // Emoji avatar
   photo_url: string | null // Uploaded photo URL
+  date_of_birth: string | null // Birthday for profile display
   points: number
   sort_order: number
   created_at: string

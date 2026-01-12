@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -23,6 +24,8 @@ import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { AvatarDisplay } from './PhotoUpload'
+import MemberProfileModal from './MemberProfileModal'
+import { FamilyMember } from '@/lib/database.types'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -43,6 +46,7 @@ export default function Sidebar() {
   const { theme, toggleTheme } = useTheme()
   const { members } = useFamily()
   const { rewardsEnabled } = useSettings()
+  const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
 
   const handleSignOut = async () => {
     await signOut()
@@ -101,9 +105,10 @@ export default function Sidebar() {
           </h3>
           <div className="space-y-1">
             {members.map((member) => (
-              <div
+              <button
                 key={member.id}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
+                onClick={() => setSelectedMember(member)}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors text-left"
               >
                 <AvatarDisplay
                   photoUrl={member.photo_url}
@@ -119,7 +124,7 @@ export default function Sidebar() {
                     {member.points}
                   </span>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -150,6 +155,13 @@ export default function Sidebar() {
           </button>
         </div>
       )}
+
+      {/* Member Profile Modal */}
+      <MemberProfileModal
+        member={selectedMember}
+        isOpen={selectedMember !== null}
+        onClose={() => setSelectedMember(null)}
+      />
     </aside>
   )
 }
