@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { ZoomIn, ZoomOut, RotateCcw, Check, X } from 'lucide-react'
+import { Check, X, RotateCcw } from 'lucide-react'
 import Modal from './ui/Modal'
 
 interface ImageCropperProps {
@@ -11,18 +11,24 @@ interface ImageCropperProps {
   onCrop: (croppedBlob: Blob) => void
 }
 
+interface CropArea {
+  x: number
+  y: number
+  size: number
+}
+
 export default function ImageCropper({ isOpen, imageSrc, onClose, onCrop }: ImageCropperProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [image, setImage] = useState<HTMLImageElement | null>(null)
-  const [scale, setScale] = useState(1)
-  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 })
+  const [cropArea, setCropArea] = useState<CropArea>({ x: 0, y: 0, size: 100 })
   const [isDragging, setIsDragging] = useState(false)
+  const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [minScale, setMinScale] = useState(1)
+  const [resizeCorner, setResizeCorner] = useState<string | null>(null)
 
-  const CROP_SIZE = 256 // Output size
-  const DISPLAY_SIZE = 280 // Display area size
+  const CROP_OUTPUT_SIZE = 256 // Output size in pixels
+  const MIN_CROP_SIZE = 50
 
   // Load image when src changes
   useEffect(() => {
@@ -31,224 +37,278 @@ export default function ImageCropper({ isOpen, imageSrc, onClose, onCrop }: Imag
     const img = new Image()
     img.onload = () => {
       setImage(img)
-      // Calculate minimum scale to cover the crop area
-      const minScaleX = DISPLAY_SIZE / img.width
-      const minScaleY = DISPLAY_SIZE / img.height
-      const newMinScale = Math.max(minScaleX, minScaleY)
-      setMinScale(newMinScale)
-      setScale(newMinScale)
-      setPosition({ x: 0, y: 0 })
+
+      // Calculate display size to fit in container (max 400px)
+      const maxSize = 400
+      const scale = Math.min(maxSize / img.width, maxSize / img.height, 1)
+      const width = img.width * scale
+      const height = img.height * scale
+      setDisplaySize({ width, height })
+
+      // Initialize crop area centered, as large as possible (square)
+      const initialSize = Math.min(width, height) * 0.8
+      setCropArea({
+        x: (width - initialSize) / 2,
+        y: (height - initialSize) / 2,
+        size: initialSize,
+      })
     }
     img.src = imageSrc
   }, [imageSrc])
 
-  // Draw image on canvas
-  useEffect(() => {
-    if (!image || !canvasRef.current) return
-
-    const canvas = canvasRef.current
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    canvas.width = DISPLAY_SIZE
-    canvas.height = DISPLAY_SIZE
-
-    // Clear canvas
-    ctx.fillStyle = '#1e293b'
-    ctx.fillRect(0, 0, DISPLAY_SIZE, DISPLAY_SIZE)
-
-    // Calculate centered position
-    const scaledWidth = image.width * scale
-    const scaledHeight = image.height * scale
-    const x = (DISPLAY_SIZE - scaledWidth) / 2 + position.x
-    const y = (DISPLAY_SIZE - scaledHeight) / 2 + position.y
-
-    // Draw image
-    ctx.drawImage(image, x, y, scaledWidth, scaledHeight)
-  }, [image, scale, position])
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    setIsDragging(true)
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
-  }, [position])
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !image) return
-
-    const newX = e.clientX - dragStart.x
-    const newY = e.clientY - dragStart.y
-
-    // Calculate bounds
-    const scaledWidth = image.width * scale
-    const scaledHeight = image.height * scale
-    const maxOffsetX = Math.max(0, (scaledWidth - DISPLAY_SIZE) / 2)
-    const maxOffsetY = Math.max(0, (scaledHeight - DISPLAY_SIZE) / 2)
-
-    setPosition({
-      x: Math.max(-maxOffsetX, Math.min(maxOffsetX, newX)),
-      y: Math.max(-maxOffsetY, Math.min(maxOffsetY, newY)),
-    })
-  }, [isDragging, dragStart, image, scale])
-
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false)
-  }, [])
-
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setIsDragging(true)
-      setDragStart({
-        x: e.touches[0].clientX - position.x,
-        y: e.touches[0].clientY - position.y
-      })
+  const getEventPosition = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY }
     }
-  }, [position])
+    return { clientX: e.clientX, clientY: e.clientY }
+  }
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isDragging || !image || e.touches.length !== 1) return
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    const { clientX, clientY } = getEventPosition(e)
+    setIsDragging(true)
+    setDragStart({ x: clientX - cropArea.x, y: clientY - cropArea.y })
+  }, [cropArea])
 
-    const newX = e.touches[0].clientX - dragStart.x
-    const newY = e.touches[0].clientY - dragStart.y
-
-    const scaledWidth = image.width * scale
-    const scaledHeight = image.height * scale
-    const maxOffsetX = Math.max(0, (scaledWidth - DISPLAY_SIZE) / 2)
-    const maxOffsetY = Math.max(0, (scaledHeight - DISPLAY_SIZE) / 2)
-
-    setPosition({
-      x: Math.max(-maxOffsetX, Math.min(maxOffsetX, newX)),
-      y: Math.max(-maxOffsetY, Math.min(maxOffsetY, newY)),
-    })
-  }, [isDragging, dragStart, image, scale])
-
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false)
+  const handleResizeStart = useCallback((corner: string, e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const { clientX, clientY } = getEventPosition(e)
+    setIsResizing(true)
+    setResizeCorner(corner)
+    setDragStart({ x: clientX, y: clientY })
   }, [])
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
+  const handleMove = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDragging && !isResizing) return
     e.preventDefault()
-    const delta = e.deltaY > 0 ? -0.1 : 0.1
-    setScale(prev => Math.max(minScale, Math.min(3, prev + delta)))
-  }, [minScale])
 
-  const handleZoomIn = () => setScale(prev => Math.min(3, prev + 0.2))
-  const handleZoomOut = () => setScale(prev => Math.max(minScale, prev - 0.2))
+    const { clientX, clientY } = getEventPosition(e)
+
+    if (isDragging) {
+      const newX = clientX - dragStart.x
+      const newY = clientY - dragStart.y
+
+      setCropArea(prev => ({
+        ...prev,
+        x: Math.max(0, Math.min(displaySize.width - prev.size, newX)),
+        y: Math.max(0, Math.min(displaySize.height - prev.size, newY)),
+      }))
+    }
+
+    if (isResizing && resizeCorner) {
+      const deltaX = clientX - dragStart.x
+      const deltaY = clientY - dragStart.y
+
+      setCropArea(prev => {
+        let newSize = prev.size
+        let newX = prev.x
+        let newY = prev.y
+
+        // Calculate size change based on which corner
+        if (resizeCorner.includes('e')) {
+          newSize = Math.max(MIN_CROP_SIZE, prev.size + deltaX)
+        } else if (resizeCorner.includes('w')) {
+          const sizeDelta = -deltaX
+          newSize = Math.max(MIN_CROP_SIZE, prev.size + sizeDelta)
+          if (newSize !== prev.size) {
+            newX = prev.x - (newSize - prev.size)
+          }
+        }
+
+        if (resizeCorner.includes('s')) {
+          newSize = Math.max(MIN_CROP_SIZE, Math.max(newSize, prev.size + deltaY))
+        } else if (resizeCorner.includes('n')) {
+          const sizeDelta = -deltaY
+          const potentialSize = Math.max(MIN_CROP_SIZE, prev.size + sizeDelta)
+          if (potentialSize > newSize) {
+            newSize = potentialSize
+            newY = prev.y - (newSize - prev.size)
+          }
+        }
+
+        // Keep square and constrain to bounds
+        newSize = Math.min(newSize, displaySize.width - newX, displaySize.height - newY)
+        newX = Math.max(0, newX)
+        newY = Math.max(0, newY)
+
+        if (newX + newSize > displaySize.width) newSize = displaySize.width - newX
+        if (newY + newSize > displaySize.height) newSize = displaySize.height - newY
+
+        return { x: newX, y: newY, size: newSize }
+      })
+
+      setDragStart({ x: clientX, y: clientY })
+    }
+  }, [isDragging, isResizing, dragStart, displaySize, resizeCorner])
+
+  const handleEnd = useCallback(() => {
+    setIsDragging(false)
+    setIsResizing(false)
+    setResizeCorner(null)
+  }, [])
+
   const handleReset = () => {
-    setScale(minScale)
-    setPosition({ x: 0, y: 0 })
+    const initialSize = Math.min(displaySize.width, displaySize.height) * 0.8
+    setCropArea({
+      x: (displaySize.width - initialSize) / 2,
+      y: (displaySize.height - initialSize) / 2,
+      size: initialSize,
+    })
   }
 
   const handleCrop = useCallback(() => {
     if (!image) return
 
-    // Create output canvas
-    const outputCanvas = document.createElement('canvas')
-    outputCanvas.width = CROP_SIZE
-    outputCanvas.height = CROP_SIZE
-    const ctx = outputCanvas.getContext('2d')
+    const canvas = document.createElement('canvas')
+    canvas.width = CROP_OUTPUT_SIZE
+    canvas.height = CROP_OUTPUT_SIZE
+    const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    // Calculate the crop area from the display
-    const scaledWidth = image.width * scale
-    const scaledHeight = image.height * scale
-    const x = (DISPLAY_SIZE - scaledWidth) / 2 + position.x
-    const y = (DISPLAY_SIZE - scaledHeight) / 2 + position.y
+    // Calculate actual image coordinates from display coordinates
+    const scaleX = image.width / displaySize.width
+    const scaleY = image.height / displaySize.height
 
-    // Scale factor between display and output
-    const outputScale = CROP_SIZE / DISPLAY_SIZE
+    const sourceX = cropArea.x * scaleX
+    const sourceY = cropArea.y * scaleY
+    const sourceSize = cropArea.size * Math.max(scaleX, scaleY)
 
-    // Draw the cropped area
     ctx.drawImage(
       image,
-      -x / scale,
-      -y / scale,
-      DISPLAY_SIZE / scale,
-      DISPLAY_SIZE / scale,
+      sourceX,
+      sourceY,
+      sourceSize,
+      sourceSize,
       0,
       0,
-      CROP_SIZE,
-      CROP_SIZE
+      CROP_OUTPUT_SIZE,
+      CROP_OUTPUT_SIZE
     )
 
-    // Convert to blob
-    outputCanvas.toBlob((blob) => {
+    canvas.toBlob((blob) => {
       if (blob) {
         onCrop(blob)
       }
     }, 'image/jpeg', 0.9)
-  }, [image, scale, position, onCrop])
+  }, [image, displaySize, cropArea, onCrop])
+
+  const cornerSize = 20
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Crop Image" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Crop Image" size="lg">
       <div className="flex flex-col items-center">
+        {/* Instructions */}
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
+          Drag the box to move. Drag corners to resize.
+        </p>
+
         {/* Crop area */}
         <div
           ref={containerRef}
-          className="relative rounded-full overflow-hidden cursor-move touch-none"
-          style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE }}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
-          onWheel={handleWheel}
+          className="relative bg-slate-900 select-none touch-none"
+          style={{ width: displaySize.width, height: displaySize.height }}
+          onMouseMove={handleMove}
+          onMouseUp={handleEnd}
+          onMouseLeave={handleEnd}
+          onTouchMove={handleMove}
+          onTouchEnd={handleEnd}
         >
-          <canvas
-            ref={canvasRef}
-            className="w-full h-full"
-            style={{ width: DISPLAY_SIZE, height: DISPLAY_SIZE }}
-          />
-          {/* Circular overlay guide */}
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              boxShadow: '0 0 0 1000px rgba(0,0,0,0.5)',
-              borderRadius: '50%',
-            }}
-          />
-          <div className="absolute inset-0 rounded-full border-2 border-white/50 pointer-events-none" />
-        </div>
+          {/* Image */}
+          {imageSrc && (
+            <img
+              src={imageSrc}
+              alt="Crop preview"
+              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              draggable={false}
+            />
+          )}
 
-        {/* Instructions */}
-        <p className="text-sm text-slate-500 dark:text-slate-400 mt-3 text-center">
-          Drag to reposition. Use controls or scroll to zoom.
-        </p>
-
-        {/* Zoom controls */}
-        <div className="flex items-center gap-2 mt-4">
-          <button
-            onClick={handleZoomOut}
-            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-            title="Zoom out"
-          >
-            <ZoomOut className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-          </button>
-          <div className="w-32 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          {/* Darkened overlay outside crop area */}
+          <div className="absolute inset-0 pointer-events-none">
+            {/* Top */}
             <div
-              className="h-full bg-teal-500 rounded-full transition-all"
-              style={{ width: `${((scale - minScale) / (3 - minScale)) * 100}%` }}
+              className="absolute bg-black/60"
+              style={{ top: 0, left: 0, right: 0, height: cropArea.y }}
+            />
+            {/* Bottom */}
+            <div
+              className="absolute bg-black/60"
+              style={{ top: cropArea.y + cropArea.size, left: 0, right: 0, bottom: 0 }}
+            />
+            {/* Left */}
+            <div
+              className="absolute bg-black/60"
+              style={{ top: cropArea.y, left: 0, width: cropArea.x, height: cropArea.size }}
+            />
+            {/* Right */}
+            <div
+              className="absolute bg-black/60"
+              style={{ top: cropArea.y, left: cropArea.x + cropArea.size, right: 0, height: cropArea.size }}
             />
           </div>
-          <button
-            onClick={handleZoomIn}
-            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
-            title="Zoom in"
+
+          {/* Crop box */}
+          <div
+            className="absolute border-2 border-white cursor-move"
+            style={{
+              left: cropArea.x,
+              top: cropArea.y,
+              width: cropArea.size,
+              height: cropArea.size,
+            }}
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
           >
-            <ZoomIn className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-          </button>
-          <button
-            onClick={handleReset}
-            className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ml-2"
-            title="Reset"
-          >
-            <RotateCcw className="w-5 h-5 text-slate-600 dark:text-slate-300" />
-          </button>
+            {/* Grid lines */}
+            <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white/30" />
+              <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white/30" />
+              <div className="absolute top-1/3 left-0 right-0 h-px bg-white/30" />
+              <div className="absolute top-2/3 left-0 right-0 h-px bg-white/30" />
+            </div>
+
+            {/* Corner handles */}
+            {['nw', 'ne', 'sw', 'se'].map(corner => (
+              <div
+                key={corner}
+                className="absolute w-5 h-5 bg-white border-2 border-teal-500 rounded-sm cursor-nwse-resize"
+                style={{
+                  left: corner.includes('w') ? -10 : 'auto',
+                  right: corner.includes('e') ? -10 : 'auto',
+                  top: corner.includes('n') ? -10 : 'auto',
+                  bottom: corner.includes('s') ? -10 : 'auto',
+                  cursor: corner === 'nw' || corner === 'se' ? 'nwse-resize' : 'nesw-resize',
+                }}
+                onMouseDown={(e) => handleResizeStart(corner, e)}
+                onTouchStart={(e) => handleResizeStart(corner, e)}
+              />
+            ))}
+
+            {/* Circular preview overlay */}
+            <div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              style={{
+                boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.5)',
+              }}
+            />
+          </div>
         </div>
 
+        {/* Size indicator */}
+        <p className="text-xs text-slate-400 mt-2">
+          {Math.round(cropArea.size)} x {Math.round(cropArea.size)} px
+        </p>
+
         {/* Action buttons */}
-        <div className="flex gap-3 mt-6 w-full">
+        <div className="flex gap-3 mt-4 w-full max-w-sm">
+          <button
+            onClick={handleReset}
+            className="p-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+            title="Reset"
+          >
+            <RotateCcw className="w-5 h-5" />
+          </button>
           <button
             onClick={onClose}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors font-medium"

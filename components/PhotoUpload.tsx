@@ -88,9 +88,10 @@ export default function PhotoUpload({
     try {
       // Generate unique filename
       const fileName = `${user.id}/${Date.now()}.jpg`
+      console.log('Uploading cropped image:', fileName, 'to bucket:', bucket, 'size:', blob.size)
 
       // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
         .upload(fileName, blob, {
           cacheControl: '3600',
@@ -98,19 +99,29 @@ export default function PhotoUpload({
           contentType: 'image/jpeg',
         })
 
-      if (uploadError) throw uploadError
+      if (uploadError) {
+        console.error('Upload error details:', uploadError)
+        throw uploadError
+      }
+      console.log('Upload successful:', uploadData)
 
       // Get signed URL for private bucket (valid for 1 year)
       const { data: signedData, error: signedError } = await supabase.storage
         .from(bucket)
         .createSignedUrl(fileName, 60 * 60 * 24 * 365) // 1 year
 
-      if (signedError) throw signedError
+      if (signedError) {
+        console.error('Signed URL error:', signedError)
+        throw signedError
+      }
+
+      console.log('Signed URL data:', signedData)
 
       if (!signedData?.signedUrl) {
         throw new Error('No signed URL returned')
       }
 
+      console.log('Setting photo URL:', signedData.signedUrl)
       onPhotoChange(signedData.signedUrl)
       onEmojiChange('') // Clear emoji when photo is set
       setShowOptions(false)
