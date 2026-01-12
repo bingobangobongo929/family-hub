@@ -21,8 +21,8 @@ const DEMO_ITEMS: ShoppingListItem[] = [
 
 // Check if Recipe Vault Supabase is configured
 const isRecipeVaultConfigured = () => {
-  return process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL &&
-         process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL !== ''
+  const url = process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL
+  return url && url !== '' && url !== 'your-supabase-url'
 }
 
 export default function ShoppingWidget() {
@@ -44,8 +44,14 @@ export default function ShoppingWidget() {
         .select('id')
         .limit(1)
 
-      if (listError || !lists?.[0]) {
-        console.error('Error fetching list:', listError)
+      if (listError) {
+        console.error('Error fetching shopping list:', listError)
+        setItems(DEMO_ITEMS)
+        return
+      }
+
+      if (!lists || lists.length === 0) {
+        console.log('No shopping list found, using demo items')
         setItems(DEMO_ITEMS)
         return
       }
@@ -53,7 +59,7 @@ export default function ShoppingWidget() {
       setListId(lists[0].id)
       setIsConnected(true)
 
-      const { data } = await recipeVaultSupabase
+      const { data, error: itemsError } = await recipeVaultSupabase
         .from('shopping_list_items')
         .select('*')
         .eq('list_id', lists[0].id)
@@ -61,9 +67,14 @@ export default function ShoppingWidget() {
         .order('category', { ascending: true })
         .order('sort_order', { ascending: true })
 
-      if (data) {
-        setItems(data)
+      if (itemsError) {
+        console.error('Error fetching shopping items:', itemsError)
+        setItems(DEMO_ITEMS)
+        return
       }
+
+      // Set items even if empty array (connected but no items)
+      setItems(data || [])
     } catch (error) {
       console.error('Error fetching shopping items:', error)
       setItems(DEMO_ITEMS)
