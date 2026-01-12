@@ -4,12 +4,12 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
-import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS } from '@/lib/database.types'
+import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS, CountdownEvent, CountdownEventType, COUNTDOWN_EVENT_TYPES, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
 import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 
 export default function SettingsPage() {
@@ -24,6 +24,19 @@ export default function SettingsPage() {
   const [googleEmail, setGoogleEmail] = useState<string | null>(null)
   const [googleSyncing, setGoogleSyncing] = useState(false)
   const [googleLastSync, setGoogleLastSync] = useState<string | null>(null)
+
+  // Countdown events state
+  const [countdownEvents, setCountdownEvents] = useState<CountdownEvent[]>([])
+  const [showEventModal, setShowEventModal] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<CountdownEvent | null>(null)
+  const [eventForm, setEventForm] = useState({
+    title: '',
+    date: '',
+    emoji: '🎉',
+    event_type: 'holiday' as CountdownEventType,
+    is_recurring: true,
+    is_active: true
+  })
 
   // Member form state
   const [memberForm, setMemberForm] = useState({
@@ -64,10 +77,72 @@ export default function SettingsPage() {
     setLoading(false)
   }, [user])
 
+  const fetchCountdownEvents = useCallback(async () => {
+    if (!user) {
+      // Demo mode - use local storage or defaults
+      const saved = localStorage.getItem('family-hub-countdown-events')
+      if (saved) {
+        setCountdownEvents(JSON.parse(saved))
+      } else {
+        // Use default Danish events for demo
+        const demoEvents = DEFAULT_DANISH_EVENTS.map((e, i) => ({
+          ...e,
+          id: `demo-${i}`,
+          user_id: 'demo',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })) as CountdownEvent[]
+        setCountdownEvents(demoEvents)
+      }
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('countdown_events')
+        .select('*')
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        setCountdownEvents(data)
+      } else {
+        // Seed default events for new users
+        await seedDefaultEvents()
+      }
+    } catch (error) {
+      console.error('Error fetching countdown events:', error)
+    }
+  }, [user])
+
+  const seedDefaultEvents = async () => {
+    if (!user) return
+
+    try {
+      const eventsToInsert = DEFAULT_DANISH_EVENTS.map((e, i) => ({
+        ...e,
+        user_id: user.id,
+        sort_order: i
+      }))
+
+      const { data, error } = await supabase
+        .from('countdown_events')
+        .insert(eventsToInsert)
+        .select()
+
+      if (error) throw error
+      if (data) setCountdownEvents(data)
+    } catch (error) {
+      console.error('Error seeding default events:', error)
+    }
+  }
+
   useEffect(() => {
     fetchSettings()
+    fetchCountdownEvents()
     checkGoogleConnection()
-  }, [fetchSettings])
+  }, [fetchSettings, fetchCountdownEvents])
 
   // Check Google Calendar connection status
   const checkGoogleConnection = async () => {
@@ -261,6 +336,161 @@ export default function SettingsPage() {
       photo_url: null,
       date_of_birth: ''
     })
+  }
+
+  // Countdown event handlers
+  const resetEventForm = () => {
+    setEventForm({
+      title: '',
+      date: '',
+      emoji: '🎉',
+      event_type: 'holiday',
+      is_recurring: true,
+      is_active: true
+    })
+  }
+
+  const handleAddEvent = async () => {
+    if (!eventForm.title.trim() || !eventForm.date) return
+
+    if (!user) {
+      // Demo mode - save to local storage
+      const newEvent: CountdownEvent = {
+        id: `demo-${Date.now()}`,
+        user_id: 'demo',
+        title: eventForm.title,
+        date: eventForm.date,
+        emoji: eventForm.emoji,
+        event_type: eventForm.event_type,
+        is_recurring: eventForm.is_recurring,
+        is_active: eventForm.is_active,
+        sort_order: countdownEvents.length,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      const updated = [...countdownEvents, newEvent]
+      setCountdownEvents(updated)
+      localStorage.setItem('family-hub-countdown-events', JSON.stringify(updated))
+      setShowEventModal(false)
+      resetEventForm()
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('countdown_events')
+        .insert({
+          user_id: user.id,
+          title: eventForm.title,
+          date: eventForm.date,
+          emoji: eventForm.emoji,
+          event_type: eventForm.event_type,
+          is_recurring: eventForm.is_recurring,
+          is_active: eventForm.is_active,
+          sort_order: countdownEvents.length
+        })
+
+      if (error) throw error
+      await fetchCountdownEvents()
+      setShowEventModal(false)
+      resetEventForm()
+    } catch (error) {
+      console.error('Error adding countdown event:', error)
+    }
+  }
+
+  const handleEditEvent = async () => {
+    if (!editingEvent || !eventForm.title.trim() || !eventForm.date) return
+
+    if (!user) {
+      const updated = countdownEvents.map(e =>
+        e.id === editingEvent.id
+          ? { ...e, ...eventForm, updated_at: new Date().toISOString() }
+          : e
+      )
+      setCountdownEvents(updated)
+      localStorage.setItem('family-hub-countdown-events', JSON.stringify(updated))
+      setShowEventModal(false)
+      setEditingEvent(null)
+      resetEventForm()
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('countdown_events')
+        .update({
+          title: eventForm.title,
+          date: eventForm.date,
+          emoji: eventForm.emoji,
+          event_type: eventForm.event_type,
+          is_recurring: eventForm.is_recurring,
+          is_active: eventForm.is_active
+        })
+        .eq('id', editingEvent.id)
+
+      if (error) throw error
+      await fetchCountdownEvents()
+      setShowEventModal(false)
+      setEditingEvent(null)
+      resetEventForm()
+    } catch (error) {
+      console.error('Error updating countdown event:', error)
+    }
+  }
+
+  const handleDeleteEvent = async (event: CountdownEvent) => {
+    if (!confirm(`Delete "${event.title}"?`)) return
+
+    if (!user) {
+      const updated = countdownEvents.filter(e => e.id !== event.id)
+      setCountdownEvents(updated)
+      localStorage.setItem('family-hub-countdown-events', JSON.stringify(updated))
+      return
+    }
+
+    try {
+      await supabase.from('countdown_events').delete().eq('id', event.id)
+      await fetchCountdownEvents()
+    } catch (error) {
+      console.error('Error deleting countdown event:', error)
+    }
+  }
+
+  const handleToggleEvent = async (event: CountdownEvent) => {
+    const newActive = !event.is_active
+
+    if (!user) {
+      const updated = countdownEvents.map(e =>
+        e.id === event.id ? { ...e, is_active: newActive } : e
+      )
+      setCountdownEvents(updated)
+      localStorage.setItem('family-hub-countdown-events', JSON.stringify(updated))
+      return
+    }
+
+    try {
+      await supabase
+        .from('countdown_events')
+        .update({ is_active: newActive })
+        .eq('id', event.id)
+      await fetchCountdownEvents()
+    } catch (error) {
+      console.error('Error toggling countdown event:', error)
+    }
+  }
+
+  const openEditEventModal = (event: CountdownEvent) => {
+    setEditingEvent(event)
+    setEventForm({
+      title: event.title,
+      date: event.date,
+      emoji: event.emoji,
+      event_type: event.event_type,
+      is_recurring: event.is_recurring,
+      is_active: event.is_active
+    })
+    setShowEventModal(true)
   }
 
   if (loading) {
@@ -537,6 +767,73 @@ export default function SettingsPage() {
               })}
             </div>
           </div>
+        </div>
+      </Card>
+
+      {/* Countdown Events */}
+      <Card className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <CardHeader title="Countdown Events" icon={<PartyPopper className="w-5 h-5" />} />
+          <Button size="sm" onClick={() => { resetEventForm(); setEditingEvent(null); setShowEventModal(true) }}>
+            <Plus className="w-4 h-4 mr-1" />
+            Add Event
+          </Button>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Holidays and events that appear in the countdown widget. Family member birthdays are automatically included.
+        </p>
+        <div className="space-y-2 max-h-80 overflow-y-auto">
+          {countdownEvents.map(event => (
+            <div
+              key={event.id}
+              className={`flex items-center gap-3 p-3 rounded-xl transition-colors ${
+                event.is_active
+                  ? 'bg-slate-50 dark:bg-slate-800'
+                  : 'bg-slate-100/50 dark:bg-slate-800/50 opacity-60'
+              }`}
+            >
+              <span className="text-2xl">{event.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium ${event.is_active ? 'text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                  {event.title}
+                </p>
+                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                  <span>{new Date(event.date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+                  {event.is_recurring && <span className="px-1.5 py-0.5 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 rounded">Yearly</span>}
+                  <span className="px-1.5 py-0.5 bg-slate-200 dark:bg-slate-700 rounded capitalize">{event.event_type}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleToggleEvent(event)}
+                className={`relative w-10 h-6 rounded-full transition-colors ${
+                  event.is_active ? 'bg-sage-500' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    event.is_active ? 'translate-x-4' : ''
+                  }`}
+                />
+              </button>
+              <button
+                onClick={() => openEditEventModal(event)}
+                className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleDeleteEvent(event)}
+                className="p-2 text-slate-400 hover:text-coral-500 hover:bg-coral-50 dark:hover:bg-coral-900/30 rounded-lg"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+          {countdownEvents.length === 0 && (
+            <p className="text-center text-slate-500 dark:text-slate-400 py-4">
+              No countdown events yet. Add your first one!
+            </p>
+          )}
         </div>
       </Card>
 
@@ -862,6 +1159,111 @@ export default function SettingsPage() {
             </Button>
             <Button onClick={editingMember ? handleEditMember : handleAddMember}>
               {editingMember ? 'Save Changes' : 'Add Member'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add/Edit Countdown Event Modal */}
+      <Modal
+        isOpen={showEventModal}
+        onClose={() => { setShowEventModal(false); setEditingEvent(null); resetEventForm() }}
+        title={editingEvent ? 'Edit Event' : 'Add Event'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Event Name
+            </label>
+            <input
+              type="text"
+              value={eventForm.title}
+              onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+              placeholder="e.g., Christmas, Summer Holiday"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Date
+            </label>
+            <input
+              type="date"
+              value={eventForm.date}
+              onChange={(e) => setEventForm({ ...eventForm, date: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Emoji
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {['🎉', '🎄', '🎂', '🎃', '💕', '🔥', '🇩🇰', '🎭', '💐', '🦆', '🕯️', '🎆', '❄️', '☀️', '🍂', '🍺', '✈️', '🎒', '📅', '🎁'].map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => setEventForm({ ...eventForm, emoji })}
+                  className={`w-10 h-10 text-xl rounded-xl transition-all ${
+                    eventForm.emoji === emoji
+                      ? 'bg-sage-100 ring-2 ring-sage-500 dark:bg-sage-900/50'
+                      : 'bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Type
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {COUNTDOWN_EVENT_TYPES.map(type => (
+                <button
+                  key={type.id}
+                  onClick={() => setEventForm({ ...eventForm, event_type: type.id })}
+                  className={`px-3 py-2 rounded-xl transition-all text-sm flex items-center gap-2 ${
+                    eventForm.event_type === type.id
+                      ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  <span>{type.emoji}</span>
+                  <span>{type.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-100">Repeats Yearly</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Event occurs on the same date each year</p>
+            </div>
+            <button
+              onClick={() => setEventForm({ ...eventForm, is_recurring: !eventForm.is_recurring })}
+              className={`relative w-14 h-8 rounded-full transition-colors ${
+                eventForm.is_recurring ? 'bg-sage-500' : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                  eventForm.is_recurring ? 'translate-x-6' : ''
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
+            <Button variant="secondary" onClick={() => { setShowEventModal(false); setEditingEvent(null); resetEventForm() }}>
+              Cancel
+            </Button>
+            <Button onClick={editingEvent ? handleEditEvent : handleAddEvent}>
+              {editingEvent ? 'Save Changes' : 'Add Event'}
             </Button>
           </div>
         </div>

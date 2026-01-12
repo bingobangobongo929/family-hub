@@ -31,12 +31,12 @@ const ContactsContext = createContext<ContactsContextType | undefined>(undefined
 
 // Demo contacts when not logged in
 const DEMO_CONTACTS: Contact[] = [
-  { id: 'demo-c1', user_id: 'demo', name: 'Grandma Rose', date_of_birth: '1955-03-15', relationship_group: 'grandparents', notes: null, color: '#ec4899', photo_url: null, avatar: null, created_at: '', updated_at: '' },
-  { id: 'demo-c2', user_id: 'demo', name: 'Grandpa Joe', date_of_birth: '1952-07-22', relationship_group: 'grandparents', notes: null, color: '#3b82f6', photo_url: null, avatar: null, created_at: '', updated_at: '' },
-  { id: 'demo-c3', user_id: 'demo', name: 'Uncle Tom', date_of_birth: '1980-11-08', relationship_group: 'aunts_uncles', notes: null, color: '#22c55e', photo_url: null, avatar: null, created_at: '', updated_at: '' },
-  { id: 'demo-c4', user_id: 'demo', name: 'Aunt Sarah', date_of_birth: '1982-06-30', relationship_group: 'aunts_uncles', notes: null, color: '#f97316', photo_url: null, avatar: null, created_at: '', updated_at: '' },
-  { id: 'demo-c5', user_id: 'demo', name: 'Cousin Emma', date_of_birth: '2015-09-12', relationship_group: 'cousins', notes: null, color: '#8b5cf6', photo_url: null, avatar: null, created_at: '', updated_at: '' },
-  { id: 'demo-c6', user_id: 'demo', name: 'Best Friend Jake', date_of_birth: '2017-02-28', relationship_group: 'friends', notes: "Olivia's best friend from school", color: '#06b6d4', photo_url: null, avatar: null, created_at: '', updated_at: '' },
+  { id: 'demo-c1', user_id: 'demo', name: 'Grandma Rose', date_of_birth: '1955-03-15', relationship_group: 'grandparents', notes: null, color: '#ec4899', photo_url: null, avatar: null, show_birthday_countdown: true, created_at: '', updated_at: '' },
+  { id: 'demo-c2', user_id: 'demo', name: 'Grandpa Joe', date_of_birth: '1952-07-22', relationship_group: 'grandparents', notes: null, color: '#3b82f6', photo_url: null, avatar: null, show_birthday_countdown: true, created_at: '', updated_at: '' },
+  { id: 'demo-c3', user_id: 'demo', name: 'Uncle Tom', date_of_birth: '1980-11-08', relationship_group: 'aunts_uncles', notes: null, color: '#22c55e', photo_url: null, avatar: null, show_birthday_countdown: false, created_at: '', updated_at: '' },
+  { id: 'demo-c4', user_id: 'demo', name: 'Aunt Sarah', date_of_birth: '1982-06-30', relationship_group: 'aunts_uncles', notes: null, color: '#f97316', photo_url: null, avatar: null, show_birthday_countdown: false, created_at: '', updated_at: '' },
+  { id: 'demo-c5', user_id: 'demo', name: 'Cousin Emma', date_of_birth: '2015-09-12', relationship_group: 'cousins', notes: null, color: '#8b5cf6', photo_url: null, avatar: null, show_birthday_countdown: false, created_at: '', updated_at: '' },
+  { id: 'demo-c6', user_id: 'demo', name: 'Best Friend Jake', date_of_birth: '2017-02-28', relationship_group: 'friends', notes: "Olivia's best friend from school", color: '#06b6d4', photo_url: null, avatar: null, show_birthday_countdown: true, created_at: '', updated_at: '' },
 ]
 
 // Demo links

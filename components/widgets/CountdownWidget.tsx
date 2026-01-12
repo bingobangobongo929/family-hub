@@ -1,61 +1,145 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { differenceInDays, parseISO, format } from 'date-fns'
+import { useState, useEffect, useMemo, useCallback } from 'react'
+import { differenceInDays, parseISO, format, addYears, isBefore, startOfDay } from 'date-fns'
 import { useWidgetSize } from '@/lib/useWidgetSize'
-import { useContacts, ContactWithBirthday } from '@/lib/contacts-context'
+import { useContacts } from '@/lib/contacts-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
-import { RelationshipGroup } from '@/lib/database.types'
+import { useAuth } from '@/lib/auth-context'
+import { supabase } from '@/lib/supabase'
+import { CountdownEvent as DbCountdownEvent, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
 
-interface CountdownEvent {
+interface DisplayCountdownEvent {
   id: string
   title: string
   date: string
   emoji: string
-  type: 'birthday' | 'holiday' | 'event' | 'trip'
+  type: 'birthday' | 'family_birthday' | 'holiday' | 'event' | 'trip' | 'school' | 'other'
   color?: string
-  linkedRelationships?: string[] // e.g., ["Olivia's Mormor", "Ellie's Mormor"]
+  linkedRelationships?: string[]
 }
 
-function getNextHoliday(month: number, day: number): string {
+function getNextOccurrence(month: number, day: number): string {
   const now = new Date()
   let year = now.getFullYear()
-  const holiday = new Date(year, month - 1, day)
-  if (holiday < now) {
+  const date = new Date(year, month - 1, day)
+  if (date < startOfDay(now)) {
     year++
   }
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
-// Fixed holidays
-const HOLIDAYS: CountdownEvent[] = [
-  { id: 'christmas', title: 'Christmas', date: getNextHoliday(12, 25), emoji: '🎄', type: 'holiday' },
-  { id: 'easter-2025', title: 'Easter', date: '2025-04-20', emoji: '🐰', type: 'holiday' },
-  { id: 'easter-2026', title: 'Easter', date: '2026-04-05', emoji: '🐰', type: 'holiday' },
-  { id: 'new-year', title: 'New Year', date: getNextHoliday(1, 1), emoji: '🎆', type: 'holiday' },
-]
+function getNextBirthdayDate(dateOfBirth: string): string {
+  const dob = parseISO(dateOfBirth)
+  const today = startOfDay(new Date())
+  let nextBirthday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate())
+  if (isBefore(nextBirthday, today)) {
+    nextBirthday = addYears(nextBirthday, 1)
+  }
+  return format(nextBirthday, 'yyyy-MM-dd')
+}
 
 export default function CountdownWidget() {
   const [now, setNow] = useState(new Date())
   const [ref, { size, isWide }] = useWidgetSize()
-  const { getUpcomingBirthdays, getContactLinks } = useContacts()
-  const { getMember } = useFamily()
+  const [customEvents, setCustomEvents] = useState<DbCountdownEvent[]>([])
+  const { user } = useAuth()
+  const { contacts, getContactLinks } = useContacts()
+  const { members, getMember } = useFamily()
   const { countdownRelationshipGroups } = useSettings()
+
+  // Fetch custom countdown events from database
+  const fetchCustomEvents = useCallback(async () => {
+    if (!user) {
+      // Demo mode - use defaults
+      const demoEvents = DEFAULT_DANISH_EVENTS.map((e, i) => ({
+        ...e,
+        id: `demo-${i}`,
+        user_id: 'demo',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })) as DbCountdownEvent[]
+      setCustomEvents(demoEvents)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('countdown_events')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+
+      if (error) throw error
+      setCustomEvents(data || [])
+    } catch (error) {
+      console.error('Error fetching countdown events:', error)
+      // Fall back to defaults
+      const demoEvents = DEFAULT_DANISH_EVENTS.map((e, i) => ({
+        ...e,
+        id: `demo-${i}`,
+        user_id: 'demo',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })) as DbCountdownEvent[]
+      setCustomEvents(demoEvents)
+    }
+  }, [user])
+
+  useEffect(() => {
+    fetchCustomEvents()
+  }, [fetchCustomEvents])
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(timer)
   }, [])
 
-  // Get birthdays from contacts based on settings
-  const upcomingBirthdays = useMemo(() => {
-    return getUpcomingBirthdays(365, countdownRelationshipGroups as RelationshipGroup[])
-  }, [getUpcomingBirthdays, countdownRelationshipGroups])
+  // Convert custom events to display format
+  const customCountdowns: DisplayCountdownEvent[] = useMemo(() => {
+    return customEvents.map(event => {
+      let eventDate = event.date
 
-  // Convert contact birthdays to countdown events
-  const birthdayEvents: CountdownEvent[] = useMemo(() => {
-    return upcomingBirthdays.map(contact => {
+      // For recurring events, calculate next occurrence
+      if (event.is_recurring) {
+        const originalDate = parseISO(event.date)
+        eventDate = getNextOccurrence(originalDate.getMonth() + 1, originalDate.getDate())
+      }
+
+      return {
+        id: `custom-${event.id}`,
+        title: event.title,
+        date: eventDate,
+        emoji: event.emoji,
+        type: event.event_type as DisplayCountdownEvent['type'],
+      }
+    })
+  }, [customEvents])
+
+  // Family member birthdays
+  const familyBirthdays: DisplayCountdownEvent[] = useMemo(() => {
+    return members
+      .filter(member => member.date_of_birth)
+      .map(member => ({
+        id: `family-${member.id}`,
+        title: `${member.name}'s Birthday`,
+        date: getNextBirthdayDate(member.date_of_birth!),
+        emoji: '🎂',
+        type: 'family_birthday' as const,
+        color: member.color,
+      }))
+  }, [members])
+
+  // Contact birthdays - only those with show_birthday_countdown enabled
+  const contactBirthdays: DisplayCountdownEvent[] = useMemo(() => {
+    const filteredContacts = contacts.filter(contact =>
+      contact.date_of_birth &&
+      contact.show_birthday_countdown &&
+      (countdownRelationshipGroups as string[])?.includes(contact.relationship_group)
+    )
+
+    return filteredContacts.map(contact => {
       // Get linked relationships for this contact
       const links = getContactLinks(contact.id)
       const linkedRelationships = links
@@ -66,25 +150,25 @@ export default function CountdownWidget() {
         .filter(Boolean) as string[]
 
       return {
-        id: `birthday-${contact.id}`,
+        id: `contact-${contact.id}`,
         title: `${contact.name}'s Birthday`,
-        date: format(contact.nextBirthday, 'yyyy-MM-dd'),
+        date: getNextBirthdayDate(contact.date_of_birth!),
         emoji: '🎂',
         type: 'birthday' as const,
         color: contact.color,
         linkedRelationships: linkedRelationships.length > 0 ? linkedRelationships : undefined,
       }
     })
-  }, [upcomingBirthdays, getContactLinks, getMember])
+  }, [contacts, countdownRelationshipGroups, getContactLinks, getMember])
 
-  // Combine birthdays and holidays
+  // Combine all events
   const allCountdowns = useMemo(() => {
-    const combined = [...birthdayEvents, ...HOLIDAYS]
+    const combined = [...familyBirthdays, ...contactBirthdays, ...customCountdowns]
     return combined
-      .map(c => ({ ...c, daysLeft: differenceInDays(parseISO(c.date), now) }))
+      .map(c => ({ ...c, daysLeft: differenceInDays(parseISO(c.date), startOfDay(now)) }))
       .filter(c => c.daysLeft >= 0)
       .sort((a, b) => a.daysLeft - b.daysLeft)
-  }, [birthdayEvents, now])
+  }, [familyBirthdays, contactBirthdays, customCountdowns, now])
 
   const nextEvent = allCountdowns[0]
 
@@ -101,8 +185,10 @@ export default function CountdownWidget() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'birthday': return 'from-pink-500 to-rose-500'
+      case 'family_birthday': return 'from-pink-600 to-rose-600'
       case 'holiday': return 'from-amber-500 to-orange-500'
       case 'trip': return 'from-teal-500 to-cyan-500'
+      case 'school': return 'from-blue-500 to-indigo-500'
       default: return 'from-purple-500 to-indigo-500'
     }
   }

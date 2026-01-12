@@ -23,6 +23,7 @@ export default function ContactsPage() {
     color: '#3b82f6',
     photo_url: null as string | null,
     avatar: '',
+    show_birthday_countdown: false,
   })
   const [memberLinks, setMemberLinks] = useState<{ memberId: string; relationshipType: string }[]>([])
 
@@ -37,6 +38,7 @@ export default function ContactsPage() {
       color: '#3b82f6',
       photo_url: null,
       avatar: '',
+      show_birthday_countdown: false,
     })
     setMemberLinks([])
     setEditingContact(null)
@@ -57,6 +59,7 @@ export default function ContactsPage() {
       color: contact.color,
       photo_url: contact.photo_url || null,
       avatar: contact.avatar || '',
+      show_birthday_countdown: contact.show_birthday_countdown || false,
     })
     // Load existing member links
     const existingLinks = getContactLinks(contact.id)
@@ -75,6 +78,7 @@ export default function ContactsPage() {
       color: formData.color,
       photo_url: formData.photo_url,
       avatar: formData.avatar || null,
+      show_birthday_countdown: formData.show_birthday_countdown,
     }
 
     let contactId: string
@@ -301,6 +305,32 @@ export default function ContactsPage() {
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
             />
           </div>
+
+          {/* Birthday Countdown Toggle - only show if birthday is set */}
+          {formData.date_of_birth && (
+            <div className="flex items-center justify-between p-3 rounded-xl bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-900/30">
+              <div className="flex items-center gap-2">
+                <Cake className="w-4 h-4 text-pink-500" />
+                <div>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Show in Countdown</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Include this birthday in the countdown widget</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, show_birthday_countdown: !formData.show_birthday_countdown })}
+                className={`relative w-12 h-7 rounded-full transition-colors ${
+                  formData.show_birthday_countdown ? 'bg-pink-500' : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    formData.show_birthday_countdown ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">

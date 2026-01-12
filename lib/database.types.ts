@@ -119,6 +119,7 @@ export interface Contact {
   color: string
   photo_url: string | null  // Uploaded photo URL
   avatar: string | null     // Emoji avatar
+  show_birthday_countdown: boolean  // Show in countdown widget
   created_at: string
   updated_at: string
   // Joined data
@@ -191,6 +192,56 @@ export const RELATIONSHIP_GROUPS = [
   { id: 'cousins' as const, label: 'Cousins', emoji: '🧒' },
   { id: 'friends' as const, label: 'Friends', emoji: '🤝' },
   { id: 'other' as const, label: 'Other', emoji: '👤' },
+]
+
+// ============================================
+// COUNTDOWN EVENTS (custom holidays/events)
+// ============================================
+export type CountdownEventType = 'holiday' | 'event' | 'trip' | 'school' | 'other'
+
+export interface CountdownEvent {
+  id: string
+  user_id: string
+  title: string
+  date: string           // ISO date string
+  emoji: string
+  event_type: CountdownEventType
+  is_recurring: boolean  // Repeats annually
+  is_active: boolean     // Can be disabled without deleting
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export type InsertCountdownEvent = Omit<CountdownEvent, 'id' | 'created_at' | 'updated_at'>
+export type UpdateCountdownEvent = Partial<InsertCountdownEvent>
+
+// Default Danish events to seed for new users
+export const DEFAULT_DANISH_EVENTS: Omit<InsertCountdownEvent, 'user_id'>[] = [
+  // Cultural events
+  { title: 'Fastelavn', date: '2026-02-15', emoji: '🎭', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 0 },
+  { title: 'Valentinsdag', date: '2026-02-14', emoji: '💕', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 1 },
+  { title: 'Mors Dag', date: '2026-05-10', emoji: '💐', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 2 },
+  { title: 'Grundlovsdag', date: '2026-06-05', emoji: '🇩🇰', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 3 },
+  { title: 'Sankt Hans Aften', date: '2026-06-23', emoji: '🔥', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 4 },
+  { title: 'Halloween', date: '2026-10-31', emoji: '🎃', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 5 },
+  { title: 'J-dag', date: '2026-11-06', emoji: '🍺', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 6 },
+  { title: 'Mortensaften', date: '2026-11-10', emoji: '🦆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 7 },
+  { title: 'Luciadag', date: '2026-12-13', emoji: '🕯️', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 8 },
+  { title: 'Juleaften', date: '2026-12-24', emoji: '🎄', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 9 },
+  { title: 'Nytårsaften', date: '2026-12-31', emoji: '🎆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 10 },
+  // School holidays
+  { title: 'Vinterferie starter', date: '2026-02-07', emoji: '❄️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 11 },
+  { title: 'Efterårsferie starter', date: '2026-10-10', emoji: '🍂', event_type: 'school', is_recurring: false, is_active: true, sort_order: 12 },
+  { title: 'Sommerferie starter', date: '2026-06-27', emoji: '☀️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 13 },
+]
+
+export const COUNTDOWN_EVENT_TYPES = [
+  { id: 'holiday' as const, label: 'Holiday', emoji: '🎉' },
+  { id: 'event' as const, label: 'Event', emoji: '📅' },
+  { id: 'trip' as const, label: 'Trip', emoji: '✈️' },
+  { id: 'school' as const, label: 'School', emoji: '🎒' },
+  { id: 'other' as const, label: 'Other', emoji: '📌' },
 ]
 
 // ============================================
