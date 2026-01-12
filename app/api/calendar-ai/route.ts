@@ -279,7 +279,7 @@ Note: recurrence_pattern is optional - only include if the event repeats.`
         contents: [{ parts }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 8192,
         },
       }),
     }
