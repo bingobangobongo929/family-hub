@@ -18,6 +18,7 @@ import { useSettings } from '@/lib/settings-context'
 import { CalendarEvent, MEMBER_COLORS, RecurrencePattern } from '@/lib/database.types'
 import RecurrenceSelector, { RecurrenceBadge } from '@/components/RecurrenceSelector'
 import { patternToRRule, rruleToPattern, describeRecurrence } from '@/lib/rrule'
+import { getBinsForDate, getBinInfo } from '@/lib/bin-schedule'
 
 type ViewMode = 'month' | 'week' | 'day'
 
@@ -456,6 +457,7 @@ export default function CalendarPage() {
             const isCurrentMonth = isSameMonth(day, currentDate)
             const isSelected = selectedDate && isSameDay(day, selectedDate)
             const isTodayDate = isToday(day)
+            const dayBins = getBinsForDate(day)
 
             return (
               <button
@@ -467,12 +469,21 @@ export default function CalendarPage() {
                     : 'bg-slate-25 dark:bg-slate-900/30 opacity-50'
                 } ${isSelected ? 'ring-2 ring-sage-500' : ''}`}
               >
-                <div className={`text-sm font-medium mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
-                  isTodayDate
-                    ? 'bg-sage-500 text-white'
-                    : 'text-slate-700 dark:text-slate-300'
-                }`}>
-                  {format(day, 'd')}
+                <div className="flex items-center justify-between mb-1">
+                  <div className={`text-sm font-medium w-7 h-7 flex items-center justify-center rounded-full ${
+                    isTodayDate
+                      ? 'bg-sage-500 text-white'
+                      : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {format(day, 'd')}
+                  </div>
+                  {dayBins.length > 0 && (
+                    <div className="flex gap-0.5" title={dayBins.map(b => getBinInfo(b).name).join(', ')}>
+                      {dayBins.map(binType => (
+                        <span key={binType} className="text-xs">{getBinInfo(binType).emoji}</span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-1">
                   {dayEvents.slice(0, 3).map(event => {

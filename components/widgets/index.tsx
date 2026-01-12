@@ -29,7 +29,7 @@ export const AVAILABLE_WIDGETS = [
   { id: 'routine', name: 'Routine', icon: '☀️', component: 'QuickRoutineWidget', defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 1 } },
   { id: 'shopping', name: 'Shopping', icon: '🛒', component: 'ShoppingWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'timer', name: 'Timer', icon: '⏱️', component: 'TimerWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 1, h: 2 } },
-  { id: 'bindicator', name: 'Bins', icon: '🗑️', component: 'BindicatorWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
+  { id: 'bindicator', name: 'Bindicator', icon: '🗑️', component: 'BindicatorWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
 ]
 
 // Default layout for new users

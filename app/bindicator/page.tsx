@@ -403,7 +403,7 @@ export default function BindicatorPage() {
           <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">♻️</span>
-              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200">Plastic Recycling</h3>
+              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200">PMG Recycling</h3>
             </div>
             <ul className="text-sm text-emerald-700 dark:text-emerald-300 space-y-1">
               <li>Plastic bottles and containers</li>

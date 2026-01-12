@@ -46,8 +46,8 @@ export const BIN_TYPES: BinInfo[] = [
   },
   {
     id: 'plastic',
-    name: 'Plastic Recycling',
-    shortName: 'Plastic',
+    name: 'PMG Recycling',
+    shortName: 'PMG',
     emoji: '♻️',
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-500',
