@@ -86,6 +86,22 @@ export default function PhotoUpload({
     setError(null)
 
     try {
+      // Delete old image if exists
+      if (photoUrl) {
+        try {
+          // Extract file path from signed URL
+          const urlMatch = photoUrl.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+?)\?/)
+          if (urlMatch && urlMatch[1]) {
+            const oldPath = decodeURIComponent(urlMatch[1])
+            console.log('Deleting old image:', oldPath)
+            await supabase.storage.from(bucket).remove([oldPath])
+          }
+        } catch (deleteErr) {
+          console.warn('Could not delete old image:', deleteErr)
+          // Continue with upload even if delete fails
+        }
+      }
+
       // Generate unique filename
       const fileName = `${user.id}/${Date.now()}.jpg`
       console.log('Uploading cropped image:', fileName, 'to bucket:', bucket, 'size:', blob.size)
@@ -131,12 +147,25 @@ export default function PhotoUpload({
     } finally {
       setUploading(false)
     }
-  }, [user, bucket, onPhotoChange, onEmojiChange])
+  }, [user, bucket, photoUrl, onPhotoChange, onEmojiChange])
 
-  const handleRemovePhoto = useCallback(() => {
+  const handleRemovePhoto = useCallback(async () => {
+    // Delete from storage if exists
+    if (photoUrl) {
+      try {
+        const urlMatch = photoUrl.match(/\/storage\/v1\/object\/sign\/[^/]+\/(.+?)\?/)
+        if (urlMatch && urlMatch[1]) {
+          const oldPath = decodeURIComponent(urlMatch[1])
+          console.log('Deleting image on remove:', oldPath)
+          await supabase.storage.from(bucket).remove([oldPath])
+        }
+      } catch (deleteErr) {
+        console.warn('Could not delete image:', deleteErr)
+      }
+    }
     onPhotoChange(null)
     setShowOptions(false)
-  }, [onPhotoChange])
+  }, [photoUrl, bucket, onPhotoChange])
 
   const handleEmojiSelect = useCallback((selectedEmoji: string) => {
     onEmojiChange(selectedEmoji)
