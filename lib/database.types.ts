@@ -217,23 +217,26 @@ export type InsertCountdownEvent = Omit<CountdownEvent, 'id' | 'created_at' | 'u
 export type UpdateCountdownEvent = Partial<InsertCountdownEvent>
 
 // Default Danish events to seed for new users
+// Note: is_recurring = true means same date every year (e.g., Dec 25)
+// is_recurring = false means the date changes yearly (Easter-based, "2nd Sunday of May", etc.)
 export const DEFAULT_DANISH_EVENTS: Omit<InsertCountdownEvent, 'user_id'>[] = [
-  // Cultural events
-  { title: 'Fastelavn', date: '2026-02-15', emoji: '🎭', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 0 },
-  { title: 'Valentinsdag', date: '2026-02-14', emoji: '💕', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 1 },
-  { title: 'Mors Dag', date: '2026-05-10', emoji: '💐', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 2 },
-  { title: 'Grundlovsdag', date: '2026-06-05', emoji: '🇩🇰', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 3 },
-  { title: 'Sankt Hans Aften', date: '2026-06-23', emoji: '🔥', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 4 },
-  { title: 'Halloween', date: '2026-10-31', emoji: '🎃', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 5 },
-  { title: 'J-dag', date: '2026-11-06', emoji: '🍺', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 6 },
-  { title: 'Mortensaften', date: '2026-11-10', emoji: '🦆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 7 },
-  { title: 'Luciadag', date: '2026-12-13', emoji: '🕯️', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 8 },
-  { title: 'Juleaften', date: '2026-12-24', emoji: '🎄', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 9 },
-  { title: 'Nytårsaften', date: '2026-12-31', emoji: '🎆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 10 },
-  // School holidays
-  { title: 'Vinterferie starter', date: '2026-02-07', emoji: '❄️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 11 },
-  { title: 'Efterårsferie starter', date: '2026-10-10', emoji: '🍂', event_type: 'school', is_recurring: false, is_active: true, sort_order: 12 },
-  { title: 'Sommerferie starter', date: '2026-06-27', emoji: '☀️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 13 },
+  // Fixed dates (same every year)
+  { title: 'Valentinsdag', date: '2026-02-14', emoji: '💕', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 0 },
+  { title: 'Grundlovsdag', date: '2026-06-05', emoji: '🇩🇰', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 1 },
+  { title: 'Sankt Hans Aften', date: '2026-06-23', emoji: '🔥', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 2 },
+  { title: 'Halloween', date: '2026-10-31', emoji: '🎃', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 3 },
+  { title: 'Mortensaften', date: '2026-11-10', emoji: '🦆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 4 },
+  { title: 'Luciadag', date: '2026-12-13', emoji: '🕯️', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 5 },
+  { title: 'Juleaften', date: '2026-12-24', emoji: '🎄', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 6 },
+  { title: 'Nytårsaften', date: '2026-12-31', emoji: '🎆', event_type: 'holiday', is_recurring: true, is_active: true, sort_order: 7 },
+  // Floating dates (change yearly - these are 2026 dates, user should update for future years)
+  { title: 'Fastelavn', date: '2026-02-15', emoji: '🎭', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 8 },
+  { title: 'Mors Dag', date: '2026-05-10', emoji: '💐', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 9 },
+  { title: 'J-dag', date: '2026-11-06', emoji: '🍺', event_type: 'holiday', is_recurring: false, is_active: true, sort_order: 10 },
+  // School holidays (vary by year and municipality - 2026 estimates)
+  { title: 'Vinterferie', date: '2026-02-14', emoji: '❄️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 11 },
+  { title: 'Efterårsferie', date: '2026-10-10', emoji: '🍂', event_type: 'school', is_recurring: false, is_active: true, sort_order: 12 },
+  { title: 'Sommerferie', date: '2026-06-27', emoji: '☀️', event_type: 'school', is_recurring: false, is_active: true, sort_order: 13 },
 ]
 
 export const COUNTDOWN_EVENT_TYPES = [

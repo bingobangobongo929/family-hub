@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { format, getISOWeek } from 'date-fns'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 
 export default function ClockWidget() {
@@ -16,6 +16,8 @@ export default function ClockWidget() {
   // Adapt display based on size
   const showSeconds = size === 'large' || size === 'xlarge'
   const showYear = size === 'xlarge' || (size === 'large' && isTall)
+  const showWeekBadge = (size === 'large' || size === 'xlarge') && isTall
+  const showWeekInline = !showWeekBadge && size !== 'small'
   const timeFormat = showSeconds ? 'HH:mm:ss' : 'HH:mm'
 
   // Dynamic text sizes
@@ -33,6 +35,8 @@ export default function ClockWidget() {
     xlarge: 'text-lg',
   }[size]
 
+  const weekNumber = getISOWeek(time)
+
   return (
     <div
       ref={ref}
@@ -44,10 +48,13 @@ export default function ClockWidget() {
       <div className={`${dateSize} text-slate-500 dark:text-slate-400 mt-2 text-center font-medium`}>
         {format(time, 'EEEE, MMMM d')}
         {showYear && <span className="ml-1">{format(time, 'yyyy')}</span>}
+        {showWeekInline && (
+          <span className="ml-2 text-teal-600 dark:text-teal-400">W{weekNumber}</span>
+        )}
       </div>
-      {(size === 'large' || size === 'xlarge') && isTall && (
+      {showWeekBadge && (
         <div className="mt-4 text-xs text-teal-600 dark:text-teal-400 font-medium bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">
-          Week {format(time, 'w')}
+          Week {weekNumber}
         </div>
       )}
     </div>
