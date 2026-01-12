@@ -7,6 +7,7 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import AICalendarInput from '@/components/AICalendarInput'
+import EventDetailModal from '@/components/EventDetailModal'
 import CategorySelector, { CategoryPill } from '@/components/CategorySelector'
 import MemberMultiSelect from '@/components/MemberMultiSelect'
 import MemberAvatarStack, { MemberDotStack } from '@/components/MemberAvatarStack'
@@ -36,6 +37,7 @@ export default function CalendarPage() {
   const { googleCalendarAutoPush } = useSettings()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventMembers, setEventMembers] = useState<Record<string, string[]>>({}) // event_id -> member_ids
+  const [eventContacts, setEventContacts] = useState<Record<string, string[]>>({}) // event_id -> contact_ids
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
@@ -88,9 +90,11 @@ export default function CalendarPage() {
       if (error) throw error
       setEvents((data as CalendarEvent[]) || [])
 
-      // Fetch event members for all events
+      // Fetch event members and contacts for all events
       if (data && data.length > 0) {
         const eventIds = data.map(e => e.id)
+
+        // Fetch members
         const { data: membersData } = await supabase
           .from('event_members')
           .select('event_id, member_id')
@@ -103,6 +107,21 @@ export default function CalendarPage() {
             membersMap[em.event_id].push(em.member_id)
           })
           setEventMembers(membersMap)
+        }
+
+        // Fetch contacts
+        const { data: contactsData } = await supabase
+          .from('event_contacts')
+          .select('event_id, contact_id')
+          .in('event_id', eventIds)
+
+        if (contactsData) {
+          const contactsMap: Record<string, string[]> = {}
+          contactsData.forEach(ec => {
+            if (!contactsMap[ec.event_id]) contactsMap[ec.event_id] = []
+            contactsMap[ec.event_id].push(ec.contact_id)
+          })
+          setEventContacts(contactsMap)
         }
       }
     } catch (error) {
@@ -281,6 +300,50 @@ export default function CalendarPage() {
       setShowEventModal(false)
     } catch (error) {
       console.error('Error deleting event:', error)
+    }
+  }
+
+  const handleUpdateEvent = async (
+    eventId: string,
+    updates: Partial<CalendarEvent>,
+    memberIds?: string[],
+    contactIds?: string[]
+  ) => {
+    if (!user) {
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, ...updates } : e))
+      if (memberIds) setEventMembers(prev => ({ ...prev, [eventId]: memberIds }))
+      if (contactIds) setEventContacts(prev => ({ ...prev, [eventId]: contactIds }))
+      setShowEventModal(false)
+      return
+    }
+
+    try {
+      await supabase.from('calendar_events').update(updates).eq('id', eventId)
+
+      // Update event_members if provided
+      if (memberIds !== undefined) {
+        await supabase.from('event_members').delete().eq('event_id', eventId)
+        if (memberIds.length > 0) {
+          await supabase.from('event_members').insert(
+            memberIds.map(memberId => ({ event_id: eventId, member_id: memberId }))
+          )
+        }
+      }
+
+      // Update event_contacts if provided
+      if (contactIds !== undefined) {
+        await supabase.from('event_contacts').delete().eq('event_id', eventId)
+        if (contactIds.length > 0) {
+          await supabase.from('event_contacts').insert(
+            contactIds.map(contactId => ({ event_id: eventId, contact_id: contactId }))
+          )
+        }
+      }
+
+      await fetchEvents()
+      setShowEventModal(false)
+    } catch (error) {
+      console.error('Error updating event:', error)
     }
   }
 
@@ -529,91 +592,15 @@ export default function CalendarPage() {
       </Card>
 
       {/* Event Details Modal */}
-      <Modal isOpen={showEventModal} onClose={() => setShowEventModal(false)} title="Event Details" size="md">
-        {selectedEvent && (
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <div
-                className="w-4 h-4 rounded-full mt-1 flex-shrink-0"
-                style={{ backgroundColor: selectedEvent.color }}
-              />
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                  {selectedEvent.title}
-                </h3>
-                {/* Category */}
-                {selectedEvent.category_id && (
-                  <CategoryPill categoryId={selectedEvent.category_id} className="mt-1" />
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <Clock className="w-4 h-4" />
-                <span>
-                  {format(parseISO(selectedEvent.start_time), 'EEEE, MMMM d, yyyy')}
-                  {!selectedEvent.all_day && (
-                    <> at {format(parseISO(selectedEvent.start_time), 'h:mm a')}</>
-                  )}
-                  {selectedEvent.end_time && (
-                    <> - {format(parseISO(selectedEvent.end_time), 'h:mm a')}</>
-                  )}
-                </span>
-              </div>
-
-              {/* Recurrence */}
-              {selectedEvent.recurrence_rule && (
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <Repeat className="w-4 h-4" />
-                  <span>
-                    {(() => {
-                      const pattern = rruleToPattern(selectedEvent.recurrence_rule)
-                      return pattern ? describeRecurrence(pattern) : 'Repeating'
-                    })()}
-                  </span>
-                </div>
-              )}
-
-              {selectedEvent.location && (
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <MapPin className="w-4 h-4" />
-                  <span>{selectedEvent.location}</span>
-                </div>
-              )}
-
-              {/* Members */}
-              {eventMembers[selectedEvent.id]?.length > 0 && (
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                  <Users className="w-4 h-4" />
-                  <MemberAvatarStack memberIds={eventMembers[selectedEvent.id]} size="sm" />
-                  <span className="text-xs text-slate-500">
-                    {eventMembers[selectedEvent.id].map(id => getMember(id)?.name).filter(Boolean).join(', ')}
-                  </span>
-                </div>
-              )}
-
-              {selectedEvent.description && (
-                <p className="text-slate-600 dark:text-slate-300 pt-2">
-                  {selectedEvent.description}
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => handleDeleteEvent(selectedEvent.id)}
-                className="gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </Button>
-            </div>
-          </div>
-        )}
-      </Modal>
+      <EventDetailModal
+        event={selectedEvent}
+        eventMembers={selectedEvent ? eventMembers[selectedEvent.id] || [] : []}
+        eventContacts={selectedEvent ? eventContacts[selectedEvent.id] || [] : []}
+        isOpen={showEventModal}
+        onClose={() => setShowEventModal(false)}
+        onDelete={handleDeleteEvent}
+        onUpdate={handleUpdateEvent}
+      />
 
       {/* Add Event Modal */}
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Event" size="lg">
