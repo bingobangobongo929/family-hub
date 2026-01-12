@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -93,10 +93,36 @@ function convertAIPatternToUIPattern(aiPattern: AIRecurrencePattern, startDate: 
 }
 
 export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICalendarInputProps) {
-  const { aiModel } = useSettings()
+  const { aiModel: contextAiModel } = useSettings()
   const { members } = useFamily()
   const { categories, getCategoryByName } = useCategories()
   const [inputText, setInputText] = useState('')
+
+  // Get the latest aiModel - check localStorage directly to ensure we have the most recent value
+  const [aiModel, setAiModel] = useState<'claude' | 'gemini'>(contextAiModel)
+
+  // Update aiModel when modal opens or context changes
+  useEffect(() => {
+    if (isOpen) {
+      // Read directly from localStorage for the most up-to-date value
+      const saved = localStorage.getItem('family-hub-settings')
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved)
+          if (parsed.ai_model === 'gemini' || parsed.ai_model === 'claude') {
+            setAiModel(parsed.ai_model)
+          }
+        } catch (e) {
+          console.error('Error reading settings:', e)
+        }
+      }
+    }
+  }, [isOpen])
+
+  // Also update when context changes
+  useEffect(() => {
+    setAiModel(contextAiModel)
+  }, [contextAiModel])
   const [image, setImage] = useState<string | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -282,7 +308,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
           <Sparkles className="w-5 h-5" />
-          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 2.0 Flash'}</span>
+          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 3.0 Flash'}</span>
         </div>
 
         {step === 'input' ? (
