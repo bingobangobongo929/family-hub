@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Clock, MapPin, Trash2, Users, Repeat, Pencil, X, UserPlus } from 'lucide-react'
+import { Clock, MapPin, Trash2, Users, Repeat, Pencil, X, UserPlus, Calendar } from 'lucide-react'
+import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useFamily } from '@/lib/family-context'
@@ -476,17 +477,29 @@ export default function EventDetailModal({
               <Trash2 className="w-4 h-4" />
               Delete
             </Button>
-            {onUpdate && (
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => setIsEditing(true)}
-                className="gap-2"
-              >
-                <Pencil className="w-4 h-4" />
-                Edit
-              </Button>
-            )}
+            <div className="flex gap-2">
+              <Link href="/calendar">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  Calendar
+                </Button>
+              </Link>
+              {onUpdate && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setIsEditing(true)}
+                  className="gap-2"
+                >
+                  <Pencil className="w-4 h-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
