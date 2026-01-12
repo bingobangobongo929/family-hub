@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { format, parseISO, differenceInDays, differenceInYears, addYears, isBefore, startOfDay } from 'date-fns'
-import { X, Cake, Calendar, Star, Trophy, Clock } from 'lucide-react'
+import { Cake, Calendar, Star } from 'lucide-react'
 import { FamilyMember, CalendarEvent } from '@/lib/database.types'
 import { AvatarDisplay } from './PhotoUpload'
 import { supabase } from '@/lib/supabase'
@@ -142,14 +142,6 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
           background: `linear-gradient(135deg, ${member.color}15 0%, transparent 60%), ${typeof window !== 'undefined' && document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff'}`,
         }}
       >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-3 rounded-full bg-white/80 dark:bg-slate-700/80 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors z-10"
-        >
-          <X className="w-6 h-6" />
-        </button>
-
         {/* Two-column layout for 4:3 */}
         <div className="h-full flex">
           {/* Left side - Avatar and identity */}
