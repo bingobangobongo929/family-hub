@@ -5,6 +5,7 @@ import { Camera, Smile, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import EmojiPicker from './EmojiPicker'
+import ImageCropper from './ImageCropper'
 import Modal from './ui/Modal'
 
 interface PhotoUploadProps {
@@ -32,6 +33,8 @@ export default function PhotoUpload({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showOptions, setShowOptions] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showCropper, setShowCropper] = useState(false)
+  const [cropImageSrc, setCropImageSrc] = useState<string>('')
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -41,7 +44,7 @@ export default function PhotoUpload({
     lg: 'w-32 h-32 text-5xl',
   }
 
-  const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     if (!user) {
@@ -54,25 +57,45 @@ export default function PhotoUpload({
       setError('Please select an image file')
       return
     }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB')
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Image must be less than 10MB')
       return
     }
 
+    setError(null)
+
+    // Read file and show cropper
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setCropImageSrc(event.target.result as string)
+        setShowCropper(true)
+      }
+    }
+    reader.readAsDataURL(file)
+
+    // Reset the input so the same file can be selected again
+    e.target.value = ''
+  }, [user])
+
+  const handleCroppedImage = useCallback(async (blob: Blob) => {
+    if (!user) return
+
+    setShowCropper(false)
     setUploading(true)
     setError(null)
 
     try {
       // Generate unique filename
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`
+      const fileName = `${user.id}/${Date.now()}.jpg`
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, file, {
+        .upload(fileName, blob, {
           cacheControl: '3600',
           upsert: true,
+          contentType: 'image/jpeg',
         })
 
       if (uploadError) throw uploadError
@@ -84,13 +107,10 @@ export default function PhotoUpload({
 
       if (signedError) throw signedError
 
-      console.log('Signed URL response:', signedData)
-
       if (!signedData?.signedUrl) {
         throw new Error('No signed URL returned')
       }
 
-      console.log('Setting photo URL:', signedData.signedUrl)
       onPhotoChange(signedData.signedUrl)
       onEmojiChange('') // Clear emoji when photo is set
       setShowOptions(false)
@@ -252,6 +272,14 @@ export default function PhotoUpload({
           onClose={() => setShowEmojiPicker(false)}
         />
       </Modal>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        isOpen={showCropper}
+        imageSrc={cropImageSrc}
+        onClose={() => setShowCropper(false)}
+        onCrop={handleCroppedImage}
+      />
     </div>
   )
 }
