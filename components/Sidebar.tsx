@@ -22,6 +22,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { AvatarDisplay } from './PhotoUpload'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: Home },
@@ -104,12 +105,13 @@ export default function Sidebar() {
                 key={member.id}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors"
               >
-                <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium ring-2 ring-white dark:ring-slate-700 shadow-sm"
-                  style={{ backgroundColor: member.color }}
-                >
-                  {member.avatar || member.name[0]}
-                </div>
+                <AvatarDisplay
+                  photoUrl={member.photo_url}
+                  emoji={member.avatar}
+                  name={member.name}
+                  color={member.color}
+                  size="xs"
+                />
                 <span className="text-sm text-slate-700 dark:text-slate-300 flex-1 font-medium">{member.name}</span>
                 {rewardsEnabled && member.role === 'child' && (
                   <span className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 rounded-full">
