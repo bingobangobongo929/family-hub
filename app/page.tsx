@@ -176,19 +176,30 @@ export default function Dashboard() {
 
       try {
         // Shopping count (from Recipe Vault database)
-        const { data: listData } = await recipeVaultSupabase
-          .from('shopping_lists')
-          .select('id')
-          .limit(1)
+        const recipeVaultUrl = process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL
+        const isRecipeVaultConfigured = recipeVaultUrl && recipeVaultUrl !== '' && recipeVaultUrl !== 'your-supabase-url'
 
-        if (listData?.[0]) {
-          const { count } = await recipeVaultSupabase
-            .from('shopping_list_items')
-            .select('*', { count: 'exact', head: true })
-            .eq('list_id', listData[0].id)
-            .eq('is_checked', false)
+        if (isRecipeVaultConfigured) {
+          const { data: listData } = await recipeVaultSupabase
+            .from('shopping_lists')
+            .select('id')
+            .limit(1)
 
-          setShoppingCount(count || 0)
+          if (listData?.[0]) {
+            const { count } = await recipeVaultSupabase
+              .from('shopping_list_items')
+              .select('*', { count: 'exact', head: true })
+              .eq('list_id', listData[0].id)
+              .eq('is_checked', false)
+
+            setShoppingCount(count || 0)
+          } else {
+            // No list found, use demo count
+            setShoppingCount(6)
+          }
+        } else {
+          // Recipe Vault not configured, use demo count
+          setShoppingCount(6)
         }
 
         // Chore stats (from Family Hub database)
