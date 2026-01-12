@@ -32,7 +32,7 @@ interface AIResponse {
 
 // Model identifiers
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
-const GEMINI_MODEL = 'gemini-3.0-flash-preview' // Gemini 3.0 Flash Preview - free tier
+const GEMINI_MODEL = 'gemini-3-flash-preview' // Gemini 3 Flash Preview - free tier
 
 // Available categories for AI to suggest
 const CATEGORY_NAMES = [
