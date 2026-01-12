@@ -15,6 +15,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
+import { useContacts } from '@/lib/contacts-context'
 import { useSettings } from '@/lib/settings-context'
 import { CalendarEvent, MEMBER_COLORS, RecurrencePattern } from '@/lib/database.types'
 import RecurrenceSelector, { RecurrenceBadge } from '@/components/RecurrenceSelector'
@@ -34,7 +35,11 @@ export default function CalendarPage() {
   const { user } = useAuth()
   const { members, getMember } = useFamily()
   const { categories, getCategory } = useCategories()
+  const { contacts } = useContacts()
   const { googleCalendarAutoPush } = useSettings()
+
+  // Helper to get contact by id
+  const getContact = (id: string) => contacts.find(c => c.id === id)
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventMembers, setEventMembers] = useState<Record<string, string[]>>({}) // event_id -> member_ids
   const [eventContacts, setEventContacts] = useState<Record<string, string[]>>({}) // event_id -> contact_ids
@@ -562,7 +567,15 @@ export default function CalendarPage() {
                   {dayEvents.slice(0, 3).map(event => {
                     const category = event.category_id ? getCategory(event.category_id) : null
                     const memberIds = eventMembers[event.id] || []
+                    const contactIds = eventContacts[event.id] || []
                     const isRecurring = !!event.recurrence_rule
+
+                    // Get contact initials for display
+                    const contactInitials = contactIds.slice(0, 2).map(id => {
+                      const c = getContact(id)
+                      return c ? c.name.charAt(0).toUpperCase() : ''
+                    }).filter(Boolean)
+
                     return (
                       <div
                         key={event.id}
@@ -573,8 +586,24 @@ export default function CalendarPage() {
                         {isRecurring && <Repeat className="w-3 h-3 flex-shrink-0" />}
                         {category && <span className="flex-shrink-0">{category.emoji}</span>}
                         <span className="truncate flex-1">{event.title}</span>
-                        {memberIds.length > 0 && (
-                          <MemberDotStack memberIds={memberIds} maxDisplay={3} />
+                        {(memberIds.length > 0 || contactIds.length > 0) && (
+                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                            {memberIds.length > 0 && (
+                              <MemberDotStack memberIds={memberIds} maxDisplay={2} />
+                            )}
+                            {contactInitials.map((initial, i) => (
+                              <span
+                                key={i}
+                                className="w-3 h-3 rounded-full bg-slate-400 text-white text-[8px] flex items-center justify-center font-medium"
+                                title={getContact(contactIds[i])?.name}
+                              >
+                                {initial}
+                              </span>
+                            ))}
+                            {contactIds.length > 2 && (
+                              <span className="text-[8px] opacity-70">+{contactIds.length - 2}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )

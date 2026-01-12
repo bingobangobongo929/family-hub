@@ -6,6 +6,7 @@ import { Calendar, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useContacts } from '@/lib/contacts-context'
 import { CalendarEvent } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import EventDetailModal from '@/components/EventDetailModal'
@@ -75,6 +76,7 @@ interface GroupedEvents {
 export default function ScheduleWidget() {
   const { user } = useAuth()
   const { getMember } = useFamily()
+  const { contacts } = useContacts()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventMembers, setEventMembers] = useState<Record<string, string[]>>({})
   const [eventContacts, setEventContacts] = useState<Record<string, string[]>>({})
@@ -281,17 +283,20 @@ export default function ScheduleWidget() {
   const displayConfig = useMemo(() => {
     switch (size) {
       case 'small':
-        return { maxDays: 2, maxEventsPerDay: 2, showLocation: false, showMember: false, compact: true }
+        return { maxDays: 2, maxEventsPerDay: 2, showLocation: false, showPeople: false, compact: true }
       case 'medium':
-        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showMember: true, compact: false }
+        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showPeople: true, compact: false }
       case 'large':
-        return { maxDays: 5, maxEventsPerDay: 4, showLocation: true, showMember: true, compact: false }
+        return { maxDays: 5, maxEventsPerDay: 4, showLocation: true, showPeople: true, compact: false }
       case 'xlarge':
-        return { maxDays: 7, maxEventsPerDay: 5, showLocation: true, showMember: true, compact: false }
+        return { maxDays: 7, maxEventsPerDay: 5, showLocation: true, showPeople: true, compact: false }
       default:
-        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showMember: true, compact: false }
+        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showPeople: true, compact: false }
     }
   }, [size])
+
+  // Helper to get contact by id
+  const getContact = (id: string) => contacts.find(c => c.id === id)
 
   // Total upcoming events count
   const totalUpcoming = groupedEvents.reduce((sum, g) => sum + g.events.length, 0)
@@ -363,8 +368,21 @@ export default function ScheduleWidget() {
                 {/* Events for this day */}
                 <div className="space-y-1">
                   {group.events.slice(0, displayConfig.maxEventsPerDay).map(event => {
-                    const member = getMember(event.member_id)
+                    const memberIds = eventMembers[event.id] || []
+                    const contactIds = eventContacts[event.id] || []
+                    const firstMember = memberIds.length > 0 ? getMember(memberIds[0]) : null
                     const time = format(parseISO(event.start_time), 'HH:mm')
+
+                    // Build people names list (members + contacts)
+                    const peopleNames: string[] = []
+                    memberIds.forEach(id => {
+                      const m = getMember(id)
+                      if (m) peopleNames.push(m.name)
+                    })
+                    contactIds.forEach(id => {
+                      const c = getContact(id)
+                      if (c) peopleNames.push(c.name)
+                    })
 
                     return (
                       <div
@@ -374,7 +392,7 @@ export default function ScheduleWidget() {
                       >
                         <div
                           className="w-1 h-6 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: event.color || member?.color || '#14b8a6' }}
+                          style={{ backgroundColor: event.color || firstMember?.color || '#14b8a6' }}
                         />
                         <div className="flex-1 min-w-0">
                           <p className={`font-medium ${displayConfig.compact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-100 truncate`}>
@@ -382,10 +400,10 @@ export default function ScheduleWidget() {
                           </p>
                           <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
                             <span className="font-medium">{time}</span>
-                            {displayConfig.showMember && member && (
+                            {displayConfig.showPeople && peopleNames.length > 0 && (
                               <>
                                 <span>•</span>
-                                <span className="truncate">{member.name}</span>
+                                <span className="truncate">{peopleNames.join(', ')}</span>
                               </>
                             )}
                             {displayConfig.showLocation && event.location && (
