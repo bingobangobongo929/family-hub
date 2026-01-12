@@ -17,7 +17,7 @@ export { default as BindicatorWidget } from './BindicatorWidget'
 export const AVAILABLE_WIDGETS = [
   { id: 'clock', name: 'Clock', icon: '🕐', component: 'ClockWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'weather', name: 'Weather', icon: '🌤️', component: 'WeatherWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
-  { id: 'schedule', name: 'Schedule', icon: '📅', component: 'ScheduleWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 1, h: 1 } },
+  { id: 'schedule', name: 'Week Ahead', icon: '📅', component: 'ScheduleWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 2, h: 2 } },
   { id: 'chores', name: 'Chores', icon: '✅', component: 'ChoresWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 1, h: 1 } },
   { id: 'stars', name: 'Stars', icon: '⭐', component: 'StarsWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'notes', name: 'Notes', icon: '📌', component: 'NotesWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },

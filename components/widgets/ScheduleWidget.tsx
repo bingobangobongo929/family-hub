@@ -1,43 +1,90 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { format, parseISO } from 'date-fns'
-import { Clock, MapPin } from 'lucide-react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { format, parseISO, isToday, isTomorrow, isThisWeek, isNextWeek, startOfWeek, endOfWeek, addWeeks, differenceInHours, isBefore, isAfter, startOfDay, addDays } from 'date-fns'
+import { Calendar, Clock, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { CalendarEvent } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 
-// Demo events
-const DEMO_EVENTS: CalendarEvent[] = [
-  { id: '1', user_id: 'demo', title: 'School drop-off', start_time: new Date().toISOString().split('T')[0] + 'T08:30:00', end_time: null, all_day: false, color: '#8b5cf6', member_id: 'demo-olivia', description: null, location: 'Randers School', source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-  { id: '2', user_id: 'demo', title: 'Grocery shopping', start_time: new Date().toISOString().split('T')[0] + 'T10:00:00', end_time: null, all_day: false, color: '#3b82f6', member_id: 'demo-dad', description: null, location: 'Føtex', source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-  { id: '3', user_id: 'demo', title: 'Nap time', start_time: new Date().toISOString().split('T')[0] + 'T13:00:00', end_time: null, all_day: false, color: '#22c55e', member_id: 'demo-ellie', description: null, location: null, source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-  { id: '4', user_id: 'demo', title: 'Playdate with Emma', start_time: new Date().toISOString().split('T')[0] + 'T15:30:00', end_time: null, all_day: false, color: '#8b5cf6', member_id: 'demo-olivia', description: null, location: "Emma's house", source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-  { id: '5', user_id: 'demo', title: 'Dinner prep', start_time: new Date().toISOString().split('T')[0] + 'T17:00:00', end_time: null, all_day: false, color: '#f59e0b', member_id: 'demo-mum', description: null, location: null, source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-  { id: '6', user_id: 'demo', title: 'Bath time', start_time: new Date().toISOString().split('T')[0] + 'T18:30:00', end_time: null, all_day: false, color: '#22c55e', member_id: 'demo-ellie', description: null, location: null, source: 'manual', source_id: null, recurrence_rule: null, category_id: null, created_at: '', updated_at: '' },
-]
+// Demo events spread across the week
+const generateDemoEvents = (): CalendarEvent[] => {
+  const today = new Date()
+  const events: CalendarEvent[] = []
+
+  const templates = [
+    { title: 'School drop-off', time: '08:30', color: '#8b5cf6', member: 'demo-olivia' },
+    { title: 'Swimming lesson', time: '16:00', color: '#3b82f6', member: 'demo-olivia', location: 'Leisure Centre' },
+    { title: 'Grocery shopping', time: '10:00', color: '#f59e0b', member: 'demo-mum', location: 'Føtex' },
+    { title: 'Playdate with Emma', time: '15:00', color: '#8b5cf6', member: 'demo-olivia', location: "Emma's house" },
+    { title: 'Doctor appointment', time: '11:00', color: '#ef4444', member: 'demo-ellie', location: 'Health Centre' },
+    { title: 'Piano practice', time: '17:00', color: '#8b5cf6', member: 'demo-olivia' },
+    { title: 'Family dinner', time: '18:00', color: '#22c55e', member: null },
+    { title: 'Dentist checkup', time: '09:30', color: '#f59e0b', member: 'demo-dad', location: 'Dental Clinic' },
+  ]
+
+  // Spread events across this week and next
+  for (let i = 0; i < 10; i++) {
+    const dayOffset = i % 7
+    const weekOffset = i >= 7 ? 7 : 0
+    const template = templates[i % templates.length]
+    const eventDate = addDays(startOfDay(today), dayOffset + weekOffset)
+
+    events.push({
+      id: `demo-${i}`,
+      user_id: 'demo',
+      title: template.title,
+      start_time: format(eventDate, 'yyyy-MM-dd') + `T${template.time}:00`,
+      end_time: null,
+      all_day: false,
+      color: template.color,
+      member_id: template.member,
+      description: null,
+      location: template.location || null,
+      source: 'manual',
+      source_id: null,
+      recurrence_rule: null,
+      category_id: null,
+      created_at: '',
+      updated_at: '',
+    })
+  }
+
+  return events
+}
+
+interface GroupedEvents {
+  label: string
+  shortLabel: string
+  date: Date
+  events: CalendarEvent[]
+  isUrgent: boolean
+}
 
 export default function ScheduleWidget() {
   const { user } = useAuth()
   const { getMember } = useFamily()
   const [events, setEvents] = useState<CalendarEvent[]>([])
-  const [ref, { size, isTall }] = useWidgetSize()
+  const [ref, { size, isWide, isTall }] = useWidgetSize()
 
-  const fetchTodaysEvents = useCallback(async () => {
+  const fetchWeekEvents = useCallback(async () => {
     if (!user) {
-      setEvents(DEMO_EVENTS)
+      setEvents(generateDemoEvents())
       return
     }
 
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const now = new Date()
+      const weekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
+      const twoWeeksEnd = endOfWeek(addWeeks(now, 1), { weekStartsOn: 1 })
+
       const { data } = await supabase
         .from('calendar_events')
         .select('*')
-        .gte('start_time', today + 'T00:00:00')
-        .lte('start_time', today + 'T23:59:59')
+        .gte('start_time', weekStart.toISOString())
+        .lte('start_time', twoWeeksEnd.toISOString())
         .order('start_time', { ascending: true })
 
       if (data) {
@@ -45,95 +92,204 @@ export default function ScheduleWidget() {
       }
     } catch (error) {
       console.error('Error fetching events:', error)
-      setEvents(DEMO_EVENTS)
+      setEvents(generateDemoEvents())
     }
   }, [user])
 
   useEffect(() => {
-    fetchTodaysEvents()
-  }, [fetchTodaysEvents])
+    fetchWeekEvents()
+  }, [fetchWeekEvents])
 
   const now = new Date()
-  const currentHour = now.getHours()
-  const currentMinutes = now.getMinutes()
 
-  // Find upcoming events
-  const upcomingEvents = events.filter(event => {
-    const eventTime = new Date(event.start_time)
-    return eventTime.getHours() > currentHour ||
-           (eventTime.getHours() === currentHour && eventTime.getMinutes() >= currentMinutes)
-  })
+  // Group events by day with smart labels
+  const groupedEvents = useMemo((): GroupedEvents[] => {
+    const groups: Map<string, GroupedEvents> = new Map()
 
-  // Number of events to show based on size
-  const maxEvents = {
-    small: 3,
-    medium: 4,
-    large: 6,
-    xlarge: 8,
-  }[size]
+    // Filter to upcoming events only (not past)
+    const upcomingEvents = events.filter(event => {
+      const eventTime = parseISO(event.start_time)
+      return isAfter(eventTime, now) ||
+             (isToday(eventTime) && eventTime.getHours() >= now.getHours())
+    })
 
-  const displayEvents = upcomingEvents.slice(0, maxEvents)
-  const showLocation = size === 'large' || size === 'xlarge'
-  const compactMode = size === 'small'
+    upcomingEvents.forEach(event => {
+      const eventDate = parseISO(event.start_time)
+      const dateKey = format(eventDate, 'yyyy-MM-dd')
+
+      if (!groups.has(dateKey)) {
+        let label: string
+        let shortLabel: string
+
+        if (isToday(eventDate)) {
+          label = 'Today'
+          shortLabel = 'Today'
+        } else if (isTomorrow(eventDate)) {
+          label = 'Tomorrow'
+          shortLabel = 'Tomorrow'
+        } else if (isThisWeek(eventDate, { weekStartsOn: 1 })) {
+          label = format(eventDate, 'EEEE') // "Wednesday"
+          shortLabel = format(eventDate, 'EEE') // "Wed"
+        } else if (isNextWeek(eventDate, { weekStartsOn: 1 })) {
+          label = `Next ${format(eventDate, 'EEEE')}`
+          shortLabel = `Next ${format(eventDate, 'EEE')}`
+        } else {
+          label = format(eventDate, 'EEE, MMM d')
+          shortLabel = format(eventDate, 'MMM d')
+        }
+
+        // Events within 24 hours are urgent
+        const hoursUntil = differenceInHours(eventDate, now)
+        const isUrgent = hoursUntil >= 0 && hoursUntil <= 24
+
+        groups.set(dateKey, {
+          label,
+          shortLabel,
+          date: eventDate,
+          events: [],
+          isUrgent,
+        })
+      }
+
+      groups.get(dateKey)!.events.push(event)
+    })
+
+    return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime())
+  }, [events, now])
+
+  // Calculate display limits based on size
+  const displayConfig = useMemo(() => {
+    switch (size) {
+      case 'small':
+        return { maxDays: 2, maxEventsPerDay: 2, showLocation: false, showMember: false, compact: true }
+      case 'medium':
+        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showMember: true, compact: false }
+      case 'large':
+        return { maxDays: 5, maxEventsPerDay: 4, showLocation: true, showMember: true, compact: false }
+      case 'xlarge':
+        return { maxDays: 7, maxEventsPerDay: 5, showLocation: true, showMember: true, compact: false }
+      default:
+        return { maxDays: 3, maxEventsPerDay: 3, showLocation: false, showMember: true, compact: false }
+    }
+  }, [size])
+
+  // Total upcoming events count
+  const totalUpcoming = groupedEvents.reduce((sum, g) => sum + g.events.length, 0)
+
+  // Get next urgent event (within 24 hours)
+  const nextUrgent = groupedEvents.find(g => g.isUrgent)?.events[0]
+
+  // Slice groups for display
+  const displayGroups = groupedEvents.slice(0, displayConfig.maxDays)
 
   return (
     <div
       ref={ref}
       className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark"
     >
+      {/* Header */}
       <div className="flex items-center gap-2 mb-3">
-        <Clock className="w-4 h-4 text-teal-500" />
-        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Today</h3>
-        {events.length > 0 && (
+        <Calendar className="w-4 h-4 text-teal-500" />
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
+          {size === 'small' ? 'Up Next' : 'Week Ahead'}
+        </h3>
+        {totalUpcoming > 0 && (
           <span className="text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full ml-auto">
-            {upcomingEvents.length} upcoming
+            {totalUpcoming} event{totalUpcoming !== 1 ? 's' : ''}
           </span>
         )}
       </div>
 
-      {displayEvents.length === 0 ? (
+      {/* Urgent Alert (if something is coming up very soon) */}
+      {nextUrgent && size !== 'small' && (
+        <div className="mb-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs text-amber-700 dark:text-amber-300 truncate">
+            <span className="font-medium">Soon:</span> {nextUrgent.title} at {format(parseISO(nextUrgent.start_time), 'HH:mm')}
+          </p>
+        </div>
+      )}
+
+      {/* Events List */}
+      {displayGroups.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-sm text-slate-400 dark:text-slate-500">No more events today</p>
+          <p className="text-sm text-slate-400 dark:text-slate-500">No upcoming events</p>
         </div>
       ) : (
-        <div className={`flex-1 space-y-${compactMode ? '1' : '2'} overflow-hidden`}>
-          {displayEvents.map(event => {
-            const member = getMember(event.member_id)
-            const time = format(parseISO(event.start_time), 'HH:mm')
-
-            return (
-              <div
-                key={event.id}
-                className={`flex items-center gap-3 ${compactMode ? 'py-1.5 px-2' : 'p-2.5'} rounded-xl bg-slate-50 dark:bg-slate-700/50 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700`}
-              >
-                <div
-                  className={`${compactMode ? 'w-1 h-8' : 'w-1 h-10'} rounded-full flex-shrink-0`}
-                  style={{ backgroundColor: event.color || member?.color || '#14b8a6' }}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className={`font-medium ${compactMode ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-100 truncate`}>
-                    {event.title}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <p className={`${compactMode ? 'text-[10px]' : 'text-xs'} text-slate-500 dark:text-slate-400 font-medium`}>
-                      {time}
-                      {member && ` • ${member.name}`}
-                    </p>
-                    {showLocation && event.location && (
-                      <p className="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1 truncate">
-                        <MapPin className="w-3 h-3" />
-                        {event.location}
-                      </p>
-                    )}
-                  </div>
-                </div>
+        <div className="flex-1 overflow-hidden space-y-3">
+          {displayGroups.map((group, groupIndex) => (
+            <div key={group.label}>
+              {/* Day Header */}
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`text-xs font-semibold ${
+                  group.isUrgent
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}>
+                  {displayConfig.compact ? group.shortLabel : group.label}
+                </span>
+                {!displayConfig.compact && (
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                    {format(group.date, 'MMM d')}
+                  </span>
+                )}
+                <div className="flex-1 h-px bg-slate-100 dark:bg-slate-700" />
               </div>
-            )
-          })}
-          {upcomingEvents.length > maxEvents && (
-            <p className="text-xs text-teal-600 dark:text-teal-400 text-center pt-1 font-medium">
-              +{upcomingEvents.length - maxEvents} more
-            </p>
+
+              {/* Events for this day */}
+              <div className="space-y-1">
+                {group.events.slice(0, displayConfig.maxEventsPerDay).map(event => {
+                  const member = getMember(event.member_id)
+                  const time = format(parseISO(event.start_time), 'HH:mm')
+
+                  return (
+                    <div
+                      key={event.id}
+                      className={`flex items-center gap-2 ${displayConfig.compact ? 'py-1 px-2' : 'py-1.5 px-2.5'} rounded-lg bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors`}
+                    >
+                      <div
+                        className="w-1 h-6 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: event.color || member?.color || '#14b8a6' }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-medium ${displayConfig.compact ? 'text-xs' : 'text-sm'} text-slate-800 dark:text-slate-100 truncate`}>
+                          {event.title}
+                        </p>
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                          <span className="font-medium">{time}</span>
+                          {displayConfig.showMember && member && (
+                            <>
+                              <span>•</span>
+                              <span className="truncate">{member.name}</span>
+                            </>
+                          )}
+                          {displayConfig.showLocation && event.location && (
+                            <>
+                              <span>•</span>
+                              <MapPin className="w-2.5 h-2.5" />
+                              <span className="truncate">{event.location}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {group.events.length > displayConfig.maxEventsPerDay && (
+                  <p className="text-[10px] text-teal-600 dark:text-teal-400 pl-3 font-medium">
+                    +{group.events.length - displayConfig.maxEventsPerDay} more
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Show if there are more days */}
+          {groupedEvents.length > displayConfig.maxDays && (
+            <div className="flex items-center justify-center gap-1 text-xs text-teal-600 dark:text-teal-400 pt-1">
+              <span>+{groupedEvents.length - displayConfig.maxDays} more days</span>
+              <ChevronRight className="w-3 h-3" />
+            </div>
           )}
         </div>
       )}
