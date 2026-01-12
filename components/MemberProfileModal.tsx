@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { format, parseISO, differenceInDays, differenceInYears, addYears, isBefore, startOfDay } from 'date-fns'
 import { X, Cake, Calendar, Star, Trophy, Clock } from 'lucide-react'
 import { FamilyMember, CalendarEvent } from '@/lib/database.types'
@@ -18,6 +19,13 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
   const { rewardsEnabled } = useSettings()
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  // Handle client-side mounting for portal
+  useEffect(() => {
+    setMounted(true)
+    return () => setMounted(false)
+  }, [])
 
   useEffect(() => {
     if (!member || !isOpen) return
@@ -59,7 +67,8 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
     fetchUpcomingEvents()
   }, [member, isOpen])
 
-  if (!isOpen || !member) return null
+  // Don't render until mounted (for SSR) or if not open
+  if (!mounted || !isOpen || !member) return null
 
   // Calculate birthday info
   const getBirthdayInfo = () => {
@@ -114,8 +123,9 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
 
   const funFact = getFunFact()
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-8">
+  // Use portal to render at document body level (outside sidebar)
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-8">
       {/* Backdrop with blur */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-md"
@@ -276,6 +286,7 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
