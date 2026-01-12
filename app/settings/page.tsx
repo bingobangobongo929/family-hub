@@ -603,7 +603,7 @@ export default function SettingsPage() {
             <div className="flex gap-2">
               {[
                 { id: 'claude', label: 'Claude Sonnet 4.5' },
-                { id: 'gemini', label: 'Gemini 3 Flash' }
+                { id: 'gemini', label: 'Gemini 2.0 Flash' }
               ].map(opt => (
                 <button
                   key={opt.id}

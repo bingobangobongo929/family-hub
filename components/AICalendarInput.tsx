@@ -282,7 +282,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
           <Sparkles className="w-5 h-5" />
-          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 3 Flash'}</span>
+          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 2.0 Flash'}</span>
         </div>
 
         {step === 'input' ? (
