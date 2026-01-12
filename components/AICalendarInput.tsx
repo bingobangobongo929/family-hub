@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat } from 'lucide-react'
+import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat, UserPlus } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useSettings } from '@/lib/settings-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
+import { useContacts } from '@/lib/contacts-context'
 import { MEMBER_COLORS, RecurrencePattern, RecurrenceFrequency, DAYS_OF_WEEK } from '@/lib/database.types'
 import CategorySelector from './CategorySelector'
 import { patternToRRule, describeRecurrence } from '@/lib/rrule'
@@ -40,6 +41,7 @@ interface ExtractedEvent {
   color?: string
   member_id?: string // deprecated
   member_ids?: string[] // Multiple member IDs
+  contact_ids?: string[] // Extended contacts
   category_id?: string | null
   recurrence_rrule?: string // Converted RRULE for storage
   recurrence_ui_pattern?: RecurrencePattern // For UI display
@@ -96,6 +98,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const { aiModel: contextAiModel } = useSettings()
   const { members } = useFamily()
   const { categories, getCategoryByName } = useCategories()
+  const { contacts } = useContacts()
   const [inputText, setInputText] = useState('')
 
   // Get the latest aiModel - check localStorage directly to ensure we have the most recent value
@@ -169,10 +172,15 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
     setError(null)
 
     try {
-      // Build context about family members
-      const familyContext = members.length > 0
-        ? `Family members: ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
-        : ''
+      // Build context about family members and contacts
+      const familyContext = [
+        members.length > 0
+          ? `Board family members (core family): ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
+          : '',
+        contacts.length > 0
+          ? `Extended contacts (grandparents, friends, etc.): ${contacts.map(c => c.name).join(', ')}`
+          : ''
+      ].filter(Boolean).join('\n')
 
       const response = await fetch('/api/calendar-ai', {
         method: 'POST',
@@ -232,6 +240,20 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             }
           }
 
+          // Match suggested contacts
+          let contactIds: string[] = []
+          if (event.suggested_contacts && event.suggested_contacts.length > 0) {
+            contactIds = event.suggested_contacts
+              .map(name => {
+                const matchedContact = contacts.find(c =>
+                  c.name.toLowerCase().includes(name.toLowerCase()) ||
+                  name.toLowerCase().includes(c.name.toLowerCase())
+                )
+                return matchedContact?.id
+              })
+              .filter((id): id is string => id !== undefined)
+          }
+
           // Handle recurrence pattern
           let recurrenceUiPattern: RecurrencePattern | undefined
           let recurrenceRrule: string | undefined
@@ -246,6 +268,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             selected: true,
             color,
             member_ids: memberIds,
+            contact_ids: contactIds,
             category_id: categoryId,
             recurrence_ui_pattern: recurrenceUiPattern,
             recurrence_rrule: recurrenceRrule,
@@ -410,7 +433,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
               </p>
             </div>
 
-            <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            <div className="space-y-4">
               {extractedEvents.map((event, index) => (
                 <div
                   key={index}
@@ -531,6 +554,45 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                             className="flex-1"
                           />
                         </div>
+
+                        {/* Contacts (Extended Family/Friends) */}
+                        {contacts.length > 0 && (
+                          <div className="flex items-start gap-2">
+                            <UserPlus className="w-3.5 h-3.5 text-slate-400 flex-shrink-0 mt-2" />
+                            <div className="flex-1">
+                              <div className="flex flex-wrap gap-1.5">
+                                {contacts.map(contact => {
+                                  const isSelected = event.contact_ids?.includes(contact.id)
+                                  return (
+                                    <button
+                                      key={contact.id}
+                                      onClick={() => {
+                                        const currentIds = event.contact_ids || []
+                                        const newIds = isSelected
+                                          ? currentIds.filter(id => id !== contact.id)
+                                          : [...currentIds, contact.id]
+                                        handleUpdateEvent(index, { contact_ids: newIds })
+                                      }}
+                                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                                        isSelected
+                                          ? 'text-white'
+                                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                                      }`}
+                                      style={isSelected ? { backgroundColor: contact.color || '#6b7280' } : undefined}
+                                    >
+                                      {contact.name}
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              {(event.contact_ids?.length ?? 0) > 0 && (
+                                <p className="text-xs text-slate-400 mt-1">
+                                  {event.contact_ids?.length} contact{event.contact_ids?.length !== 1 ? 's' : ''} tagged
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Color Selection */}
                         <div className="flex items-center gap-2">
