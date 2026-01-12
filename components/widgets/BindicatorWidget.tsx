@@ -70,7 +70,7 @@ export default function BindicatorWidget() {
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <h3 className={`${titleSize} font-semibold text-slate-700 dark:text-slate-200`}>
-              Bin Collections
+              Bindicator
             </h3>
             {todayBins.length > 0 && (
               <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse">
