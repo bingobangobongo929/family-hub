@@ -296,6 +296,7 @@ export default function CalendarPage() {
         : `${event.end_date || event.start_date}T${event.end_time}:00`
 
       const memberIds: string[] = event.member_ids || []
+      const contactIds: string[] = event.contact_ids || []
 
       const eventData = {
         title: event.title,
@@ -340,6 +341,15 @@ export default function CalendarPage() {
               member_id: memberId,
             }))
             await supabase.from('event_members').insert(eventMembersData)
+          }
+
+          // Insert event_contacts for contact tagging
+          if (contactIds.length > 0 && insertedEvent) {
+            const eventContactsData = contactIds.map(contactId => ({
+              event_id: insertedEvent.id,
+              contact_id: contactId,
+            }))
+            await supabase.from('event_contacts').insert(eventContactsData)
           }
 
           // Auto-push to Google Calendar if enabled
