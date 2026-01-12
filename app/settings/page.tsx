@@ -805,8 +805,8 @@ export default function SettingsPage() {
                 emoji={memberForm.avatar}
                 name={memberForm.name || 'New Member'}
                 color={memberForm.color}
-                onPhotoChange={(url) => setMemberForm({ ...memberForm, photo_url: url, avatar: url ? '' : memberForm.avatar })}
-                onEmojiChange={(emoji) => setMemberForm({ ...memberForm, avatar: emoji, photo_url: emoji ? null : memberForm.photo_url })}
+                onPhotoChange={(url) => setMemberForm(prev => ({ ...prev, photo_url: url, avatar: url ? '' : prev.avatar }))}
+                onEmojiChange={(emoji) => setMemberForm(prev => ({ ...prev, avatar: emoji, photo_url: emoji ? null : prev.photo_url }))}
                 bucket="avatars"
                 size="lg"
               />

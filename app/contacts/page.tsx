@@ -348,8 +348,8 @@ export default function ContactsPage() {
                 emoji={formData.avatar}
                 name={formData.name || 'New Contact'}
                 color={formData.color}
-                onPhotoChange={(url) => setFormData({ ...formData, photo_url: url, avatar: url ? '' : formData.avatar })}
-                onEmojiChange={(emoji) => setFormData({ ...formData, avatar: emoji, photo_url: emoji ? null : formData.photo_url })}
+                onPhotoChange={(url) => setFormData(prev => ({ ...prev, photo_url: url, avatar: url ? '' : prev.avatar }))}
+                onEmojiChange={(emoji) => setFormData(prev => ({ ...prev, avatar: emoji, photo_url: emoji ? null : prev.photo_url }))}
                 bucket="contact-photos"
                 size="lg"
               />
