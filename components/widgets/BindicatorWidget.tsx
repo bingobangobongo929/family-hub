@@ -93,7 +93,7 @@ export default function BindicatorWidget() {
                     {bin.shortName}
                   </span>
                   <span className={`${daysSize} font-bold ${urgencyStyles.text}`}>
-                    {bin.daysUntil === 0 ? 'Today!' : bin.daysUntil === 1 ? 'Tomorrow' : `${bin.daysUntil}d`}
+                    {bin.daysUntil === 0 ? 'Today!' : bin.daysUntil === 1 ? '1d' : `${bin.daysUntil}d`}
                   </span>
                   {bin.nextDate && (
                     <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
