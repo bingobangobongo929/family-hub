@@ -32,19 +32,18 @@ function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: stri
 
 // Flag image component using regular img
 function CountryFlag({ countryCode, size = 'md' }: { countryCode: string; size?: 'sm' | 'md' | 'lg' }) {
-  const code = countryCode?.toLowerCase() || 'un'
-  const sizes = { sm: { w: 24, h: 18 }, md: { w: 40, h: 30 }, lg: { w: 56, h: 42 } }
+  const code = (countryCode || 'UN').toUpperCase()
+  const sizes = { sm: { w: 24, h: 16 }, md: { w: 36, h: 24 }, lg: { w: 48, h: 32 } }
   const { w, h } = sizes[size]
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://flagcdn.com/w80/${code}.png`}
+      src={`https://purecatamphetamine.github.io/country-flag-icons/3x2/${code}.svg`}
       alt=""
       width={w}
       height={h}
-      className="rounded shadow-sm object-cover"
-      style={{ minWidth: w }}
+      className="rounded shadow-sm"
     />
   )
 }

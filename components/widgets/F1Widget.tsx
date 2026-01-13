@@ -104,9 +104,9 @@ export default function F1Widget() {
     )
   }
 
-  // Use country_code from API directly, fallback to lowercase country name
-  const countryCode = data.meeting.country_code?.toLowerCase() || data.meeting.country_name?.toLowerCase().slice(0, 2) || 'un'
-  const flagUrl = `https://flagcdn.com/w80/${countryCode}.png`
+  // Use country_code from API directly
+  const countryCode = (data.meeting.country_code || 'UN').toUpperCase()
+  const flagUrl = `https://purecatamphetamine.github.io/country-flag-icons/3x2/${countryCode}.svg`
 
   return (
     <Link href="/f1" className="block h-full">
