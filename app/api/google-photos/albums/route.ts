@@ -21,7 +21,6 @@ export async function GET(request: NextRequest) {
       `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
     )
     const tokenInfo = await tokenInfoResponse.json()
-    console.log('Token info:', JSON.stringify(tokenInfo))
 
     // Fetch albums from Google Photos API
     const albumsResponse = await fetch(
@@ -34,7 +33,12 @@ export async function GET(request: NextRequest) {
     if (!albumsResponse.ok) {
       const error = await albumsResponse.text()
       console.error('Google Photos API error:', error)
-      return NextResponse.json({ error: 'Failed to fetch albums' }, { status: 500 })
+      // Return token info with error for debugging
+      return NextResponse.json({
+        error: 'Failed to fetch albums',
+        debug_token_scopes: tokenInfo.scope,
+        debug_token_error: tokenInfo.error_description
+      }, { status: 500 })
     }
 
     const data = await albumsResponse.json()
