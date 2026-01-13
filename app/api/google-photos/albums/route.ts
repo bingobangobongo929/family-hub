@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Google Photos not connected' }, { status: 401 })
     }
 
+    // Debug: Check what scopes the token actually has
+    const tokenInfoResponse = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
+    )
+    const tokenInfo = await tokenInfoResponse.json()
+    console.log('Token info:', JSON.stringify(tokenInfo))
+
     // Fetch albums from Google Photos API
     const albumsResponse = await fetch(
       'https://photoslibrary.googleapis.com/v1/albums?pageSize=50',
