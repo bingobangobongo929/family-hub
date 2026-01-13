@@ -13,6 +13,8 @@ import {
   formatDanishTime,
   formatDanishDate,
   getTeamColor,
+  getCountryFlag,
+  getSessionIcon,
 } from '@/lib/f1-api'
 
 interface ScheduleData {
@@ -161,33 +163,48 @@ export default function F1Page() {
 function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: OpenF1Session[] } }) {
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, text: '' })
 
+  // Find next session
+  const nextSession = useMemo(() => {
+    if (!meeting.sessions?.length) return null
+    const now = new Date()
+    return meeting.sessions.find(s => new Date(s.date_start) > now)
+  }, [meeting.sessions])
+
   useEffect(() => {
     function update() {
-      const raceDate = new Date(meeting.date_start)
-      setCountdown(getCountdown(raceDate))
+      const targetDate = nextSession
+        ? new Date(nextSession.date_start)
+        : new Date(meeting.date_start)
+      setCountdown(getCountdown(targetDate))
     }
     update()
     const interval = setInterval(update, 1000)
     return () => clearInterval(interval)
-  }, [meeting])
+  }, [meeting, nextSession])
 
+  const countryFlag = getCountryFlag(meeting.country_name)
   const danishDate = toDanishTime(new Date(meeting.date_start))
 
   return (
     <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-4 text-white">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
-          <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
-          <p className="text-sm text-white/80">
-            {meeting.circuit_short_name} • {meeting.country_name}
-          </p>
-          <p className="text-sm text-white/70 mt-1">
-            {formatDanishDate(danishDate)}
-          </p>
+        <div className="flex items-start gap-4">
+          <span className="text-5xl">{countryFlag}</span>
+          <div>
+            <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
+            <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
+            <p className="text-sm text-white/80">
+              {meeting.circuit_short_name} • {meeting.country_name}
+            </p>
+            <p className="text-sm text-white/70 mt-1">
+              {formatDanishDate(danishDate)}
+            </p>
+          </div>
         </div>
         <div className="text-center md:text-right">
-          <p className="text-sm text-white/80">Countdown</p>
+          <p className="text-sm text-white/80 mb-1">
+            {nextSession ? `Until ${SESSION_NAMES[nextSession.session_name] || nextSession.session_name}` : 'Countdown'}
+          </p>
           <div className="flex gap-3 justify-center md:justify-end">
             <div className="text-center">
               <p className="text-3xl md:text-4xl font-bold font-mono">{countdown.days}</p>
@@ -205,21 +222,31 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
         </div>
       </div>
 
-      {/* Sessions preview */}
+      {/* Sessions preview with icons */}
       {meeting.sessions && meeting.sessions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-white/20">
           <p className="text-xs text-white/70 mb-2">Sessions (Danish Time)</p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {meeting.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
+              const icon = getSessionIcon(session.session_name)
+              const isPast = new Date(session.date_start) < new Date()
+
               return (
-                <div key={session.session_key} className="bg-white/10 rounded-lg p-2 text-center">
-                  <p className="text-xs font-medium">
-                    {SESSION_NAMES[session.session_name] || session.session_name}
-                  </p>
+                <div
+                  key={session.session_key}
+                  className={`bg-white/10 rounded-lg p-2 text-center ${isPast ? 'opacity-50' : ''}`}
+                >
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <span className="text-base">{icon}</span>
+                    <p className="text-xs font-medium">
+                      {SESSION_NAMES[session.session_name] || session.session_name}
+                    </p>
+                  </div>
                   <p className="text-xs text-white/70">
                     {sessionDate.toLocaleDateString('da-DK', { weekday: 'short' })} {formatDanishTime(sessionDate)}
                   </p>
+                  {isPast && <span className="text-xs text-white/50">Done</span>}
                 </div>
               )
             })}
@@ -281,7 +308,7 @@ function CalendarView({
   )
 }
 
-// Individual race card
+// Individual race card with flag
 function RaceCard({
   race,
   isNext = false,
@@ -293,6 +320,7 @@ function RaceCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const raceDate = toDanishTime(new Date(race.date_start))
+  const countryFlag = getCountryFlag(race.country_name)
 
   return (
     <div
@@ -309,40 +337,37 @@ function RaceCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
-          <div className="text-center min-w-[60px]">
-            <p className="text-2xl font-bold text-red-600">
-              {raceDate.getDate()}
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 uppercase">
-              {raceDate.toLocaleDateString('da-DK', { month: 'short' })}
-            </p>
-          </div>
+          {/* Flag instead of date box */}
+          <span className="text-4xl">{countryFlag}</span>
           <div>
-            <p className="font-semibold text-slate-800 dark:text-slate-200">
-              {race.meeting_name}
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-slate-800 dark:text-slate-200">
+                {race.meeting_name}
+              </p>
               {isNext && (
-                <span className="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-full">
+                <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-full font-medium">
                   Next
                 </span>
               )}
-            </p>
+            </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {race.circuit_short_name} • {race.country_name}
+              {race.circuit_short_name} • {raceDate.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}
             </p>
           </div>
         </div>
-        <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
-          {expanded ? '▲' : '▼'}
+        <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-xl">
+          {expanded ? '−' : '+'}
         </button>
       </div>
 
-      {/* Expanded session details */}
+      {/* Expanded session details with icons */}
       {expanded && race.sessions && race.sessions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             {race.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
               const isSessionPast = new Date(session.date_start) < new Date()
+              const icon = getSessionIcon(session.session_name)
 
               return (
                 <div
@@ -353,15 +378,21 @@ function RaceCard({
                       : 'bg-red-50 dark:bg-red-900/20'
                   }`}
                 >
-                  <p className={`font-medium ${isSessionPast ? 'text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>
-                    {SESSION_NAMES[session.session_name] || session.session_name}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{icon}</span>
+                    <p className={`font-medium ${isSessionPast ? 'text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>
+                      {SESSION_NAMES[session.session_name] || session.session_name}
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                     {sessionDate.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
                   <p className="text-sm font-medium text-red-600 dark:text-red-400">
                     {formatDanishTime(sessionDate)}
                   </p>
+                  {isSessionPast && (
+                    <span className="text-xs text-slate-400">Completed</span>
+                  )}
                 </div>
               )
             })}
