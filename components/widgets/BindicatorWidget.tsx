@@ -89,7 +89,7 @@ export default function BindicatorWidget() {
                   className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 ${urgencyStyles.bg} ${urgencyStyles.border} transition-all`}
                 >
                   <span className={emojiSize}>{bin.emoji}</span>
-                  <span className={`${titleSize} font-medium text-slate-900 dark:text-slate-200 mt-1`}>
+                  <span className={`${titleSize} font-semibold text-black dark:text-white mt-1`}>
                     {bin.shortName}
                   </span>
                   <span className={`${daysSize} font-bold ${urgencyStyles.text}`}>
@@ -142,7 +142,7 @@ export default function BindicatorWidget() {
               >
                 <span className={size === 'small' ? 'text-lg' : 'text-xl'}>{bin.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={`font-medium text-slate-900 dark:text-slate-200 truncate ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
+                  <p className={`font-semibold text-black dark:text-white truncate ${size === 'small' ? 'text-xs' : 'text-sm'}`}>
                     {bin.shortName}
                   </p>
                   {bin.nextDate && size !== 'small' && (
