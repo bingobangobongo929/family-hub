@@ -391,9 +391,9 @@ export default function Dashboard() {
                 {isEditMode && (
                   <button
                     onClick={() => removeWidget(widgetId)}
-                    className="absolute -top-2 -right-2 w-7 h-7 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 transition-colors z-10 shadow-lg"
+                    className="absolute top-2 right-2 w-6 h-6 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 transition-colors z-10 shadow-md"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
