@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { format, parseISO, isToday, isTomorrow, isThisWeek, startOfWeek, endOfWeek, addWeeks, differenceInHours, isAfter, startOfDay, addDays, isWithinInterval } from 'date-fns'
+import { format, parseISO, isToday, isTomorrow, isThisWeek, startOfWeek, endOfWeek, addWeeks, differenceInHours, isAfter, isBefore, startOfDay, addDays, isWithinInterval } from 'date-fns'
 import { Calendar, MapPin, ChevronRight, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
@@ -10,6 +10,7 @@ import { useContacts } from '@/lib/contacts-context'
 import { CalendarEvent } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import EventDetailModal from '@/components/EventDetailModal'
+import { getOccurrences, isRecurrenceActive } from '@/lib/rrule'
 
 // Helper function since date-fns doesn't export isNextWeek
 function isNextWeek(date: Date, options?: { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }): boolean {
@@ -104,47 +105,119 @@ export default function ScheduleWidget() {
       const weekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
       const twoWeeksEnd = endOfWeek(addWeeks(now, 1), { weekStartsOn: 1 })
 
-      const { data } = await supabase
+      // Fetch regular events within date range
+      const { data: regularEvents } = await supabase
         .from('calendar_events')
         .select('*')
+        .is('recurrence_rule', null)
         .gte('start_time', weekStart.toISOString())
         .lte('start_time', twoWeeksEnd.toISOString())
         .order('start_time', { ascending: true })
 
-      if (data) {
-        setEvents(data)
+      // Fetch recurring events (regardless of start_time)
+      const { data: recurringEvents } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .not('recurrence_rule', 'is', null)
 
-        // Fetch event_members
-        if (data.length > 0) {
-          const eventIds = data.map(e => e.id)
-          const { data: membersData } = await supabase
-            .from('event_members')
-            .select('event_id, member_id')
-            .in('event_id', eventIds)
+      // Expand recurring events into occurrences within the visible range
+      const expandedEvents: CalendarEvent[] = []
 
-          if (membersData) {
-            const membersMap: Record<string, string[]> = {}
-            membersData.forEach(em => {
-              if (!membersMap[em.event_id]) membersMap[em.event_id] = []
-              membersMap[em.event_id].push(em.member_id)
+      if (recurringEvents) {
+        for (const event of recurringEvents) {
+          if (!event.recurrence_rule) continue
+
+          // Check if recurrence is still active
+          const eventStart = parseISO(event.start_time)
+          if (!isRecurrenceActive(event.recurrence_rule, eventStart)) continue
+
+          // Get occurrences within the visible range
+          const occurrences = getOccurrences(
+            event.recurrence_rule,
+            eventStart,
+            20, // Get up to 20 occurrences
+            weekStart // Only after week start
+          )
+
+          // Filter to only those within our date range and create virtual events
+          for (const occurrence of occurrences) {
+            if (isBefore(occurrence, weekStart) || isAfter(occurrence, twoWeeksEnd)) continue
+
+            // Preserve original time from the event
+            const originalTime = eventStart
+            occurrence.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0)
+
+            // Create a virtual event for this occurrence
+            expandedEvents.push({
+              ...event,
+              id: `${event.id}_${occurrence.getTime()}`, // Unique ID for this occurrence
+              start_time: occurrence.toISOString(),
+              // Keep end_time relative if it exists
+              end_time: event.end_time ? (() => {
+                const originalEnd = parseISO(event.end_time)
+                const duration = originalEnd.getTime() - eventStart.getTime()
+                return new Date(occurrence.getTime() + duration).toISOString()
+              })() : null,
             })
-            setEventMembers(membersMap)
           }
+        }
+      }
 
-          // Fetch event_contacts
-          const { data: contactsData } = await supabase
-            .from('event_contacts')
-            .select('event_id, contact_id')
-            .in('event_id', eventIds)
+      // Combine and sort all events
+      const allEvents = [...(regularEvents || []), ...expandedEvents]
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
 
-          if (contactsData) {
-            const contactsMap: Record<string, string[]> = {}
-            contactsData.forEach(ec => {
-              if (!contactsMap[ec.event_id]) contactsMap[ec.event_id] = []
-              contactsMap[ec.event_id].push(ec.contact_id)
-            })
-            setEventContacts(contactsMap)
-          }
+      setEvents(allEvents)
+
+      // Fetch event_members and event_contacts for all real event IDs
+      // (Get base IDs from both regular and recurring events)
+      const realEventIds = [
+        ...(regularEvents || []).map(e => e.id),
+        ...(recurringEvents || []).map(e => e.id)
+      ]
+
+      if (realEventIds.length > 0) {
+        const { data: membersData } = await supabase
+          .from('event_members')
+          .select('event_id, member_id')
+          .in('event_id', realEventIds)
+
+        if (membersData) {
+          const membersMap: Record<string, string[]> = {}
+          membersData.forEach(em => {
+            if (!membersMap[em.event_id]) membersMap[em.event_id] = []
+            membersMap[em.event_id].push(em.member_id)
+          })
+          // Also map to virtual occurrence IDs
+          expandedEvents.forEach(e => {
+            const baseId = e.id.split('_')[0]
+            if (membersMap[baseId]) {
+              membersMap[e.id] = membersMap[baseId]
+            }
+          })
+          setEventMembers(membersMap)
+        }
+
+        // Fetch event_contacts
+        const { data: contactsData } = await supabase
+          .from('event_contacts')
+          .select('event_id, contact_id')
+          .in('event_id', realEventIds)
+
+        if (contactsData) {
+          const contactsMap: Record<string, string[]> = {}
+          contactsData.forEach(ec => {
+            if (!contactsMap[ec.event_id]) contactsMap[ec.event_id] = []
+            contactsMap[ec.event_id].push(ec.contact_id)
+          })
+          // Also map to virtual occurrence IDs
+          expandedEvents.forEach(e => {
+            const baseId = e.id.split('_')[0]
+            if (contactsMap[baseId]) {
+              contactsMap[e.id] = contactsMap[baseId]
+            }
+          })
+          setEventContacts(contactsMap)
         }
       }
     } catch (error) {

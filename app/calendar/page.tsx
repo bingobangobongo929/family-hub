@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday, addWeeks, subWeeks, addDays } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday, addWeeks, subWeeks, addDays, isBefore, isAfter } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Repeat } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -18,7 +18,7 @@ import { useContacts } from '@/lib/contacts-context'
 import { useSettings } from '@/lib/settings-context'
 import { CalendarEvent, MEMBER_COLORS, RecurrencePattern } from '@/lib/database.types'
 import RecurrenceSelector from '@/components/RecurrenceSelector'
-import { patternToRRule } from '@/lib/rrule'
+import { patternToRRule, getOccurrences, isRecurrenceActive } from '@/lib/rrule'
 import { getBinsForDate, getBinInfo } from '@/lib/bin-schedule'
 
 type ViewMode = 'month' | 'week'
@@ -101,23 +101,82 @@ export default function CalendarPage() {
       const start = startOfMonth(subMonths(currentDate, 1))
       const end = endOfMonth(addMonths(currentDate, 1))
 
-      const { data, error } = await supabase
+      // Fetch regular events within date range
+      const { data: regularEvents, error } = await supabase
         .from('calendar_events')
         .select('*')
+        .is('recurrence_rule', null)
         .gte('start_time', start.toISOString())
         .lte('start_time', end.toISOString())
         .order('start_time', { ascending: true })
 
       if (error) throw error
-      setEvents((data as CalendarEvent[]) || [])
 
-      if (data && data.length > 0) {
-        const eventIds = data.map(e => e.id)
+      // Fetch recurring events (regardless of start_time)
+      const { data: recurringEvents } = await supabase
+        .from('calendar_events')
+        .select('*')
+        .not('recurrence_rule', 'is', null)
 
+      // Expand recurring events into occurrences within the visible range
+      const expandedEvents: CalendarEvent[] = []
+
+      if (recurringEvents) {
+        for (const event of recurringEvents) {
+          if (!event.recurrence_rule) continue
+
+          // Check if recurrence is still active
+          const eventStart = parseISO(event.start_time)
+          if (!isRecurrenceActive(event.recurrence_rule, eventStart)) continue
+
+          // Get occurrences within the visible range
+          const occurrences = getOccurrences(
+            event.recurrence_rule,
+            eventStart,
+            50, // Get up to 50 occurrences for calendar view
+            start
+          )
+
+          // Filter to only those within our date range and create virtual events
+          for (const occurrence of occurrences) {
+            if (isBefore(occurrence, start) || isAfter(occurrence, end)) continue
+
+            // Preserve original time from the event
+            const originalTime = eventStart
+            occurrence.setHours(originalTime.getHours(), originalTime.getMinutes(), 0, 0)
+
+            // Create a virtual event for this occurrence
+            expandedEvents.push({
+              ...event,
+              id: `${event.id}_${occurrence.getTime()}`, // Unique ID for this occurrence
+              start_time: occurrence.toISOString(),
+              end_time: event.end_time ? (() => {
+                const originalEnd = parseISO(event.end_time)
+                const duration = originalEnd.getTime() - eventStart.getTime()
+                return new Date(occurrence.getTime() + duration).toISOString()
+              })() : null,
+            })
+          }
+        }
+      }
+
+      // Combine and sort all events
+      const allEvents = [...(regularEvents || []), ...expandedEvents]
+        .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+      setEvents(allEvents)
+
+      // Fetch event_members and event_contacts for all real event IDs
+      const realEventIds = [
+        ...(regularEvents || []).map(e => e.id),
+        ...(recurringEvents || []).map(e => e.id)
+      ]
+
+      if (realEventIds.length > 0) {
         const { data: membersData } = await supabase
           .from('event_members')
           .select('event_id, member_id')
-          .in('event_id', eventIds)
+          .in('event_id', realEventIds)
 
         if (membersData) {
           const membersMap: Record<string, string[]> = {}
@@ -125,19 +184,33 @@ export default function CalendarPage() {
             if (!membersMap[em.event_id]) membersMap[em.event_id] = []
             membersMap[em.event_id].push(em.member_id)
           })
+          // Also map to virtual occurrence IDs
+          expandedEvents.forEach(e => {
+            const baseId = e.id.split('_')[0]
+            if (membersMap[baseId]) {
+              membersMap[e.id] = membersMap[baseId]
+            }
+          })
           setEventMembers(membersMap)
         }
 
         const { data: contactsData } = await supabase
           .from('event_contacts')
           .select('event_id, contact_id')
-          .in('event_id', eventIds)
+          .in('event_id', realEventIds)
 
         if (contactsData) {
           const contactsMap: Record<string, string[]> = {}
           contactsData.forEach(ec => {
             if (!contactsMap[ec.event_id]) contactsMap[ec.event_id] = []
             contactsMap[ec.event_id].push(ec.contact_id)
+          })
+          // Also map to virtual occurrence IDs
+          expandedEvents.forEach(e => {
+            const baseId = e.id.split('_')[0]
+            if (contactsMap[baseId]) {
+              contactsMap[e.id] = contactsMap[baseId]
+            }
           })
           setEventContacts(contactsMap)
         }
