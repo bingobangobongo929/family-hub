@@ -31,13 +31,20 @@ export async function GET(request: NextRequest) {
     )
 
     if (!albumsResponse.ok) {
-      const error = await albumsResponse.text()
-      console.error('Google Photos API error:', error)
-      // Return token info with error for debugging
+      const errorText = await albumsResponse.text()
+      console.error('Google Photos API error:', errorText)
+      // Return full error for debugging
+      let errorJson
+      try {
+        errorJson = JSON.parse(errorText)
+      } catch {
+        errorJson = { raw: errorText }
+      }
       return NextResponse.json({
         error: 'Failed to fetch albums',
         debug_token_scopes: tokenInfo.scope,
-        debug_token_error: tokenInfo.error_description
+        debug_api_error: errorJson,
+        debug_api_status: albumsResponse.status
       }, { status: 500 })
     }
 

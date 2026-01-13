@@ -6,9 +6,11 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
 const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL + '/api/google-photos/callback'
 
-// Google Photos API scope - full access (readonly was giving permission errors)
+// Google Photos API scopes
 const SCOPES = [
   'https://www.googleapis.com/auth/photoslibrary',
+  'openid',
+  'email',
 ]
 
 // Generate OAuth URL for Google Photos
