@@ -15,6 +15,7 @@ const SCOPES = [
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const action = searchParams.get('action')
+  const userId = searchParams.get('user_id')
 
   if (!GOOGLE_CLIENT_ID) {
     return NextResponse.json(
@@ -24,7 +25,14 @@ export async function GET(request: NextRequest) {
   }
 
   if (action === 'url') {
-    // Generate authorization URL
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'User ID required' },
+        { status: 400 }
+      )
+    }
+
+    // Generate authorization URL with user_id in state parameter
     const params = new URLSearchParams({
       client_id: GOOGLE_CLIENT_ID,
       redirect_uri: REDIRECT_URI!,
@@ -32,6 +40,7 @@ export async function GET(request: NextRequest) {
       scope: SCOPES.join(' '),
       access_type: 'offline',
       prompt: 'consent',
+      state: userId, // Pass user ID through OAuth flow
     })
 
     const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`

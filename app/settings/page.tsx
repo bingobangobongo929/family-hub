@@ -241,8 +241,9 @@ export default function SettingsPage() {
 
   // Connect Google Photos
   const handleConnectGooglePhotos = async () => {
+    if (!user) return
     try {
-      const response = await fetch('/api/google-photos/auth?action=url')
+      const response = await fetch(`/api/google-photos/auth?action=url&user_id=${user.id}`)
       const data = await response.json()
       if (data.url) {
         window.location.href = data.url

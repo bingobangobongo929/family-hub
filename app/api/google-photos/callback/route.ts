@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -10,6 +9,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const userId = searchParams.get('state') // User ID passed through OAuth state
 
   if (error) {
     return NextResponse.redirect(
@@ -20,6 +20,12 @@ export async function GET(request: NextRequest) {
   if (!code) {
     return NextResponse.redirect(
       new URL('/settings?google_photos_error=no_code', request.url)
+    )
+  }
+
+  if (!userId) {
+    return NextResponse.redirect(
+      new URL('/settings?google_photos_error=not_authenticated', request.url)
     )
   }
 
@@ -59,36 +65,17 @@ export async function GET(request: NextRequest) {
 
     const googleUser = await userInfoResponse.json()
 
-    // Get the current user from Supabase cookie
-    const cookieStore = await cookies()
-    const supabaseAuthToken = cookieStore.get('sb-access-token')?.value
-
-    if (!supabaseAuthToken) {
-      return NextResponse.redirect(
-        new URL('/settings?google_photos_error=not_authenticated', request.url)
-      )
-    }
-
-    // Create Supabase client
+    // Create Supabase client with service role
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Get user from session
-    const { data: { user } } = await supabase.auth.getUser(supabaseAuthToken)
-
-    if (!user) {
-      return NextResponse.redirect(
-        new URL('/settings?google_photos_error=no_user', request.url)
-      )
-    }
-
     // Store the integration
     const { error: dbError } = await supabase
       .from('user_integrations')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         provider: 'google_photos',
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
