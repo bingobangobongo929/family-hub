@@ -104,9 +104,8 @@ export default function F1Widget() {
     )
   }
 
-  // Use country_code from API directly
-  const countryCode = (data.meeting.country_code || 'UN').toUpperCase()
-  const flagUrl = `https://purecatamphetamine.github.io/country-flag-icons/3x2/${countryCode}.svg`
+  // Use flag URL from API directly
+  const flagUrl = data.meeting.country_flag
 
   return (
     <Link href="/f1" className="block h-full">

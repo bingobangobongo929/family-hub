@@ -69,6 +69,7 @@ export interface OpenF1Meeting {
   country_name: string
   country_code: string
   country_key: number
+  country_flag: string
   date_start: string
   year: number
 }

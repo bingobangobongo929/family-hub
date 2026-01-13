@@ -30,20 +30,19 @@ function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: stri
   return <Flag className={className} />
 }
 
-// Flag image component using regular img
-function CountryFlag({ countryCode, size = 'md' }: { countryCode: string; size?: 'sm' | 'md' | 'lg' }) {
-  const code = (countryCode || 'UN').toUpperCase()
-  const sizes = { sm: { w: 24, h: 16 }, md: { w: 36, h: 24 }, lg: { w: 48, h: 32 } }
+// Flag image component using API-provided URL
+function CountryFlag({ flagUrl, size = 'md' }: { flagUrl: string; size?: 'sm' | 'md' | 'lg' }) {
+  const sizes = { sm: { w: 32, h: 18 }, md: { w: 48, h: 27 }, lg: { w: 64, h: 36 } }
   const { w, h } = sizes[size]
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={`https://purecatamphetamine.github.io/country-flag-icons/3x2/${code}.svg`}
+      src={flagUrl}
       alt=""
       width={w}
       height={h}
-      className="rounded shadow-sm"
+      className="rounded shadow-sm object-cover"
     />
   )
 }
@@ -219,7 +218,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
     <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-4 text-white">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-start gap-4">
-          <CountryFlag countryCode={meeting.country_code} size="lg" />
+          <CountryFlag flagUrl={meeting.country_flag} size="lg" />
           <div>
             <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
             <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
@@ -365,7 +364,7 @@ function RaceCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
-          <CountryFlag countryCode={race.country_code} size="md" />
+          <CountryFlag flagUrl={race.country_flag} size="md" />
           <div>
             <div className="flex items-center gap-2">
               <p className="font-semibold text-slate-800 dark:text-slate-200">
