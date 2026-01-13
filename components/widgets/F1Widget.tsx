@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Wrench, Clock, Zap, Flag } from 'lucide-react'
 import {
   OpenF1Meeting,
@@ -12,7 +11,6 @@ import {
   getCountdown,
   toDanishTime,
   formatDanishTime,
-  getCountryCode,
 } from '@/lib/f1-api'
 
 interface F1Data {
@@ -37,7 +35,7 @@ function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: stri
 }
 
 export default function F1Widget() {
-  const [ref, { size, isWide }] = useWidgetSize()
+  const [ref, { isWide }] = useWidgetSize()
   const [data, setData] = useState<F1Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, text: '' })
@@ -106,7 +104,8 @@ export default function F1Widget() {
     )
   }
 
-  const countryCode = getCountryCode(data.meeting.country_name)
+  // Use country_code from API directly, fallback to lowercase country name
+  const countryCode = data.meeting.country_code?.toLowerCase() || data.meeting.country_name?.toLowerCase().slice(0, 2) || 'un'
   const flagUrl = `https://flagcdn.com/w80/${countryCode}.png`
 
   return (
@@ -114,13 +113,14 @@ export default function F1Widget() {
       <div ref={ref} className="h-full flex flex-col p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
         {/* Header - flag and circuit */}
         <div className="flex items-center gap-2 mb-2">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={flagUrl}
-            alt={data.meeting.country_name}
+            alt=""
             width={28}
             height={21}
-            className="rounded shadow-sm"
-            unoptimized
+            className="rounded shadow-sm object-cover"
+            style={{ minWidth: 28 }}
           />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">

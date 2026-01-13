@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import Image from 'next/image'
 import { Wrench, Clock, Zap, Flag } from 'lucide-react'
 import {
   OpenF1Meeting,
@@ -15,7 +14,6 @@ import {
   formatDanishTime,
   formatDanishDate,
   getTeamColor,
-  getCountryCode,
 } from '@/lib/f1-api'
 
 // Session icon component
@@ -32,20 +30,21 @@ function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: stri
   return <Flag className={className} />
 }
 
-// Flag image component
-function CountryFlag({ country, size = 'md' }: { country: string; size?: 'sm' | 'md' | 'lg' }) {
-  const code = getCountryCode(country)
+// Flag image component using regular img
+function CountryFlag({ countryCode, size = 'md' }: { countryCode: string; size?: 'sm' | 'md' | 'lg' }) {
+  const code = countryCode?.toLowerCase() || 'un'
   const sizes = { sm: { w: 24, h: 18 }, md: { w: 40, h: 30 }, lg: { w: 56, h: 42 } }
   const { w, h } = sizes[size]
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={`https://flagcdn.com/w80/${code}.png`}
-      alt={country}
+      alt=""
       width={w}
       height={h}
-      className="rounded shadow-sm"
-      unoptimized
+      className="rounded shadow-sm object-cover"
+      style={{ minWidth: w }}
     />
   )
 }
@@ -221,7 +220,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
     <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-4 text-white">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-start gap-4">
-          <CountryFlag country={meeting.country_name} size="lg" />
+          <CountryFlag countryCode={meeting.country_code} size="lg" />
           <div>
             <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
             <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
@@ -367,7 +366,7 @@ function RaceCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
-          <CountryFlag country={race.country_name} size="md" />
+          <CountryFlag countryCode={race.country_code} size="md" />
           <div>
             <div className="flex items-center gap-2">
               <p className="font-semibold text-slate-800 dark:text-slate-200">

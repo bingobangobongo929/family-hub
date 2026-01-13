@@ -67,6 +67,8 @@ export interface OpenF1Meeting {
   circuit_key: number
   circuit_short_name: string
   country_name: string
+  country_code: string
+  country_key: number
   date_start: string
   year: number
 }
