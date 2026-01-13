@@ -379,6 +379,87 @@ export async function fetchSprintResults(year: number, round: number): Promise<F
   }
 }
 
+// Country to flag emoji mapping
+export const COUNTRY_FLAGS: Record<string, string> = {
+  'Bahrain': '🇧🇭',
+  'Saudi Arabia': '🇸🇦',
+  'Australia': '🇦🇺',
+  'Japan': '🇯🇵',
+  'China': '🇨🇳',
+  'United States': '🇺🇸',
+  'USA': '🇺🇸',
+  'Italy': '🇮🇹',
+  'Monaco': '🇲🇨',
+  'Canada': '🇨🇦',
+  'Spain': '🇪🇸',
+  'Austria': '🇦🇹',
+  'United Kingdom': '🇬🇧',
+  'Great Britain': '🇬🇧',
+  'Hungary': '🇭🇺',
+  'Belgium': '🇧🇪',
+  'Netherlands': '🇳🇱',
+  'Singapore': '🇸🇬',
+  'Azerbaijan': '🇦🇿',
+  'Mexico': '🇲🇽',
+  'Brazil': '🇧🇷',
+  'Qatar': '🇶🇦',
+  'Abu Dhabi': '🇦🇪',
+  'UAE': '🇦🇪',
+  'Las Vegas': '🇺🇸',
+  'Miami': '🇺🇸',
+}
+
+export function getCountryFlag(country: string): string {
+  return COUNTRY_FLAGS[country] || '🏁'
+}
+
+// Session icons for visual identification
+export const SESSION_ICONS: Record<string, string> = {
+  'Practice 1': '🔧',
+  'Practice 2': '🔧',
+  'Practice 3': '🔧',
+  'Qualifying': '⏱️',
+  'Sprint Qualifying': '🏃',
+  'Sprint Shootout': '🏃',
+  'Sprint': '🏃',
+  'Race': '🏁',
+  'Testing': '🧪',
+  'Pre-Season Testing': '🧪',
+}
+
+export function getSessionIcon(sessionName: string): string {
+  return SESSION_ICONS[sessionName] || '🏎️'
+}
+
+// Get urgency level based on time until session
+export function getSessionUrgency(sessionDate: Date): 'now' | 'today' | 'tomorrow' | 'soon' | 'later' {
+  const now = new Date()
+  const diff = sessionDate.getTime() - now.getTime()
+  const hours = diff / (1000 * 60 * 60)
+
+  if (diff <= 0) return 'now'
+  if (hours < 24) return 'today'
+  if (hours < 48) return 'tomorrow'
+  if (hours < 72) return 'soon'
+  return 'later'
+}
+
+// Get urgency styling for sessions
+export function getSessionUrgencyStyles(urgency: string): { bg: string; border: string; text: string } {
+  switch (urgency) {
+    case 'now':
+      return { bg: 'bg-red-100 dark:bg-red-900/40', border: 'border-red-300 dark:border-red-700', text: 'text-red-600 dark:text-red-400' }
+    case 'today':
+      return { bg: 'bg-orange-100 dark:bg-orange-900/40', border: 'border-orange-300 dark:border-orange-700', text: 'text-orange-600 dark:text-orange-400' }
+    case 'tomorrow':
+      return { bg: 'bg-yellow-100 dark:bg-yellow-900/40', border: 'border-yellow-300 dark:border-yellow-700', text: 'text-yellow-700 dark:text-yellow-400' }
+    case 'soon':
+      return { bg: 'bg-blue-50 dark:bg-blue-900/30', border: 'border-blue-200 dark:border-blue-800', text: 'text-blue-600 dark:text-blue-400' }
+    default:
+      return { bg: 'bg-slate-50 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700', text: 'text-slate-600 dark:text-slate-400' }
+  }
+}
+
 // Team colors for styling
 export const TEAM_COLORS: Record<string, string> = {
   'red_bull': '#3671C6',
