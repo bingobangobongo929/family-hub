@@ -41,6 +41,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ albums })
   } catch (error) {
     console.error('Albums fetch error:', error)
-    return NextResponse.json({ error: 'Failed to fetch albums' }, { status: 500 })
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: `Failed to fetch albums: ${errorMsg}` }, { status: 500 })
   }
 }
