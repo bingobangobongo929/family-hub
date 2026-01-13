@@ -89,11 +89,14 @@ export default function BindicatorWidget() {
                   className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 ${urgencyStyles.bg} ${urgencyStyles.border} transition-all`}
                 >
                   <span className={emojiSize}>{bin.emoji}</span>
-                  <span className={`${titleSize} font-semibold mt-1 ${
-                    bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon'
-                      ? 'text-slate-900 dark:text-slate-100'
-                      : 'text-slate-700 dark:text-slate-200'
-                  }`}>
+                  <span
+                    className={`${titleSize} font-semibold mt-1`}
+                    style={{
+                      color: (bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon')
+                        ? '#1e293b'
+                        : '#475569'
+                    }}
+                  >
                     {bin.shortName}
                   </span>
                   <span className={`${daysSize} font-bold ${urgencyStyles.text}`}>
@@ -146,11 +149,14 @@ export default function BindicatorWidget() {
               >
                 <span className={size === 'small' ? 'text-lg' : 'text-xl'}>{bin.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={`font-semibold truncate ${size === 'small' ? 'text-xs' : 'text-sm'} ${
-                    bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon'
-                      ? 'text-slate-900 dark:text-slate-100'
-                      : 'text-slate-700 dark:text-slate-200'
-                  }`}>
+                  <p
+                    className={`font-semibold truncate ${size === 'small' ? 'text-xs' : 'text-sm'}`}
+                    style={{
+                      color: (bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon')
+                        ? '#1e293b'
+                        : '#475569'
+                    }}
+                  >
                     {bin.shortName}
                   </p>
                   {bin.nextDate && size !== 'small' && (
