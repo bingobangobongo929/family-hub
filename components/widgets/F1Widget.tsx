@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import Link from 'next/link'
+import Image from 'next/image'
+import { Wrench, Clock, Zap, Flag } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -10,8 +12,7 @@ import {
   getCountdown,
   toDanishTime,
   formatDanishTime,
-  getCountryFlag,
-  getSessionIcon,
+  getCountryCode,
 } from '@/lib/f1-api'
 
 interface F1Data {
@@ -19,6 +20,20 @@ interface F1Data {
   meeting: OpenF1Meeting | null
   session?: OpenF1Session | null
   sessions: OpenF1Session[]
+}
+
+// Session icon component
+function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: string; className?: string }) {
+  if (sessionName.includes('Practice')) {
+    return <Wrench className={className} />
+  }
+  if (sessionName.includes('Qualifying') || sessionName.includes('Sprint Shootout')) {
+    return <Clock className={className} />
+  }
+  if (sessionName.includes('Sprint') && !sessionName.includes('Qualifying') && !sessionName.includes('Shootout')) {
+    return <Zap className={className} />
+  }
+  return <Flag className={className} />
 }
 
 export default function F1Widget() {
@@ -48,17 +63,20 @@ export default function F1Widget() {
     return () => clearInterval(interval)
   }, [])
 
-  // Get next upcoming session
-  const nextSession = useMemo(() => {
-    if (!data?.sessions?.length) return null
+  // Get upcoming sessions
+  const upcomingSessions = useMemo(() => {
+    if (!data?.sessions?.length) return []
     const now = new Date()
-    return data.sessions.find(s => new Date(s.date_start) > now)
-  }, [data?.sessions])
+    return data.sessions
+      .filter(s => new Date(s.date_start) > now)
+      .slice(0, isWide ? 6 : 4)
+  }, [data?.sessions, isWide])
 
-  // Update countdown every second
+  const nextSession = upcomingSessions[0]
+
+  // Update countdown
   useEffect(() => {
     if (!nextSession) return
-
     function update() {
       if (nextSession) {
         setCountdown(getCountdown(new Date(nextSession.date_start)))
@@ -69,28 +87,10 @@ export default function F1Widget() {
     return () => clearInterval(interval)
   }, [nextSession])
 
-  // Get sessions with status for race weekend view
-  const sessionsWithStatus = useMemo(() => {
-    if (!data?.sessions?.length) return []
-    const now = new Date()
-
-    return data.sessions.map(session => {
-      const start = new Date(session.date_start)
-      const end = new Date(session.date_end || session.date_start)
-      end.setHours(end.getHours() + 2) // Sessions typically last ~2 hours
-
-      let status: 'completed' | 'live' | 'upcoming' = 'upcoming'
-      if (now > end) status = 'completed'
-      else if (now >= start && now <= end) status = 'live'
-
-      return { ...session, status }
-    })
-  }, [data?.sessions])
-
   if (loading) {
     return (
       <div ref={ref} className="h-full flex items-center justify-center p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl">
-        <div className="animate-pulse text-red-600 dark:text-red-400">Loading F1...</div>
+        <div className="animate-pulse text-red-600 dark:text-red-400 text-sm">Loading...</div>
       </div>
     )
   }
@@ -99,110 +99,77 @@ export default function F1Widget() {
     return (
       <Link href="/f1" className="block h-full">
         <div ref={ref} className="h-full flex flex-col items-center justify-center p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl">
-          <span className="text-3xl mb-2">🏎️</span>
-          <span className="text-slate-600 dark:text-slate-300 text-sm">No upcoming races</span>
+          <Flag className="w-8 h-8 text-red-500 mb-2" />
+          <span className="text-slate-600 dark:text-slate-300 text-sm">No races</span>
         </div>
       </Link>
     )
   }
 
-  const countryFlag = getCountryFlag(data.meeting.country_name)
-  const nextSessionIcon = nextSession ? getSessionIcon(nextSession.session_name) : '🏎️'
-  const nextSessionName = nextSession ? (SESSION_NAMES[nextSession.session_name] || nextSession.session_name) : ''
-  const nextSessionTime = nextSession ? formatDanishTime(toDanishTime(new Date(nextSession.date_start))) : ''
-
-  // NOT race weekend - simple countdown view
-  if (!data.isRaceWeekend) {
-    return (
-      <Link href="/f1" className="block h-full">
-        <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
-          {/* Header with flag and location */}
-          <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">{countryFlag}</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">
-                {data.meeting.circuit_short_name}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {data.meeting.country_name}
-              </p>
-            </div>
-          </div>
-
-          {/* Countdown */}
-          <div className="flex-1 flex flex-col items-center justify-center">
-            <div className="text-center">
-              <p className="text-4xl md:text-5xl font-bold text-red-600 dark:text-red-400 font-mono mb-1">
-                {countdown.text || '--'}
-              </p>
-              {nextSession && (
-                <div className="flex items-center justify-center gap-2 text-slate-600 dark:text-slate-300">
-                  <span className="text-lg">{nextSessionIcon}</span>
-                  <span className="text-sm font-medium">{nextSessionName}</span>
-                  <span className="text-xs text-slate-500">• {nextSessionTime}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Link>
-    )
-  }
-
-  // RACE WEEKEND - show session tiles
-  const gridCols = isWide ? 'grid-cols-3' : 'grid-cols-2'
-  const maxSessions = isWide ? 6 : 4
+  const countryCode = getCountryCode(data.meeting.country_name)
+  const flagUrl = `https://flagcdn.com/w80/${countryCode}.png`
 
   return (
     <Link href="/f1" className="block h-full">
       <div ref={ref} className="h-full flex flex-col p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">{countryFlag}</span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
-                {data.meeting.circuit_short_name}
-              </p>
-            </div>
+        {/* Header - flag and circuit */}
+        <div className="flex items-center gap-2 mb-2">
+          <Image
+            src={flagUrl}
+            alt={data.meeting.country_name}
+            width={28}
+            height={21}
+            className="rounded shadow-sm"
+            unoptimized
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">
+              {data.meeting.circuit_short_name}
+            </p>
           </div>
-          <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse">
-            Race Weekend
-          </span>
+          {data.isRaceWeekend && (
+            <span className="px-1.5 py-0.5 bg-red-500 text-white text-xs rounded font-medium">
+              LIVE
+            </span>
+          )}
         </div>
 
-        {/* Session tiles */}
-        <div className={`flex-1 grid ${gridCols} gap-1.5 min-h-0`}>
-          {sessionsWithStatus.slice(0, maxSessions).map((session) => {
-            const icon = getSessionIcon(session.session_name)
+        {/* Session columns */}
+        <div className="flex-1 flex gap-1.5 min-h-0">
+          {upcomingSessions.slice(0, isWide ? 6 : 4).map((session) => {
             const shortName = SESSION_NAMES[session.session_name] || session.session_name
             const danishTime = formatDanishTime(toDanishTime(new Date(session.date_start)))
-
-            const statusStyles = {
-              completed: 'bg-slate-100 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600 opacity-60',
-              live: 'bg-red-100 dark:bg-red-900/40 border-red-400 dark:border-red-600 ring-2 ring-red-400',
-              upcoming: 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-600',
-            }[session.status]
+            const isNext = session.session_key === nextSession?.session_key
 
             return (
               <div
                 key={session.session_key}
-                className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 ${statusStyles} transition-all`}
+                className={`flex-1 flex flex-col items-center justify-between py-2 px-1 rounded-xl border-2 transition-all ${
+                  isNext
+                    ? 'bg-red-100 dark:bg-red-900/40 border-red-400 dark:border-red-600'
+                    : 'bg-white/60 dark:bg-slate-800/60 border-slate-200 dark:border-slate-600'
+                }`}
               >
-                <div className="flex items-center gap-1">
-                  <span className="text-base">{icon}</span>
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                    {shortName}
-                  </span>
-                </div>
-                {session.status === 'live' ? (
-                  <span className="text-sm font-bold text-red-600 dark:text-red-400 animate-pulse">
-                    LIVE
-                  </span>
-                ) : session.status === 'completed' ? (
-                  <span className="text-xs text-slate-500">Done</span>
+                {/* Icon */}
+                <SessionIcon
+                  sessionName={session.session_name}
+                  className={`w-5 h-5 ${isNext ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}
+                />
+
+                {/* Session name */}
+                <span className={`text-xs font-bold ${isNext ? 'text-red-700 dark:text-red-300' : 'text-slate-700 dark:text-slate-300'}`}>
+                  {shortName.replace('Sprint ', 'S').replace('Quali', 'Q')}
+                </span>
+
+                {/* Countdown or time */}
+                {isNext ? (
+                  <div className="text-center">
+                    <span className="text-sm font-bold text-red-600 dark:text-red-400 font-mono block">
+                      {countdown.days > 0 ? `${countdown.days}d` : countdown.hours > 0 ? `${countdown.hours}h` : `${countdown.minutes}m`}
+                    </span>
+                  </div>
                 ) : (
-                  <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                  <span className="text-xs text-slate-500 dark:text-slate-400">
                     {danishTime}
                   </span>
                 )}

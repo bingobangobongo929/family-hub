@@ -379,38 +379,50 @@ export async function fetchSprintResults(year: number, round: number): Promise<F
   }
 }
 
-// Country to flag emoji mapping
-export const COUNTRY_FLAGS: Record<string, string> = {
-  'Bahrain': '🇧🇭',
-  'Saudi Arabia': '🇸🇦',
-  'Australia': '🇦🇺',
-  'Japan': '🇯🇵',
-  'China': '🇨🇳',
-  'United States': '🇺🇸',
-  'USA': '🇺🇸',
-  'Italy': '🇮🇹',
-  'Monaco': '🇲🇨',
-  'Canada': '🇨🇦',
-  'Spain': '🇪🇸',
-  'Austria': '🇦🇹',
-  'United Kingdom': '🇬🇧',
-  'Great Britain': '🇬🇧',
-  'Hungary': '🇭🇺',
-  'Belgium': '🇧🇪',
-  'Netherlands': '🇳🇱',
-  'Singapore': '🇸🇬',
-  'Azerbaijan': '🇦🇿',
-  'Mexico': '🇲🇽',
-  'Brazil': '🇧🇷',
-  'Qatar': '🇶🇦',
-  'Abu Dhabi': '🇦🇪',
-  'UAE': '🇦🇪',
-  'Las Vegas': '🇺🇸',
-  'Miami': '🇺🇸',
+// Country to ISO code mapping for flag images
+export const COUNTRY_CODES: Record<string, string> = {
+  'Bahrain': 'bh',
+  'Saudi Arabia': 'sa',
+  'Australia': 'au',
+  'Japan': 'jp',
+  'China': 'cn',
+  'United States': 'us',
+  'USA': 'us',
+  'Italy': 'it',
+  'Monaco': 'mc',
+  'Canada': 'ca',
+  'Spain': 'es',
+  'Austria': 'at',
+  'United Kingdom': 'gb',
+  'Great Britain': 'gb',
+  'Hungary': 'hu',
+  'Belgium': 'be',
+  'Netherlands': 'nl',
+  'Singapore': 'sg',
+  'Azerbaijan': 'az',
+  'Mexico': 'mx',
+  'Brazil': 'br',
+  'Qatar': 'qa',
+  'Abu Dhabi': 'ae',
+  'UAE': 'ae',
+  'Las Vegas': 'us',
+  'Miami': 'us',
+  'Portugal': 'pt',
+  'France': 'fr',
+  'Germany': 'de',
+  'Russia': 'ru',
+  'Turkey': 'tr',
+  'Emilia Romagna': 'it',
+  'Styria': 'at',
+}
+
+export function getCountryCode(country: string): string {
+  return COUNTRY_CODES[country] || 'un'
 }
 
 export function getCountryFlag(country: string): string {
-  return COUNTRY_FLAGS[country] || '🏁'
+  const code = getCountryCode(country)
+  return `https://flagcdn.com/w80/${code}.png`
 }
 
 // Session icons for visual identification

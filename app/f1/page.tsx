@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
+import Image from 'next/image'
+import { Wrench, Clock, Zap, Flag } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -13,9 +15,40 @@ import {
   formatDanishTime,
   formatDanishDate,
   getTeamColor,
-  getCountryFlag,
-  getSessionIcon,
+  getCountryCode,
 } from '@/lib/f1-api'
+
+// Session icon component
+function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: string; className?: string }) {
+  if (sessionName.includes('Practice')) {
+    return <Wrench className={className} />
+  }
+  if (sessionName.includes('Qualifying') || sessionName.includes('Sprint Shootout')) {
+    return <Clock className={className} />
+  }
+  if (sessionName.includes('Sprint') && !sessionName.includes('Qualifying') && !sessionName.includes('Shootout')) {
+    return <Zap className={className} />
+  }
+  return <Flag className={className} />
+}
+
+// Flag image component
+function CountryFlag({ country, size = 'md' }: { country: string; size?: 'sm' | 'md' | 'lg' }) {
+  const code = getCountryCode(country)
+  const sizes = { sm: { w: 24, h: 18 }, md: { w: 40, h: 30 }, lg: { w: 56, h: 42 } }
+  const { w, h } = sizes[size]
+
+  return (
+    <Image
+      src={`https://flagcdn.com/w80/${code}.png`}
+      alt={country}
+      width={w}
+      height={h}
+      className="rounded shadow-sm"
+      unoptimized
+    />
+  )
+}
 
 interface ScheduleData {
   schedule: (OpenF1Meeting & { sessions: OpenF1Session[] })[]
@@ -182,14 +215,13 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
     return () => clearInterval(interval)
   }, [meeting, nextSession])
 
-  const countryFlag = getCountryFlag(meeting.country_name)
   const danishDate = toDanishTime(new Date(meeting.date_start))
 
   return (
     <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl p-4 text-white">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-start gap-4">
-          <span className="text-5xl">{countryFlag}</span>
+          <CountryFlag country={meeting.country_name} size="lg" />
           <div>
             <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
             <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
@@ -229,7 +261,6 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {meeting.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
-              const icon = getSessionIcon(session.session_name)
               const isPast = new Date(session.date_start) < new Date()
 
               return (
@@ -238,7 +269,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
                   className={`bg-white/10 rounded-lg p-2 text-center ${isPast ? 'opacity-50' : ''}`}
                 >
                   <div className="flex items-center justify-center gap-1 mb-1">
-                    <span className="text-base">{icon}</span>
+                    <SessionIcon sessionName={session.session_name} className="w-4 h-4" />
                     <p className="text-xs font-medium">
                       {SESSION_NAMES[session.session_name] || session.session_name}
                     </p>
@@ -320,7 +351,6 @@ function RaceCard({
 }) {
   const [expanded, setExpanded] = useState(false)
   const raceDate = toDanishTime(new Date(race.date_start))
-  const countryFlag = getCountryFlag(race.country_name)
 
   return (
     <div
@@ -337,8 +367,7 @@ function RaceCard({
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-center gap-4">
-          {/* Flag instead of date box */}
-          <span className="text-4xl">{countryFlag}</span>
+          <CountryFlag country={race.country_name} size="md" />
           <div>
             <div className="flex items-center gap-2">
               <p className="font-semibold text-slate-800 dark:text-slate-200">
@@ -367,7 +396,6 @@ function RaceCard({
             {race.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
               const isSessionPast = new Date(session.date_start) < new Date()
-              const icon = getSessionIcon(session.session_name)
 
               return (
                 <div
@@ -379,7 +407,7 @@ function RaceCard({
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{icon}</span>
+                    <SessionIcon sessionName={session.session_name} className={`w-5 h-5 ${isSessionPast ? 'text-slate-400' : 'text-red-500'}`} />
                     <p className={`font-medium ${isSessionPast ? 'text-slate-500' : 'text-slate-800 dark:text-slate-200'}`}>
                       {SESSION_NAMES[session.session_name] || session.session_name}
                     </p>
