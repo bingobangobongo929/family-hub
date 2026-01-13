@@ -28,6 +28,7 @@ import { supabase, recipeVaultSupabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { useEditMode } from '@/lib/edit-mode-context'
 import { DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
@@ -60,11 +61,11 @@ export default function Dashboard() {
   const { user } = useAuth()
   const { members } = useFamily()
   const { rewardsEnabled } = useSettings()
+  const { isEditMode, setIsEditMode } = useEditMode()
   const [shoppingCount, setShoppingCount] = useState(0)
   const [choreStats, setChoreStats] = useState({ completed: 0, total: 0 })
   const [eventCount, setEventCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [isEditMode, setIsEditMode] = useState(false)
   const [showWidgetPicker, setShowWidgetPicker] = useState(false)
   const [layouts, setLayouts] = useState<{ lg: Layout[] }>({ lg: DEFAULT_LAYOUT })
   const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))

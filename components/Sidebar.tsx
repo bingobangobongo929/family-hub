@@ -20,15 +20,14 @@ import {
   Trash2,
   Image,
   Flag,
-  Edit3,
   ChevronUp,
-  ChevronDown,
-  Check
+  ChevronDown
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { useEditMode } from '@/lib/edit-mode-context'
 import { AvatarDisplay } from './PhotoUpload'
 import MemberProfileModal from './MemberProfileModal'
 import { FamilyMember } from '@/lib/database.types'
@@ -54,8 +53,8 @@ export default function Sidebar() {
   const { theme, toggleTheme } = useTheme()
   const { members, reorderMembers } = useFamily()
   const { rewardsEnabled, sidebarNavOrder, updateSetting } = useSettings()
+  const { isEditMode } = useEditMode()
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
-  const [isEditMode, setIsEditMode] = useState(false)
 
   const handleSignOut = async () => {
     await signOut()
@@ -110,26 +109,13 @@ export default function Sidebar() {
               Family Hub
             </h1>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setIsEditMode(!isEditMode)}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                isEditMode
-                  ? 'bg-teal-500 text-white'
-                  : 'text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400'
-              }`}
-              title={isEditMode ? 'Done editing' : 'Reorder sidebar'}
-            >
-              {isEditMode ? <Check className="w-5 h-5" /> : <Edit3 className="w-4 h-4" />}
-            </button>
-            <button
-              onClick={toggleTheme}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-          </div>
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+          </button>
         </div>
 
         {/* Navigation */}

@@ -7,6 +7,7 @@ import { FamilyProvider } from '@/lib/family-context'
 import { SettingsProvider } from '@/lib/settings-context'
 import { CategoriesProvider } from '@/lib/categories-context'
 import { ContactsProvider } from '@/lib/contacts-context'
+import { EditModeProvider } from '@/lib/edit-mode-context'
 import AppLayout from '@/components/AppLayout'
 
 const inter = Inter({
@@ -41,9 +42,11 @@ export default function RootLayout({
               <SettingsProvider>
                 <CategoriesProvider>
                   <ContactsProvider>
-                    <AppLayout>
-                      {children}
-                    </AppLayout>
+                    <EditModeProvider>
+                      <AppLayout>
+                        {children}
+                      </AppLayout>
+                    </EditModeProvider>
                   </ContactsProvider>
                 </CategoriesProvider>
               </SettingsProvider>
