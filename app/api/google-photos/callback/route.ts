@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { encrypt } from '@/lib/encryption'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -71,14 +72,18 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Store the integration
+    // Encrypt tokens before storing
+    const encryptedAccessToken = encrypt(tokens.access_token)
+    const encryptedRefreshToken = tokens.refresh_token ? encrypt(tokens.refresh_token) : null
+
+    // Store the integration with encrypted tokens
     const { error: dbError } = await supabase
       .from('user_integrations')
       .upsert({
         user_id: userId,
         provider: 'google_photos',
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
+        access_token: encryptedAccessToken,
+        refresh_token: encryptedRefreshToken,
         token_expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         provider_user_id: googleUser.id,
         provider_email: googleUser.email,
