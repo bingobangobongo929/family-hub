@@ -12,6 +12,7 @@ export { default as PhotoWidget } from './PhotoWidget'
 export { default as ShoppingWidget } from './ShoppingWidget'
 export { default as TimerWidget } from './TimerWidget'
 export { default as BindicatorWidget } from './BindicatorWidget'
+export { default as GooglePhotosWidget } from './GooglePhotosWidget'
 
 // Widget type definitions for the dashboard
 export const AVAILABLE_WIDGETS = [
@@ -30,6 +31,7 @@ export const AVAILABLE_WIDGETS = [
   { id: 'shopping', name: 'Shopping', icon: '🛒', component: 'ShoppingWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'timer', name: 'Timer', icon: '⏱️', component: 'TimerWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 1, h: 2 } },
   { id: 'bindicator', name: 'Bindicator', icon: '🗑️', component: 'BindicatorWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
+  { id: 'googlephotos', name: 'Google Photos', icon: '📸', component: 'GooglePhotosWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
 ]
 
 // Default layout for new users

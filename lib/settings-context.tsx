@@ -13,6 +13,10 @@ interface SettingsContextType {
   googleCalendarAutoPush: boolean
   showBirthdaysOnCalendar: boolean
   countdownRelationshipGroups: string[]
+  // Google Photos settings
+  googlePhotosAlbumId: string | null
+  googlePhotosAlbumTitle: string | null
+  googlePhotosRotationInterval: number
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -111,6 +115,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         googleCalendarAutoPush: settings.google_calendar_auto_push as boolean ?? false,
         showBirthdaysOnCalendar: settings.show_birthdays_on_calendar as boolean ?? true,
         countdownRelationshipGroups: (settings.countdown_relationship_groups as string[]) || ['family_us', 'grandparents', 'friends'],
+        // Google Photos settings
+        googlePhotosAlbumId: (settings.google_photos_album_id as string | null) ?? null,
+        googlePhotosAlbumTitle: (settings.google_photos_album_title as string | null) ?? null,
+        googlePhotosRotationInterval: (settings.google_photos_rotation_interval as number) ?? 10,
       }}
     >
       {children}

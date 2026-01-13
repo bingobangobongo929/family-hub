@@ -477,6 +477,10 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   google_calendar_auto_push: false, // Auto-push events to Google Calendar
   countdown_relationship_groups: ['family_us', 'grandparents', 'friends'], // Filter for birthday widget
   show_birthdays_on_calendar: true, // Show birthday events on calendar
+  // Google Photos settings
+  google_photos_album_id: null, // Selected album for widget and gallery
+  google_photos_album_title: null, // Album title for display
+  google_photos_rotation_interval: 10, // Seconds between photo rotation in widget
 }
 
 // Preset gradient options for dashboard backgrounds

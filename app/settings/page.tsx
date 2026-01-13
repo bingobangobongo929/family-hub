@@ -4,7 +4,8 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper } from 'lucide-react'
+import AlbumSelector from '@/components/AlbumSelector'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper, ImageIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -24,6 +25,10 @@ export default function SettingsPage() {
   const [googleEmail, setGoogleEmail] = useState<string | null>(null)
   const [googleSyncing, setGoogleSyncing] = useState(false)
   const [googleLastSync, setGoogleLastSync] = useState<string | null>(null)
+
+  // Google Photos state
+  const [googlePhotosConnected, setGooglePhotosConnected] = useState(false)
+  const [googlePhotosEmail, setGooglePhotosEmail] = useState<string | null>(null)
 
   // Countdown events state
   const [countdownEvents, setCountdownEvents] = useState<CountdownEvent[]>([])
@@ -164,6 +169,23 @@ export default function SettingsPage() {
     } catch (error) {
       // No connection found
     }
+
+    // Check Google Photos connection
+    try {
+      const { data } = await supabase
+        .from('user_integrations')
+        .select('provider_email')
+        .eq('user_id', user.id)
+        .eq('provider', 'google_photos')
+        .single()
+
+      if (data) {
+        setGooglePhotosConnected(true)
+        setGooglePhotosEmail(data.provider_email)
+      }
+    } catch (error) {
+      // No connection found
+    }
   }
 
   // Connect Google Calendar
@@ -215,6 +237,40 @@ export default function SettingsPage() {
       console.error('Error syncing Google Calendar:', error)
     }
     setGoogleSyncing(false)
+  }
+
+  // Connect Google Photos
+  const handleConnectGooglePhotos = async () => {
+    try {
+      const response = await fetch('/api/google-photos/auth?action=url')
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error) {
+      console.error('Error connecting Google Photos:', error)
+    }
+  }
+
+  // Disconnect Google Photos
+  const handleDisconnectGooglePhotos = async () => {
+    if (!user || !confirm('Disconnect Google Photos? This will remove access to your photo albums.')) return
+
+    try {
+      await fetch('/api/google-photos/auth', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id }),
+      })
+
+      setGooglePhotosConnected(false)
+      setGooglePhotosEmail(null)
+      // Clear album selection
+      updateSetting('google_photos_album_id', null)
+      updateSetting('google_photos_album_title', null)
+    } catch (error) {
+      console.error('Error disconnecting Google Photos:', error)
+    }
   }
 
   const updateSetting = async (key: string, value: any) => {
@@ -709,6 +765,102 @@ export default function SettingsPage() {
                 />
               </button>
             </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Google Photos Integration */}
+      <Card className="mb-6">
+        <CardHeader title="Google Photos" icon={<ImageIcon className="w-5 h-5" />} />
+        <div className="mt-4 space-y-4">
+          {/* Connection status */}
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm">
+                <svg className="w-6 h-6" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M12 7.5c2.76 0 5 2.24 5 5s-2.24 5-5 5-5-2.24-5-5 2.24-5 5-5m0-2c-3.87 0-7 3.13-7 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7z"/>
+                  <path fill="#FBBC05" d="M12 2v3"/>
+                  <path fill="#34A853" d="M12 19v3"/>
+                  <path fill="#EA4335" d="M5 12H2"/>
+                  <path fill="#4285F4" d="M22 12h-3"/>
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-100">Google Photos</p>
+                {googlePhotosConnected ? (
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm text-green-600 dark:text-green-400">Connected: {googlePhotosEmail}</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Display your family photos</p>
+                )}
+              </div>
+            </div>
+            {googlePhotosConnected ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleDisconnectGooglePhotos}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Unlink className="w-4 h-4 mr-1" />
+                Disconnect
+              </Button>
+            ) : (
+              <Button
+                onClick={handleConnectGooglePhotos}
+                disabled={!user}
+                className="gap-2"
+              >
+                <Link className="w-4 h-4" />
+                Connect
+              </Button>
+            )}
+          </div>
+          {!user && (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              Sign in to connect Google Photos
+            </p>
+          )}
+
+          {/* Album Selection */}
+          {googlePhotosConnected && (
+            <>
+              <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
+                <div>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">Photo Album</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Select album for widget and gallery</p>
+                </div>
+                <AlbumSelector
+                  selectedAlbumId={settings.google_photos_album_id as string | null}
+                  selectedAlbumTitle={settings.google_photos_album_title as string | null}
+                  onSelect={(albumId, albumTitle) => {
+                    updateSetting('google_photos_album_id', albumId)
+                    updateSetting('google_photos_album_title', albumTitle)
+                  }}
+                />
+              </div>
+
+              {/* Slideshow Speed */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-slate-800 dark:text-slate-100">Slideshow Speed</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Seconds between photos in widget</p>
+                </div>
+                <select
+                  value={settings.google_photos_rotation_interval as number}
+                  onChange={(e) => updateSetting('google_photos_rotation_interval', parseInt(e.target.value))}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+                >
+                  <option value={5}>5 seconds</option>
+                  <option value={10}>10 seconds</option>
+                  <option value={15}>15 seconds</option>
+                  <option value={30}>30 seconds</option>
+                  <option value={60}>1 minute</option>
+                </select>
+              </div>
+            </>
           )}
         </div>
       </Card>
