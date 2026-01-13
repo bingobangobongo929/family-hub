@@ -19,6 +19,7 @@ import {
   TimerWidget,
   BindicatorWidget,
   GooglePhotosWidget,
+  F1Widget,
   AVAILABLE_WIDGETS,
   DEFAULT_LAYOUT,
 } from '@/components/widgets'
@@ -49,6 +50,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   timer: TimerWidget,
   bindicator: BindicatorWidget,
   googlephotos: GooglePhotosWidget,
+  f1: F1Widget,
 }
 
 const STORAGE_KEY = 'family-hub-widget-layout'

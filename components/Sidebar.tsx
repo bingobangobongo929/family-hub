@@ -18,7 +18,8 @@ import {
   Star,
   UserCircle,
   Trash2,
-  Image
+  Image,
+  Flag
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -37,6 +38,7 @@ const navItems = [
   { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
   { href: '/gallery', label: 'Gallery', icon: Image },
   { href: '/bindicator', label: 'Bindicator', icon: Trash2 },
+  { href: '/f1', label: 'Formula 1', icon: Flag },
   { href: '/notes', label: 'Notes', icon: StickyNote },
   { href: '/contacts', label: 'Contacts', icon: UserCircle },
   { href: '/settings', label: 'Settings', icon: Settings },
