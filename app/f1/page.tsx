@@ -254,7 +254,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
       {/* Sessions preview with icons */}
       {meeting.sessions && meeting.sessions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-white/20">
-          <p className="text-xs text-white/70 mb-2">Sessions (Danish Time)</p>
+          <p className="text-xs text-white/70 mb-2">Sessions (Local Time)</p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {meeting.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
@@ -272,7 +272,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
                     </p>
                   </div>
                   <p className="text-xs text-white/70">
-                    {sessionDate.toLocaleDateString('da-DK', { weekday: 'short' })} {formatDanishTime(sessionDate)}
+                    {sessionDate.toLocaleDateString('en-GB', { weekday: 'short' })} {formatDanishTime(sessionDate)}
                   </p>
                   {isPast && <span className="text-xs text-white/50">Done</span>}
                 </div>
@@ -377,7 +377,7 @@ function RaceCard({
               )}
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {race.circuit_short_name} • {raceDate.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })}
+              {race.circuit_short_name} • {raceDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
             </p>
           </div>
         </div>
@@ -410,7 +410,7 @@ function RaceCard({
                     </p>
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    {sessionDate.toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'short' })}
+                    {sessionDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
                   <p className="text-sm font-medium text-red-600 dark:text-red-400">
                     {formatDanishTime(sessionDate)}

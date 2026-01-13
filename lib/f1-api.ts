@@ -84,14 +84,14 @@ export interface OpenF1Session {
   gmt_offset: string
 }
 
-// Convert UTC to Danish time (Europe/Copenhagen)
+// Convert UTC to Copenhagen time (Danish timezone)
 export function toDanishTime(utcDate: Date): Date {
   return new Date(utcDate.toLocaleString('en-US', { timeZone: 'Europe/Copenhagen' }))
 }
 
-// Format date for display in Danish
-export function formatDanishDateTime(date: Date): string {
-  return date.toLocaleString('da-DK', {
+// Format date/time for display (English, Copenhagen timezone)
+export function formatDateTime(date: Date): string {
+  return date.toLocaleString('en-GB', {
     weekday: 'short',
     day: 'numeric',
     month: 'short',
@@ -100,20 +100,25 @@ export function formatDanishDateTime(date: Date): string {
   })
 }
 
-export function formatDanishDate(date: Date): string {
-  return date.toLocaleDateString('da-DK', {
+export function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
   })
 }
 
-export function formatDanishTime(date: Date): string {
-  return date.toLocaleTimeString('da-DK', {
+export function formatTime(date: Date): string {
+  return date.toLocaleTimeString('en-GB', {
     hour: '2-digit',
     minute: '2-digit',
   })
 }
+
+// Legacy aliases for backwards compatibility
+export const formatDanishDateTime = formatDateTime
+export const formatDanishDate = formatDate
+export const formatDanishTime = formatTime
 
 // Get countdown string
 export function getCountdown(targetDate: Date): { days: number; hours: number; minutes: number; text: string } {
