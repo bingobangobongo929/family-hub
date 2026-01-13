@@ -100,8 +100,9 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('OAuth callback error:', error)
+    const errorMsg = error instanceof Error ? error.message : 'unknown'
     return NextResponse.redirect(
-      new URL('/settings?google_photos_error=unknown', request.url)
+      new URL(`/settings?google_photos_error=${encodeURIComponent(errorMsg)}`, request.url)
     )
   }
 }
