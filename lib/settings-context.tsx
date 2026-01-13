@@ -17,6 +17,8 @@ interface SettingsContextType {
   googlePhotosAlbumId: string | null
   googlePhotosAlbumTitle: string | null
   googlePhotosRotationInterval: number
+  // Sidebar settings
+  sidebarNavOrder: string[] | null
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -119,6 +121,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         googlePhotosAlbumId: (settings.google_photos_album_id as string | null) ?? null,
         googlePhotosAlbumTitle: (settings.google_photos_album_title as string | null) ?? null,
         googlePhotosRotationInterval: (settings.google_photos_rotation_interval as number) ?? 10,
+        // Sidebar settings
+        sidebarNavOrder: (settings.sidebar_nav_order as string[] | null) ?? null,
       }}
     >
       {children}

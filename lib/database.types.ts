@@ -481,6 +481,8 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   google_photos_album_id: null, // Selected album for widget and gallery
   google_photos_album_title: null, // Album title for display
   google_photos_rotation_interval: 10, // Seconds between photo rotation in widget
+  // Sidebar settings
+  sidebar_nav_order: null, // Custom order for sidebar navigation items (array of hrefs)
 }
 
 // Preset gradient options for dashboard backgrounds
