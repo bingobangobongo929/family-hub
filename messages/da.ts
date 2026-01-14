@@ -729,8 +729,6 @@ export const da: Translations = {
     showBirthdaysDescription: 'Vis kontakters fødselsdage som kalenderbegivenheder',
     countdownGroups: 'Nedtællings-widget grupper',
     countdownGroupsDescription: 'Vælg hvilke kontaktgrupper der vises i fødselsdags-nedtællingen',
-    countdownWidgetGroups: 'Nedtællings-widget grupper',
-    countdownWidgetGroupsDescription: 'Vælg hvilke kontaktgrupper der vises i fødselsdags-nedtællingen',
 
     // Countdown events
     countdownEventsDescription: 'Helligdage og begivenheder der vises i nedtællings-widget\'en. Familiemedlemmers fødselsdage inkluderes automatisk.',
