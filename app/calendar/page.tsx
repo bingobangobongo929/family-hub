@@ -71,22 +71,39 @@ export default function CalendarPage() {
     return () => window.removeEventListener('resize', checkMobile)
   }, []) // Only run once on mount
 
-  // Calculate cell height based on viewport
+  // Calculate actual number of rows for current month
+  const monthRows = useMemo(() => {
+    if (viewMode !== 'month') return 1
+    const monthStart = startOfMonth(currentDate)
+    const monthEnd = endOfMonth(currentDate)
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 })
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+    const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
+    return Math.ceil(days.length / 7)
+  }, [currentDate, viewMode])
+
+  // Calculate cell height based on viewport - fit to screen without scrolling
   useEffect(() => {
     const updateCellHeight = () => {
       const vh = window.innerHeight
-      const headerHeight = 140 // Approx header + nav height
-      const dayHeaderHeight = 48
-      const availableHeight = vh - headerHeight - dayHeaderHeight
-      const rows = viewMode === 'week' ? 1 : viewMode === 'day' ? 1 : 6 // Max 6 rows in month view
+      const isMobileView = window.innerWidth < 768
+      // Account for: header (~110px), day headers (~44px), mobile nav (~70px on mobile)
+      const headerHeight = isMobileView ? 110 : 120
+      const dayHeaderHeight = 44
+      const mobileNavHeight = isMobileView ? 70 : 0
+      const safeAreaBottom = isMobileView ? 20 : 0 // Extra buffer for notch phones
+      const availableHeight = vh - headerHeight - dayHeaderHeight - mobileNavHeight - safeAreaBottom
+      const rows = viewMode === 'week' ? 1 : viewMode === 'day' ? 1 : monthRows
       const calculatedHeight = Math.floor(availableHeight / rows)
-      setCellHeight(Math.max(100, Math.min(200, calculatedHeight)))
+      // On mobile, allow smaller cells to fit; on desktop keep minimum of 100
+      const minHeight = isMobileView ? 60 : 100
+      setCellHeight(Math.max(minHeight, Math.min(200, calculatedHeight)))
     }
 
     updateCellHeight()
     window.addEventListener('resize', updateCellHeight)
     return () => window.removeEventListener('resize', updateCellHeight)
-  }, [viewMode])
+  }, [viewMode, monthRows])
 
   // Form state
   const [formData, setFormData] = useState({
@@ -599,12 +616,13 @@ export default function CalendarPage() {
 
   // Calculate how many events can fit in a cell
   const maxEventsPerCell = useMemo(() => {
-    const eventHeight = 36 // Each event is ~36px (min-h-[36px])
-    const headerHeight = 32 // Day number header
-    const padding = 8
+    // Compact events on mobile (24px), larger on desktop (36px)
+    const eventHeight = isMobile ? 24 : 36
+    const headerHeight = isMobile ? 28 : 32 // Day number header
+    const padding = 4
     const available = cellHeight - headerHeight - padding
     return Math.max(1, Math.floor(available / eventHeight))
-  }, [cellHeight])
+  }, [cellHeight, isMobile])
 
   return (
     <div className="h-full flex flex-col">
@@ -913,7 +931,7 @@ export default function CalendarPage() {
 
       {/* Calendar grid - only for month/week views */}
       {(viewMode === 'month' || viewMode === 'week') && (
-        <div className={`flex-1 grid grid-cols-7 ${viewMode === 'week' ? '' : 'auto-rows-fr'} bg-white dark:bg-slate-900`}>
+        <div className={`flex-1 grid grid-cols-7 ${viewMode === 'week' ? '' : 'auto-rows-fr'} bg-white dark:bg-slate-900 overflow-hidden`}>
           {calendarDays.map(day => {
             const dayEvents = getEventsForDay(day)
             const isCurrentMonth = viewMode === 'week' || isSameMonth(day, currentDate)
@@ -926,16 +944,18 @@ export default function CalendarPage() {
               <div
                 key={day.toISOString()}
                 onClick={() => handleDayClick(day)}
-                className={`border-b border-r border-slate-200 dark:border-slate-700 p-1.5 cursor-pointer transition-colors ${
+                className={`border-b border-r border-slate-200 dark:border-slate-700 p-1 cursor-pointer transition-colors overflow-hidden ${
                   isCurrentMonth
                     ? 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
                     : 'bg-slate-50 dark:bg-slate-900/50 opacity-50'
                 }`}
-                style={{ minHeight: viewMode === 'week' ? '100%' : cellHeight }}
+                style={{ height: viewMode === 'week' ? '100%' : cellHeight }}
               >
                 {/* Day header */}
-                <div className="flex items-center justify-between mb-1">
-                  <div className={`text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full ${
+                <div className="flex items-center justify-between">
+                  <div className={`font-semibold flex items-center justify-center rounded-full ${
+                    isMobile ? 'text-xs w-6 h-6' : 'text-sm w-8 h-8'
+                  } ${
                     isTodayDate
                       ? 'bg-teal-500 text-white'
                       : 'text-slate-700 dark:text-slate-300'
@@ -945,14 +965,14 @@ export default function CalendarPage() {
                   {dayBins.length > 0 && (
                     <div className="flex gap-0.5">
                       {dayBins.map(binType => (
-                        <span key={binType} className="text-sm">{getBinInfo(binType).emoji}</span>
+                        <span key={binType} className={isMobile ? 'text-xs' : 'text-sm'}>{getBinInfo(binType).emoji}</span>
                       ))}
                     </div>
                   )}
                 </div>
 
-                {/* Events - Touch friendly size */}
-                <div className="space-y-1">
+                {/* Events */}
+                <div className={isMobile ? 'space-y-0.5' : 'space-y-1'}>
                   {visibleEvents.map(event => {
                     const category = event.category_id ? getCategory(event.category_id) : null
                     const memberIds = eventMembers[event.id] || []
@@ -964,51 +984,55 @@ export default function CalendarPage() {
                       <button
                         key={event.id}
                         onClick={(e) => handleEventClick(event, e)}
-                        className="w-full min-h-[44px] px-2 py-2 rounded-lg text-left transition-all active:scale-[0.98] flex items-center gap-1.5 tap-highlight"
-                        style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                        className={`w-full rounded-md text-left transition-all active:scale-[0.98] flex items-center gap-1 tap-highlight ${
+                          isMobile ? 'px-1 py-0.5 min-h-[22px]' : 'px-2 py-1.5 min-h-[34px]'
+                        }`}
+                        style={{ backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }}
                       >
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1">
-                            {isRecurring && <Repeat className="w-3 h-3 flex-shrink-0" style={{ color: event.color }} />}
-                            {category && <span className="text-xs flex-shrink-0">{category.emoji}</span>}
-                            <span className="text-xs font-semibold truncate" style={{ color: event.color }}>
+                          <div className="flex items-center gap-0.5">
+                            {isRecurring && <Repeat className={`flex-shrink-0 ${isMobile ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} style={{ color: event.color }} />}
+                            {category && !isMobile && <span className="text-xs flex-shrink-0">{category.emoji}</span>}
+                            <span className={`font-semibold truncate ${isMobile ? 'text-[10px]' : 'text-xs'}`} style={{ color: event.color }}>
                               {event.title}
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                            <span>{time}</span>
-                            {(memberIds.length > 0 || contactIds.length > 0) && (
-                              <>
-                                <span>•</span>
-                                <div className="flex items-center gap-0.5">
-                                  {memberIds.slice(0, 2).map(id => {
-                                    const m = getMember(id)
-                                    return m ? (
-                                      <span
-                                        key={id}
-                                        className="w-3 h-3 rounded-full flex-shrink-0"
-                                        style={{ backgroundColor: m.color }}
-                                        title={m.name}
-                                      />
-                                    ) : null
-                                  })}
-                                  {contactIds.slice(0, 2).map(id => {
-                                    const c = getContact(id)
-                                    const displayName = c?.display_name || c?.name || ''
-                                    return c ? (
-                                      <span
-                                        key={id}
-                                        className="w-3 h-3 rounded-full bg-slate-400 text-white text-[7px] flex items-center justify-center font-bold flex-shrink-0"
-                                        title={displayName}
-                                      >
-                                        {displayName.charAt(0)}
-                                      </span>
-                                    ) : null
-                                  })}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          {!isMobile && (
+                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                              <span>{time}</span>
+                              {(memberIds.length > 0 || contactIds.length > 0) && (
+                                <>
+                                  <span>•</span>
+                                  <div className="flex items-center gap-0.5">
+                                    {memberIds.slice(0, 2).map(id => {
+                                      const m = getMember(id)
+                                      return m ? (
+                                        <span
+                                          key={id}
+                                          className="w-3 h-3 rounded-full flex-shrink-0"
+                                          style={{ backgroundColor: m.color }}
+                                          title={m.name}
+                                        />
+                                      ) : null
+                                    })}
+                                    {contactIds.slice(0, 2).map(id => {
+                                      const c = getContact(id)
+                                      const displayName = c?.display_name || c?.name || ''
+                                      return c ? (
+                                        <span
+                                          key={id}
+                                          className="w-3 h-3 rounded-full bg-slate-400 text-white text-[7px] flex items-center justify-center font-bold flex-shrink-0"
+                                          title={displayName}
+                                        >
+                                          {displayName.charAt(0)}
+                                        </span>
+                                      ) : null
+                                    })}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </button>
                     )
