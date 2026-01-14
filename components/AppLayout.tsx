@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Sidebar from './Sidebar'
-import MobileHeader from './MobileHeader'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
 import { RefreshCw } from 'lucide-react'
@@ -75,9 +74,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured || user) {
     return (
       <div className="flex min-h-screen bg-warm-50 dark:bg-slate-900">
-        {/* Mobile Header */}
-        <MobileHeader onMenuClick={openSidebar} />
-
         {/* Sidebar - hidden on mobile, always visible on desktop */}
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 

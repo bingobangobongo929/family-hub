@@ -108,6 +108,7 @@ export const da: Translations = {
     switchToDanish: 'Skift til dansk',
     switchToEnglish: 'Switch to English',
     more: 'Mere',
+    menu: 'Menu',
     editDashboard: 'Rediger dashboard',
   },
 

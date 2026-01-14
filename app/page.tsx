@@ -258,8 +258,8 @@ export default function Dashboard() {
 
   return (
     <div className={`max-w-7xl mx-auto ${gradientClass ? `-mx-4 -mt-4 px-4 pt-4 pb-8 min-h-screen bg-gradient-to-br ${gradientClass}` : ''}`}>
-      {/* Header - with left padding on mobile for hamburger menu */}
-      <div className="mb-8 pl-14 lg:pl-0">
+      {/* Header */}
+      <div className="mb-8">
         <h1 className="font-display text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-slate-100">
           {t(`dashboard.greeting.${getTimeOfDay()}`)}
         </h1>

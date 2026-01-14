@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, CheckSquare, ShoppingCart, MoreHorizontal } from 'lucide-react'
+import { Home, Calendar, CheckSquare, ShoppingCart, Menu } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n-context'
 
 interface MobileNavProps {
@@ -47,7 +47,7 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
           )
         })}
 
-        {/* More button */}
+        {/* Menu button */}
         <button
           onClick={onMoreClick}
           className={`flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all touch-target min-w-[64px] ${
@@ -56,8 +56,8 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
               : 'text-slate-500 dark:text-slate-400'
           }`}
         >
-          <MoreHorizontal className={`w-6 h-6 ${isMoreActive ? 'stroke-[2.5]' : ''}`} />
-          <span className="text-[10px] font-medium">{t('nav.more')}</span>
+          <Menu className={`w-6 h-6 ${isMoreActive ? 'stroke-[2.5]' : ''}`} />
+          <span className="text-[10px] font-medium">{t('nav.menu')}</span>
         </button>
       </div>
     </nav>
