@@ -74,9 +74,8 @@ function TempBar({ temp, low, high, showTemp = true }: { temp: number; low: numb
   )
 }
 
-// Sun position arc showing time of day
-function SunArc({ sunrise, sunset, className = '' }: { sunrise: string; sunset: string; className?: string }) {
-  // Parse times and calculate current position
+// Compact sun arc - inline with sunrise/sunset
+function SunArc({ sunrise, sunset }: { sunrise: string; sunset: string }) {
   const now = new Date()
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
 
@@ -86,64 +85,24 @@ function SunArc({ sunrise, sunset, className = '' }: { sunrise: string; sunset: 
   const sunsetMinutes = sunsetH * 60 + sunsetM
 
   const dayLength = sunsetMinutes - sunriseMinutes
-  const progress = dayLength > 0
-    ? Math.max(0, Math.min(1, (currentMinutes - sunriseMinutes) / dayLength))
-    : 0.5
-
-  // Calculate sun position on arc (0 = left, 1 = right)
-  const angle = progress * Math.PI // 0 to PI for semicircle
-  const sunX = 50 + 40 * Math.cos(Math.PI - angle) // Flip for left-to-right
-  const sunY = 45 - 35 * Math.sin(angle) // Invert Y for SVG
-
+  const progress = dayLength > 0 ? Math.max(0, Math.min(1, (currentMinutes - sunriseMinutes) / dayLength)) : 0.5
   const isDaytime = currentMinutes >= sunriseMinutes && currentMinutes <= sunsetMinutes
 
   return (
-    <div className={`relative ${className}`}>
-      <svg viewBox="0 0 100 50" className="w-full h-auto">
-        {/* Sky gradient background */}
-        <defs>
-          <linearGradient id="sky-gradient" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor={isDaytime ? '#fef3c7' : '#1e3a5f'} />
-            <stop offset="100%" stopColor={isDaytime ? '#7dd3fc' : '#0f172a'} />
-          </linearGradient>
-        </defs>
-
-        {/* Horizon line */}
-        <line x1="5" y1="45" x2="95" y2="45" stroke="currentColor" strokeWidth="1" className="text-slate-300 dark:text-slate-600" />
-
-        {/* Sun path arc (dashed) */}
-        <path
-          d="M 10 45 Q 50 -10 90 45"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          strokeDasharray="3,3"
-          className="text-amber-300/50 dark:text-amber-500/30"
-        />
-
-        {/* Sun */}
+    <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50">
+      <div className="flex items-center gap-1">
+        <Sunrise className="w-3.5 h-3.5 text-orange-400" />
+        <span className="text-xs text-slate-600 dark:text-slate-400">{sunrise}</span>
+      </div>
+      <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full relative overflow-hidden">
+        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-300 via-amber-400 to-red-400 rounded-full" style={{ width: `${progress * 100}%` }} />
         {isDaytime && (
-          <circle cx={sunX} cy={sunY} r="6" fill="#fbbf24" className="drop-shadow-lg">
-            <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
-          </circle>
+          <div className="absolute w-3 h-3 bg-amber-400 rounded-full -top-[3px] shadow border border-amber-500" style={{ left: `calc(${progress * 100}% - 6px)` }} />
         )}
-
-        {/* Sunrise icon position */}
-        <circle cx="10" cy="45" r="3" fill="#f97316" className="opacity-60" />
-        {/* Sunset icon position */}
-        <circle cx="90" cy="45" r="3" fill="#ef4444" className="opacity-60" />
-      </svg>
-
-      {/* Time labels */}
-      <div className="flex justify-between mt-1 px-1">
-        <div className="flex items-center gap-1">
-          <Sunrise className="w-3 h-3 text-orange-400" />
-          <span className="text-[10px] text-slate-500 dark:text-slate-400">{sunrise}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Sunset className="w-3 h-3 text-red-400" />
-          <span className="text-[10px] text-slate-500 dark:text-slate-400">{sunset}</span>
-        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        <Sunset className="w-3.5 h-3.5 text-red-400" />
+        <span className="text-xs text-slate-600 dark:text-slate-400">{sunset}</span>
       </div>
     </div>
   )
@@ -258,71 +217,71 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
     tempSize = 'text-4xl'
   }
 
-  // Enhanced 2x3 layout
+  // Enhanced 2x3 layout - compact and filled
   if (isTallLayout) {
     return (
       <div
         ref={ref}
-        className="h-full flex flex-col p-4 bg-gradient-to-br from-sky-50 via-teal-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden"
+        className="h-full flex flex-col p-3 bg-gradient-to-br from-sky-50 via-teal-50 to-cyan-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden"
       >
-        {/* Current weather header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className="min-w-0">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        {/* Current weather header - compact */}
+        <div className="flex items-start gap-3 mb-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
               {DEMO_WEATHER.location}
             </p>
             <div className="flex items-baseline gap-1">
-              <span className="font-display text-5xl font-light text-slate-800 dark:text-slate-100">
+              <span className="font-display text-4xl font-light text-slate-800 dark:text-slate-100 leading-none">
                 {temp}°
               </span>
+              <span className="text-sm text-slate-500">{unitLabel}</span>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-slate-600 dark:text-slate-300">
-                H:{convertTemp(DEMO_WEATHER.high)}° L:{convertTemp(DEMO_WEATHER.low)}°
-              </span>
-            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              H:{convertTemp(DEMO_WEATHER.high)}° L:{convertTemp(DEMO_WEATHER.low)}°
+            </p>
           </div>
           <div className="flex flex-col items-center">
-            {getWeatherIcon(DEMO_WEATHER.condition, 'w-16 h-16')}
-            <p className="text-xs text-slate-500 dark:text-slate-400 capitalize mt-1">
+            {getWeatherIcon(DEMO_WEATHER.condition, 'w-14 h-14')}
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 capitalize">
               {DEMO_WEATHER.condition.replace('_', ' ')}
             </p>
           </div>
         </div>
 
         {/* Temperature range bar */}
-        <div className="flex items-center gap-2 mb-3 px-1">
-          <span className="text-xs text-blue-500 font-medium">{convertTemp(DEMO_WEATHER.low)}°</span>
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] text-blue-500 font-medium">{convertTemp(DEMO_WEATHER.low)}°</span>
           <TempBar temp={DEMO_WEATHER.temp} low={DEMO_WEATHER.low} high={DEMO_WEATHER.high} showTemp={false} />
-          <span className="text-xs text-red-500 font-medium">{convertTemp(DEMO_WEATHER.high)}°</span>
+          <span className="text-[10px] text-red-500 font-medium">{convertTemp(DEMO_WEATHER.high)}°</span>
         </div>
 
-        {/* Sun arc */}
-        <SunArc sunrise={DEMO_WEATHER.sunrise} sunset={DEMO_WEATHER.sunset} className="mb-3" />
+        {/* Sun arc - compact inline version */}
+        <SunArc sunrise={DEMO_WEATHER.sunrise} sunset={DEMO_WEATHER.sunset} />
 
-        {/* Stats row */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          <div className="flex flex-col items-center p-2 rounded-xl bg-white/50 dark:bg-slate-800/50">
-            <Droplets className="w-4 h-4 text-teal-500 mb-1" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{DEMO_WEATHER.humidity}%</span>
-            <span className="text-[10px] text-slate-400">Humidity</span>
+        {/* Stats row - compact */}
+        <div className="grid grid-cols-4 gap-1.5 my-2">
+          <div className="flex flex-col items-center py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50">
+            <Droplets className="w-3.5 h-3.5 text-teal-500" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{DEMO_WEATHER.humidity}%</span>
           </div>
-          <div className="flex flex-col items-center p-2 rounded-xl bg-white/50 dark:bg-slate-800/50">
-            <Thermometer className="w-4 h-4 text-orange-500 mb-1" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{convertTemp(DEMO_WEATHER.feelsLike)}°</span>
-            <span className="text-[10px] text-slate-400">{t('weather.feels')}</span>
+          <div className="flex flex-col items-center py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50">
+            <Thermometer className="w-3.5 h-3.5 text-orange-500" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{convertTemp(DEMO_WEATHER.feelsLike)}°</span>
           </div>
-          <div className="flex flex-col items-center p-2 rounded-xl bg-white/50 dark:bg-slate-800/50">
-            <CloudRain className="w-4 h-4 text-blue-500 mb-1" />
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{DEMO_WEATHER.precipitation}%</span>
-            <span className="text-[10px] text-slate-400">Rain</span>
+          <div className="flex flex-col items-center py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50">
+            <Wind className="w-3.5 h-3.5 text-cyan-500" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{DEMO_WEATHER.wind}</span>
+          </div>
+          <div className="flex flex-col items-center py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50">
+            <CloudRain className="w-3.5 h-3.5 text-blue-500" />
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">{DEMO_WEATHER.precipitation}%</span>
           </div>
         </div>
 
-        {/* Hourly forecast graph */}
-        <div className="flex-1 min-h-0">
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-2">{t('weather.hourly')}</p>
-          <div className="h-[calc(100%-1rem)]">
+        {/* Hourly forecast graph - fills remaining space */}
+        <div className="flex-1 min-h-0 flex flex-col">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1">{t('weather.hourly')}</p>
+          <div className="flex-1">
             <HourlyGraph hourly={DEMO_WEATHER.hourly} convertTemp={convertTemp} />
           </div>
         </div>

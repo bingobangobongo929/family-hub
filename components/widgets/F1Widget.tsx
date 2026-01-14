@@ -36,43 +36,21 @@ function SessionIcon({ sessionName, className = "w-4 h-4" }: { sessionName: stri
   return <Flag className={className} />
 }
 
-// Circular countdown ring component
-function CountdownRing({ days, hours, minutes, totalHours }: { days: number; hours: number; minutes: number; totalHours: number }) {
-  // Calculate progress (0-1) - assumes max 7 days countdown
+// Compact countdown ring component
+function CountdownRing({ days, hours, minutes }: { days: number; hours: number; minutes: number }) {
   const maxHours = 7 * 24
   const currentHours = days * 24 + hours + minutes / 60
   const progress = Math.max(0, Math.min(1, 1 - currentHours / maxHours))
 
-  const radius = 54
+  const radius = 42
   const circumference = 2 * Math.PI * radius
   const strokeDashoffset = circumference * (1 - progress)
 
   return (
-    <div className="relative w-32 h-32">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-        {/* Background ring */}
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="8"
-          className="text-slate-200 dark:text-slate-700"
-        />
-        {/* Progress ring */}
-        <circle
-          cx="60"
-          cy="60"
-          r={radius}
-          fill="none"
-          stroke="url(#f1-gradient)"
-          strokeWidth="8"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
-          className="transition-all duration-1000"
-        />
+    <div className="relative w-24 h-24">
+      <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="currentColor" strokeWidth="6" className="text-slate-200 dark:text-slate-700" />
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="url(#f1-gradient)" strokeWidth="6" strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} />
         <defs>
           <linearGradient id="f1-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#ef4444" />
@@ -80,22 +58,15 @@ function CountdownRing({ days, hours, minutes, totalHours }: { days: number; hou
           </linearGradient>
         </defs>
       </svg>
-      {/* Center content */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="text-2xl font-bold text-slate-800 dark:text-slate-100 font-mono leading-none">
+        <div className="font-bold text-slate-800 dark:text-slate-100 font-mono leading-none">
           {days > 0 ? (
-            <>
-              <span className="text-3xl">{days}</span>
-              <span className="text-lg text-slate-500">d</span>
-            </>
+            <><span className="text-2xl">{days}</span><span className="text-sm text-slate-500">d</span></>
           ) : (
-            <>
-              <span className="text-3xl">{hours}</span>
-              <span className="text-lg text-slate-500">h</span>
-            </>
+            <><span className="text-2xl">{hours}</span><span className="text-sm text-slate-500">h</span></>
           )}
         </div>
-        <div className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+        <div className="text-xs text-slate-500 dark:text-slate-400 font-mono">
           {days > 0 ? `${hours}h ${minutes}m` : `${minutes}m`}
         </div>
       </div>
@@ -185,120 +156,87 @@ export default function F1Widget() {
 
   const flagUrl = data.meeting.country_flag
 
-  // Enhanced 2x3 layout
+  // Enhanced 2x3 layout - compact and filled
   if (isTallLayout) {
     return (
       <Link href="/f1" className="block h-full">
-        <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden">
-          {/* Header with flag and circuit */}
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-12 h-8 rounded-md overflow-hidden shadow-md flex-shrink-0">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={flagUrl} alt="" className="w-full h-full object-cover" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-slate-800 dark:text-slate-100 truncate">
-                {data.meeting.meeting_name?.replace('Grand Prix', 'GP') || data.meeting.circuit_short_name}
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {data.meeting.circuit_short_name}
-              </p>
+        <div ref={ref} className="h-full flex flex-col p-3 bg-gradient-to-br from-red-50 via-orange-50 to-yellow-50 dark:from-slate-800 dark:via-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden">
+          {/* Header row with countdown */}
+          <div className="flex items-center gap-3 mb-2">
+            {/* Left: Flag and circuit info */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <div className="w-10 h-7 rounded overflow-hidden shadow flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={flagUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
+                  {data.meeting.meeting_name?.replace('Grand Prix', 'GP') || data.meeting.circuit_short_name}
+                </h3>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                  {data.meeting.circuit_short_name}
+                </p>
+              </div>
             </div>
             {data.isRaceWeekend && (
-              <span className="px-2 py-1 bg-red-500 text-white text-xs rounded-lg font-bold animate-pulse shadow-lg shadow-red-500/30">
-                LIVE
-              </span>
+              <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] rounded font-bold animate-pulse">LIVE</span>
             )}
           </div>
 
-          {/* Countdown ring - centered */}
+          {/* Countdown section - horizontal layout */}
           {nextSession && (
-            <div className="flex flex-col items-center mb-3">
-              <CountdownRing
-                days={countdown.days}
-                hours={countdown.hours}
-                minutes={countdown.minutes}
-                totalHours={countdown.days * 24 + countdown.hours}
-              />
-              <div className="flex items-center gap-1.5 mt-2 px-3 py-1.5 rounded-full bg-red-100 dark:bg-red-900/40">
-                <SessionIcon sessionName={nextSession.session_name} className="w-4 h-4 text-red-600 dark:text-red-400" />
-                <span className="text-sm font-semibold text-red-700 dark:text-red-300">
-                  {SESSION_NAMES[nextSession.session_name] || nextSession.session_name}
-                </span>
+            <div className="flex items-center gap-3 p-2 mb-2 rounded-xl bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/30 dark:to-orange-900/30">
+              <CountdownRing days={countdown.days} hours={countdown.hours} minutes={countdown.minutes} />
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <SessionIcon sessionName={nextSession.session_name} className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                    {SESSION_NAMES[nextSession.session_name] || nextSession.session_name}
+                  </span>
+                </div>
+                <p className="text-xs text-red-600/70 dark:text-red-400/70">
+                  {formatDay(toDanishTime(new Date(nextSession.date_start)))} {formatTime(toDanishTime(new Date(nextSession.date_start)))}
+                </p>
               </div>
             </div>
           )}
 
-          {/* Visual session timeline */}
-          <div className="flex-1 flex flex-col gap-1.5 min-h-0 overflow-hidden">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Schedule</p>
-            {upcomingSessions.slice(0, 6).map((session, i) => {
+          {/* Full session schedule - fills remaining space */}
+          <div className="flex-1 flex flex-col gap-1 min-h-0 overflow-hidden">
+            {upcomingSessions.slice(nextSession ? 1 : 0, 7).map((session, i) => {
               const time = toDanishTime(new Date(session.date_start))
-              const isNext = i === 0
               const sessionColor = getSessionColor(session.session_name)
 
               return (
                 <div
                   key={session.session_key}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded-xl transition-all ${
-                    isNext
-                      ? 'bg-gradient-to-r from-red-100 to-orange-100 dark:from-red-900/40 dark:to-orange-900/40 shadow-sm'
-                      : 'bg-white/60 dark:bg-slate-800/60'
-                  }`}
+                  className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-white/50 dark:bg-slate-800/50"
                 >
-                  {/* Session type indicator dot */}
-                  <div className={`w-2.5 h-2.5 rounded-full ${sessionColor} flex-shrink-0 ${isNext ? 'animate-pulse' : ''}`} />
-
-                  <SessionIcon
-                    sessionName={session.session_name}
-                    className={`w-4 h-4 flex-shrink-0 ${isNext ? 'text-red-600 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'}`}
-                  />
-
-                  <span className={`flex-1 text-sm truncate ${
-                    isNext
-                      ? 'font-semibold text-red-700 dark:text-red-300'
-                      : 'text-slate-600 dark:text-slate-400'
-                  }`}>
+                  <div className={`w-2 h-2 rounded-full ${sessionColor} flex-shrink-0`} />
+                  <SessionIcon sessionName={session.session_name} className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 flex-shrink-0" />
+                  <span className="flex-1 text-xs text-slate-600 dark:text-slate-400 truncate">
                     {SESSION_NAMES[session.session_name] || session.session_name}
                   </span>
-
-                  <div className="flex flex-col items-end flex-shrink-0">
-                    <span className={`text-xs font-medium ${isNext ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-500'}`}>
-                      {formatDay(time)}
-                    </span>
-                    <span className="text-xs text-slate-400 dark:text-slate-500">
-                      {formatTime(time)}
-                    </span>
-                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-500 flex-shrink-0">
+                    {formatDay(time)} {formatTime(time)}
+                  </span>
                 </div>
               )
             })}
           </div>
 
-          {/* Top drivers mini-display (if available) */}
+          {/* Top 3 drivers - always show if available */}
           {data.drivers && data.drivers.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
-              <div className="flex items-center gap-1 mb-1">
-                <Trophy className="w-3 h-3 text-amber-500" />
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Championship</span>
-              </div>
-              <div className="flex gap-2">
+            <div className="mt-auto pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+              <div className="flex gap-1">
                 {data.drivers.slice(0, 3).map((driver, i) => (
-                  <div
-                    key={driver.code}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/60 dark:bg-slate-800/60 flex-1"
-                  >
-                    <span className={`text-xs font-bold ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : 'text-amber-700'}`}>
+                  <div key={driver.code} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/50 dark:bg-slate-800/50 flex-1">
+                    <span className={`text-[10px] font-bold ${i === 0 ? 'text-amber-500' : i === 1 ? 'text-slate-400' : 'text-amber-700'}`}>
                       {i + 1}
                     </span>
-                    <div
-                      className="w-1 h-4 rounded-full"
-                      style={{ backgroundColor: getTeamColor(driver.constructorId) }}
-                    />
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
-                      {driver.code}
-                    </span>
-                    <span className="text-[10px] text-slate-400 ml-auto">{driver.points}</span>
+                    <div className="w-0.5 h-3 rounded-full" style={{ backgroundColor: getTeamColor(driver.constructorId) }} />
+                    <span className="text-[10px] font-semibold text-slate-700 dark:text-slate-300">{driver.code}</span>
+                    <span className="text-[9px] text-slate-400 ml-auto">{driver.points}</span>
                   </div>
                 ))}
               </div>
