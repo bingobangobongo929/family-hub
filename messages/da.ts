@@ -795,6 +795,7 @@ export const da: Translations = {
   weather: {
     title: 'Vejr',
     hourly: 'Time for time',
+    feels: 'Føles',
     feelsLike: 'Føles som',
     conditions: {
       sunny: 'Solrigt',

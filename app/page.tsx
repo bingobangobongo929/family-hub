@@ -73,8 +73,32 @@ export default function Dashboard() {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))
   const [mounted, setMounted] = useState(false)
   const [backgroundGradient, setBackgroundGradient] = useState<string>('default')
+  const [rowHeight, setRowHeight] = useState(100)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadDone = useRef(false)
+
+  // Calculate row height based on screen width to maintain widget proportions
+  useEffect(() => {
+    const calculateRowHeight = () => {
+      const width = window.innerWidth
+      // On desktop (6 cols), each col is ~width/6, row height 100px works well
+      // On mobile, we want to maintain similar proportions
+      if (width < 480) {
+        // 1 column - make rows taller since widgets are full width
+        setRowHeight(120)
+      } else if (width < 768) {
+        // 2 columns
+        setRowHeight(110)
+      } else {
+        // 4+ columns
+        setRowHeight(100)
+      }
+    }
+
+    calculateRowHeight()
+    window.addEventListener('resize', calculateRowHeight)
+    return () => window.removeEventListener('resize', calculateRowHeight)
+  }, [])
 
   // Load saved layout on mount - from database if logged in, otherwise localStorage
   useEffect(() => {
@@ -469,7 +493,7 @@ export default function Dashboard() {
           layouts={layouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
-          rowHeight={100}
+          rowHeight={rowHeight}
           isDraggable={isEditMode}
           isResizable={isEditMode}
           onLayoutChange={handleLayoutChange}

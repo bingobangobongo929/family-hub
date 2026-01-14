@@ -793,6 +793,7 @@ export const en = {
   weather: {
     title: 'Weather',
     hourly: 'Hourly',
+    feels: 'Feels',
     feelsLike: 'Feels',
     conditions: {
       sunny: 'Sunny',
