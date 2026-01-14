@@ -40,11 +40,11 @@ export default function LanguageToggle() {
   return (
     <button
       onClick={toggleLocale}
-      className="w-9 h-9 rounded-xl flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors overflow-hidden"
+      className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors overflow-hidden"
       title={title}
       aria-label={title}
     >
-      <div className="w-6 h-4 rounded-sm overflow-hidden shadow-sm">
+      <div className="w-5 h-3.5 rounded-sm overflow-hidden shadow-sm">
         {locale === 'en' ? (
           <UKFlag className="w-full h-full" />
         ) : (

@@ -113,16 +113,6 @@ export default function Sidebar() {
               {t('nav.appName')}
             </h1>
           </div>
-          <div className="flex items-center gap-1">
-            <LanguageToggle />
-            <button
-              onClick={toggleTheme}
-              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-              title={theme === 'light' ? t('nav.switchToDark') : t('nav.switchToLight')}
-            >
-              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-            </button>
-          </div>
         </div>
 
         {/* Navigation */}
@@ -242,6 +232,17 @@ export default function Sidebar() {
               <p className="text-xs text-slate-400 dark:text-slate-500">
                 {t('nav.admin')}
               </p>
+            </div>
+            {/* Language and theme toggles */}
+            <div className="flex items-center gap-1">
+              <LanguageToggle />
+              <button
+                onClick={toggleTheme}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                title={theme === 'light' ? t('nav.switchToDark') : t('nav.switchToLight')}
+              >
+                {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+              </button>
             </div>
           </div>
           <button
