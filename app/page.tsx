@@ -390,16 +390,23 @@ export default function Dashboard() {
 
             return (
               <div key={widgetId} className="relative">
-                <div className="h-full">
+                {/* Widget content - disable interactions in edit mode */}
+                <div className={`h-full ${isEditMode ? 'pointer-events-none' : ''}`}>
                   <WidgetComponent />
                 </div>
+                {/* Edit mode overlay and controls */}
                 {isEditMode && (
-                  <button
-                    onClick={() => removeWidget(widgetId)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 transition-colors z-10 shadow-md"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    {/* Overlay to show it's in edit mode */}
+                    <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600" />
+                    {/* Remove button - larger for easy tapping */}
+                    <button
+                      onClick={() => removeWidget(widgetId)}
+                      className="absolute -top-2 -right-2 w-10 h-10 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </>
                 )}
               </div>
             )

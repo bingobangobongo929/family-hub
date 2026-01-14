@@ -324,6 +324,7 @@ export const en = {
     completed: 'Completed ({count})',
     allDone: 'All done!',
     refresh: 'Refresh',
+    addMore: 'Add more items',
   },
 
   // Shopping categories

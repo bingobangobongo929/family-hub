@@ -155,9 +155,9 @@ export default function ShoppingWidget() {
           </p>
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
           <div
-            className={`h-full ${useColumns ? 'grid gap-x-2' : 'flex flex-col'}`}
+            className={`${useColumns ? 'grid gap-x-2 gap-y-1 content-start' : 'flex flex-col gap-0.5'}`}
             style={useColumns ? { gridTemplateColumns: 'repeat(2, 1fr)' } : undefined}
           >
             {uncheckedItems.slice(0, maxItems).map(item => (
@@ -188,14 +188,22 @@ export default function ShoppingWidget() {
               </button>
             ))}
           </div>
-          {uncheckedItems.length > maxItems && (
+          {/* Show more link or spacer */}
+          {uncheckedItems.length > maxItems ? (
             <Link
               href="/shopping"
-              className={`block text-amber-600 dark:text-amber-400 text-center mt-1 hover:underline ${size === 'small' ? 'text-[10px]' : 'text-xs'}`}
+              className={`block text-amber-600 dark:text-amber-400 text-center mt-auto pt-1 hover:underline ${size === 'small' ? 'text-[10px]' : 'text-xs'}`}
             >
               {t('common.more', { count: uncheckedItems.length - maxItems })}
             </Link>
-          )}
+          ) : uncheckedItems.length < 3 ? (
+            <Link
+              href="/shopping"
+              className={`block text-amber-600 dark:text-amber-400 text-center mt-auto pt-2 hover:underline ${size === 'small' ? 'text-[10px]' : 'text-xs'}`}
+            >
+              {t('shopping.addMore')}
+            </Link>
+          ) : null}
         </div>
       )}
 

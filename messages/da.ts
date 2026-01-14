@@ -326,6 +326,7 @@ export const da: Translations = {
     completed: 'Udført ({count})',
     allDone: 'Alt færdigt!',
     refresh: 'Opdater',
+    addMore: 'Tilføj flere varer',
   },
 
   // Shopping categories
