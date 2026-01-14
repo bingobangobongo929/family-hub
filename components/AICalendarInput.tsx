@@ -608,7 +608,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                                 <p className="text-xs text-slate-400 mt-1">
                                   {event.contact_ids?.length === 1
                                     ? t('contacts.contactTagged')
-                                    : t('contacts.contactsTagged', { count: event.contact_ids?.length })}
+                                    : t('contacts.contactsTagged', { count: event.contact_ids?.length ?? 0 })}
                                 </p>
                               )}
                             </div>
