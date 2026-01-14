@@ -108,7 +108,11 @@ export const en = {
 
   // Dashboard
   dashboard: {
-    greeting: 'Good {timeOfDay}!',
+    greeting: {
+      morning: 'Good morning!',
+      afternoon: 'Good afternoon!',
+      evening: 'Good evening!',
+    },
     subtitle: "Here's what's happening with your family today.",
     edit: 'Edit',
     done: 'Done',
@@ -193,11 +197,18 @@ export const en = {
   schedule: {
     title: 'Week Ahead',
     titleSmall: 'Up Next',
+    weekAhead: 'Week Ahead',
+    upNext: 'Up Next',
     eventCount: '{count} events',
     eventCountSingle: '1 event',
+    events: '{count} events',
+    oneEvent: '1 event',
     soon: 'Soon:',
+    at: 'at',
+    next: 'Next',
     nextDay: 'Next {day}',
     moreDays: '+{count} more days',
+    noUpcoming: 'No upcoming events',
   },
 
   // Chores / Tasks
@@ -246,18 +257,22 @@ export const en = {
     title: 'Shopping List',
     addItem: 'Add Item',
     itemPlaceholder: 'Item name...',
+    itemNamePlaceholder: 'Item name...',
     quantityPlaceholder: 'Quantity (optional)',
+    quantityOptional: 'Quantity (optional)',
     selectCategory: 'Select category',
     connectedToRecipeVault: 'Connected to Recipe Vault',
     demoMode: 'Demo mode - connect Supabase for sync',
     toBuy: '{count} to buy',
     inTrolley: '{count} in trolley',
+    done: '{count} done',
     fromRecipes: '{count} from recipes',
     addFromRecipeVault: 'Add from Recipe Vault',
     emptyList: 'Your shopping list is empty',
     addFirstItem: 'Add your first item',
     completed: 'Completed ({count})',
     allDone: 'All done!',
+    refresh: 'Refresh',
   },
 
   // Shopping categories
@@ -464,18 +479,28 @@ export const en = {
   bindicator: {
     title: 'Bindicator',
     pageSubtitle: 'Bin collection schedule for 2026',
+    subtitle: 'Bin collection schedule for 2026',
     viewUpcoming: 'Upcoming',
     viewCalendar: 'Calendar',
     viewByBin: 'By Bin',
+    upcoming: 'Upcoming',
+    calendar: 'Calendar',
+    byBin: 'By Bin',
     putOutTonight: 'Put out tonight!',
     putOutTomorrow: 'Put out tomorrow!',
-    collectionToday: 'Collection day is today ({date})',
-    collectionTomorrow: 'Collection day is tomorrow ({date})',
+    today: 'Today',
+    collectionToday: 'Collection day is today',
+    collectionTomorrow: 'Collection day is tomorrow',
     upcomingCollections: 'Upcoming Collections',
     whatGoesInEachBin: 'What goes in each bin?',
+    whatGoesIn: 'What goes in each bin?',
     allCollectionDates: 'All collection dates for 2026 ({count} total):',
+    allDatesFor2026: 'All collection dates for 2026 ({count} total):',
     noneScheduled: 'None scheduled',
     next: 'Next:',
+    nextCollection: 'Next collection',
+    days: '{count} days',
+    daysShort: 'd',
   },
 
   // Bin types
@@ -576,8 +601,15 @@ export const en = {
   countdown: {
     title: 'Countdown',
     noUpcomingEvents: 'No upcoming events',
+    noUpcoming: 'No upcoming events',
     todayBang: 'Today!',
     tomorrowBang: 'Tomorrow!',
+    today: 'Today!',
+    tomorrow: 'Tomorrow!',
+    oneDay: '1 day',
+    days: '{count} days',
+    daysShort: 'd',
+    birthday: "{name}'s Birthday",
   },
 
   // Meal plan

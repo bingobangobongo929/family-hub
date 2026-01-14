@@ -110,7 +110,11 @@ export const da: Translations = {
 
   // Dashboard
   dashboard: {
-    greeting: 'God {timeOfDay}!',
+    greeting: {
+      morning: 'God morgen!',
+      afternoon: 'God eftermiddag!',
+      evening: 'God aften!',
+    },
     subtitle: 'Her er hvad der sker i familien i dag.',
     edit: 'Rediger',
     done: 'Færdig',
@@ -195,11 +199,18 @@ export const da: Translations = {
   schedule: {
     title: 'Ugen frem',
     titleSmall: 'Næste',
+    weekAhead: 'Ugen frem',
+    upNext: 'Næste',
     eventCount: '{count} begivenheder',
     eventCountSingle: '1 begivenhed',
+    events: '{count} begivenheder',
+    oneEvent: '1 begivenhed',
     soon: 'Snart:',
+    at: 'kl.',
+    next: 'Næste',
     nextDay: 'Næste {day}',
     moreDays: '+{count} flere dage',
+    noUpcoming: 'Ingen kommende begivenheder',
   },
 
   // Chores / Tasks
@@ -248,18 +259,22 @@ export const da: Translations = {
     title: 'Indkøbsliste',
     addItem: 'Tilføj vare',
     itemPlaceholder: 'Varenavn...',
+    itemNamePlaceholder: 'Varenavn...',
     quantityPlaceholder: 'Antal (valgfri)',
+    quantityOptional: 'Antal (valgfri)',
     selectCategory: 'Vælg kategori',
     connectedToRecipeVault: 'Forbundet til Recipe Vault',
     demoMode: 'Demo-tilstand - forbind Supabase for synkronisering',
     toBuy: '{count} at købe',
     inTrolley: '{count} i kurven',
+    done: '{count} færdige',
     fromRecipes: '{count} fra opskrifter',
     addFromRecipeVault: 'Tilføj fra Recipe Vault',
     emptyList: 'Din indkøbsliste er tom',
     addFirstItem: 'Tilføj din første vare',
     completed: 'Udført ({count})',
     allDone: 'Alt færdigt!',
+    refresh: 'Opdater',
   },
 
   // Shopping categories
@@ -466,18 +481,28 @@ export const da: Translations = {
   bindicator: {
     title: 'Affaldskalender',
     pageSubtitle: 'Affaldsindsamling for 2026',
+    subtitle: 'Affaldsindsamling for 2026',
     viewUpcoming: 'Kommende',
     viewCalendar: 'Kalender',
     viewByBin: 'Efter beholder',
+    upcoming: 'Kommende',
+    calendar: 'Kalender',
+    byBin: 'Efter beholder',
     putOutTonight: 'Stil ud i aften!',
     putOutTomorrow: 'Stil ud i morgen!',
-    collectionToday: 'Afhentningsdag er i dag ({date})',
-    collectionTomorrow: 'Afhentningsdag er i morgen ({date})',
+    today: 'I dag',
+    collectionToday: 'Afhentningsdag er i dag',
+    collectionTomorrow: 'Afhentningsdag er i morgen',
     upcomingCollections: 'Kommende afhentninger',
     whatGoesInEachBin: 'Hvad kommer i hvilken beholder?',
+    whatGoesIn: 'Hvad kommer i hvilken beholder?',
     allCollectionDates: 'Alle afhentningsdatoer for 2026 ({count} i alt):',
+    allDatesFor2026: 'Alle afhentningsdatoer for 2026 ({count} i alt):',
     noneScheduled: 'Ingen planlagt',
     next: 'Næste:',
+    nextCollection: 'Næste afhentning',
+    days: '{count} dage',
+    daysShort: 'd',
   },
 
   // Bin types
@@ -578,8 +603,15 @@ export const da: Translations = {
   countdown: {
     title: 'Nedtælling',
     noUpcomingEvents: 'Ingen kommende begivenheder',
+    noUpcoming: 'Ingen kommende begivenheder',
     todayBang: 'I dag!',
     tomorrowBang: 'I morgen!',
+    today: 'I dag!',
+    tomorrow: 'I morgen!',
+    oneDay: '1 dag',
+    days: '{count} dage',
+    daysShort: 'd',
+    birthday: '{name}s fødselsdag',
   },
 
   // Meal plan
