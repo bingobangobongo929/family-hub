@@ -553,27 +553,27 @@ export default function CalendarPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header - Touch friendly */}
-      <div className="flex-shrink-0 px-4 py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-        <div className="flex items-center justify-between gap-4">
+      <div className="flex-shrink-0 px-2 sm:px-4 py-2 sm:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Navigation */}
           <div className="flex items-center gap-1">
             <button
               onClick={handlePrevious}
-              className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all"
+              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all touch-target"
             >
-              <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-300" />
             </button>
             <button
               onClick={handleNext}
-              className="w-12 h-12 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all"
+              className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all touch-target"
             >
-              <ChevronRight className="w-6 h-6 text-slate-600 dark:text-slate-300" />
+              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6 text-slate-600 dark:text-slate-300" />
             </button>
           </div>
 
           {/* Title */}
-          <div className="flex-1 text-center">
-            <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
+          <div className="flex-1 text-center min-w-0">
+            <h1 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
               {viewMode === 'week'
                 ? t('calendar.weekOf', { date: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: dateLocale }) })
                 : format(currentDate, 'MMMM yyyy', { locale: dateLocale })
@@ -582,10 +582,10 @@ export default function CalendarPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <button
               onClick={handleToday}
-              className="px-4 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all text-sm font-medium text-slate-700 dark:text-slate-300"
+              className="px-2 sm:px-4 h-10 sm:h-12 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 touch-target"
             >
               {t('common.today')}
             </button>
@@ -593,13 +593,13 @@ export default function CalendarPage() {
         </div>
 
         {/* View toggle + Add buttons */}
-        <div className="flex items-center justify-between mt-3">
+        <div className="flex items-center justify-between mt-2 sm:mt-3 gap-2">
           <div className="flex rounded-xl bg-slate-100 dark:bg-slate-700 p-1">
             {(['month', 'week'] as ViewMode[]).map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
+                className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all touch-target ${
                   viewMode === mode
                     ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -610,20 +610,20 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-1 sm:gap-2">
             <button
               onClick={() => setShowAIModal(true)}
-              className="h-12 px-4 rounded-xl bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 active:scale-95 transition-all flex items-center gap-2"
+              className="h-10 sm:h-12 px-2 sm:px-4 rounded-xl bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 active:scale-95 transition-all flex items-center gap-1 sm:gap-2 touch-target"
             >
-              <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">{t('calendar.smart')}</span>
+              <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
+              <span className="hidden sm:inline text-sm font-medium text-purple-700 dark:text-purple-300">{t('calendar.smart')}</span>
             </button>
             <button
               onClick={handleAddEvent}
-              className="h-12 px-4 rounded-xl bg-teal-500 hover:bg-teal-600 active:scale-95 transition-all flex items-center gap-2"
+              className="h-10 sm:h-12 px-3 sm:px-4 rounded-xl bg-teal-500 hover:bg-teal-600 active:scale-95 transition-all flex items-center gap-1 sm:gap-2 touch-target"
             >
-              <Plus className="w-5 h-5 text-white" />
-              <span className="text-sm font-medium text-white">{t('common.add')}</span>
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+              <span className="hidden sm:inline text-sm font-medium text-white">{t('common.add')}</span>
             </button>
           </div>
         </div>

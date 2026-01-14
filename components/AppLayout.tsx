@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import Sidebar from './Sidebar'
+import MobileHeader from './MobileHeader'
+import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
 import { RefreshCw } from 'lucide-react'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
@@ -13,6 +15,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const isLoginPage = pathname === '/login'
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -37,8 +40,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, isLoginPage, router, isSupabaseConfigured])
 
+  // Close sidebar on route change
+  useEffect(() => {
+    setSidebarOpen(false)
+  }, [pathname])
+
   const handleScreensaverWake = useCallback(() => {
     // Could add analytics or other wake handlers here
+  }, [])
+
+  const openSidebar = useCallback(() => {
+    setSidebarOpen(true)
+  }, [])
+
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false)
   }, [])
 
   // Show loading spinner while checking auth
@@ -59,10 +75,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!isSupabaseConfigured || user) {
     return (
       <div className="flex min-h-screen bg-warm-50 dark:bg-slate-900">
-        <Sidebar />
-        <main className="flex-1 ml-64 p-8">
+        {/* Mobile Header */}
+        <MobileHeader onMenuClick={openSidebar} />
+
+        {/* Sidebar - hidden on mobile, always visible on desktop */}
+        <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
+
+        {/* Main Content */}
+        <main className="flex-1 lg:ml-64 pt-16 pb-20 lg:pt-0 lg:pb-0 p-4 sm:p-6 lg:p-8">
           {children}
         </main>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileNav onMoreClick={openSidebar} />
+
+        {/* Screensaver */}
         <Screensaver
           mode={settings.screensaver_mode as 'clock' | 'photos' | 'gradient' | 'blank'}
           enabled={settings.screensaver_enabled as boolean}

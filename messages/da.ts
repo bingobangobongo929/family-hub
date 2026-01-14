@@ -107,6 +107,7 @@ export const da: Translations = {
     switchToLight: 'Skift til lys tilstand',
     switchToDanish: 'Skift til dansk',
     switchToEnglish: 'Switch to English',
+    more: 'Mere',
   },
 
   // Clock widget

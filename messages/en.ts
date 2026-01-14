@@ -105,6 +105,7 @@ export const en = {
     switchToLight: 'Switch to light mode',
     switchToDanish: 'Skift til dansk',
     switchToEnglish: 'Switch to English',
+    more: 'More',
   },
 
   // Dashboard

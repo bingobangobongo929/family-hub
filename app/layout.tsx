@@ -27,6 +27,21 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: 'Family Hub',
   description: 'Your family command center - calendar, tasks, shopping lists, and more',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Family Hub',
+  },
+  formatDetection: {
+    telephone: false,
+  },
 }
 
 export default function RootLayout({
