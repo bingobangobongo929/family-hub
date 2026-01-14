@@ -76,11 +76,15 @@ export default function BindicatorWidget() {
             <h3 className={`${titleSize} font-semibold text-slate-700 dark:text-slate-200`}>
               {t('bindicator.title')}
             </h3>
-            {todayBins.length > 0 && (
-              <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse">
+            {tomorrowBins.length > 0 ? (
+              <span className="px-2 py-0.5 bg-orange-500 text-white text-xs rounded-full font-medium animate-pulse">
                 {t('bindicator.putOutTonight')}
               </span>
-            )}
+            ) : todayBins.length > 0 ? (
+              <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium">
+                {t('bindicator.collectionToday')}
+              </span>
+            ) : null}
           </div>
 
           {/* Grid of bins */}
@@ -94,12 +98,15 @@ export default function BindicatorWidget() {
                 >
                   <span className={emojiSize}>{bin.emoji}</span>
                   <span
-                    className={`${titleSize} font-semibold mt-1`}
-                    style={{
-                      color: (bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon')
-                        ? '#1e293b'
-                        : '#475569'
-                    }}
+                    className={`${titleSize} font-semibold mt-1 ${
+                      bin.urgency === 'today'
+                        ? 'text-red-900 dark:text-red-100'
+                        : bin.urgency === 'tomorrow'
+                        ? 'text-orange-900 dark:text-orange-100'
+                        : bin.urgency === 'soon'
+                        ? 'text-amber-900 dark:text-amber-100'
+                        : 'text-slate-600 dark:text-slate-300'
+                    }`}
                   >
                     {bin.shortName}
                   </span>
@@ -127,15 +134,15 @@ export default function BindicatorWidget() {
         {/* Alert banner for today/tomorrow */}
         {(todayBins.length > 0 || tomorrowBins.length > 0) && (
           <div className={`mb-2 p-2 rounded-xl text-center ${
-            todayBins.length > 0
-              ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-              : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+            tomorrowBins.length > 0
+              ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+              : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
           }`}>
             <div className="font-semibold text-sm">
-              {todayBins.length > 0 ? t('bindicator.putOutTonight') : t('bindicator.putOutTomorrow')}
+              {tomorrowBins.length > 0 ? t('bindicator.putOutTonight') : t('bindicator.collectionToday')}
             </div>
             <div className="flex justify-center gap-1 mt-1">
-              {(todayBins.length > 0 ? todayBins : tomorrowBins).map(bin => (
+              {(tomorrowBins.length > 0 ? tomorrowBins : todayBins).map(bin => (
                 <span key={bin.id} className="text-xl">{bin.emoji}</span>
               ))}
             </div>
@@ -154,12 +161,15 @@ export default function BindicatorWidget() {
                 <span className={size === 'small' ? 'text-lg' : 'text-xl'}>{bin.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <p
-                    className={`font-semibold truncate ${size === 'small' ? 'text-xs' : 'text-sm'}`}
-                    style={{
-                      color: (bin.urgency === 'tomorrow' || bin.urgency === 'today' || bin.urgency === 'soon')
-                        ? '#1e293b'
-                        : '#475569'
-                    }}
+                    className={`font-semibold truncate ${size === 'small' ? 'text-xs' : 'text-sm'} ${
+                      bin.urgency === 'today'
+                        ? 'text-red-900 dark:text-red-100'
+                        : bin.urgency === 'tomorrow'
+                        ? 'text-orange-900 dark:text-orange-100'
+                        : bin.urgency === 'soon'
+                        ? 'text-amber-900 dark:text-amber-100'
+                        : 'text-slate-600 dark:text-slate-300'
+                    }`}
                   >
                     {bin.shortName}
                   </p>
