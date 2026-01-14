@@ -58,35 +58,6 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
 const STORAGE_KEY = 'family-hub-widget-layout'
 const ACTIVE_WIDGETS_KEY = 'family-hub-active-widgets'
 
-// Generate layouts for all breakpoints from lg layout
-// Mobile layouts make widgets taller to compensate for being wider
-function generateResponsiveLayouts(lgLayout: Layout[]): Record<string, Layout[]> {
-  // For mobile (1-2 cols), stack widgets vertically with increased height
-  const generateMobileLayout = (layout: Layout[], cols: number, heightMultiplier: number): Layout[] => {
-    let currentY = 0
-    return layout.map((item) => {
-      const w = Math.min(item.w, cols) // Can't be wider than available cols
-      const h = Math.ceil(item.h * heightMultiplier) // Increase height
-      const result = {
-        ...item,
-        x: 0, // Stack in single column
-        y: currentY,
-        w: cols, // Full width on mobile
-        h,
-      }
-      currentY += h
-      return result
-    })
-  }
-
-  return {
-    lg: lgLayout,
-    md: lgLayout, // 4 cols - use same layout
-    sm: generateMobileLayout(lgLayout, 2, 1.3), // 2 cols, 30% taller
-    xs: generateMobileLayout(lgLayout, 2, 1.5), // 2 cols, 50% taller
-    xxs: generateMobileLayout(lgLayout, 1, 1.8), // 1 col, 80% taller
-  }
-}
 
 export default function Dashboard() {
   const { user } = useAuth()
@@ -103,31 +74,16 @@ export default function Dashboard() {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))
   const [mounted, setMounted] = useState(false)
   const [backgroundGradient, setBackgroundGradient] = useState<string>('default')
-  const [rowHeight, setRowHeight] = useState(100)
+  const [isMobile, setIsMobile] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadDone = useRef(false)
 
-  // Calculate row height based on screen width to maintain widget proportions
+  // Detect mobile for layout switching
   useEffect(() => {
-    const calculateRowHeight = () => {
-      const width = window.innerWidth
-      // On desktop (6 cols), each col is ~width/6, row height 100px works well
-      // On mobile, we want to maintain similar proportions
-      if (width < 480) {
-        // 1 column - make rows taller since widgets are full width
-        setRowHeight(120)
-      } else if (width < 768) {
-        // 2 columns
-        setRowHeight(110)
-      } else {
-        // 4+ columns
-        setRowHeight(100)
-      }
-    }
-
-    calculateRowHeight()
-    window.addEventListener('resize', calculateRowHeight)
-    return () => window.removeEventListener('resize', calculateRowHeight)
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
   }, [])
 
   // Load saved layout on mount - from database if logged in, otherwise localStorage
@@ -400,11 +356,6 @@ export default function Dashboard() {
     return activeWidgets
   }, [activeWidgets, rewardsEnabled])
 
-  // Generate responsive layouts for all breakpoints
-  const responsiveLayouts = useMemo(() => {
-    return generateResponsiveLayouts(layouts.lg)
-  }, [layouts.lg])
-
   // Available widgets that aren't active (also hide stars when rewards disabled)
   const availableToAdd = AVAILABLE_WIDGETS.filter(w => {
     if (!activeWidgets.includes(w.id)) {
@@ -521,37 +472,31 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Widget Grid */}
-      <div className={isEditMode ? 'edit-mode' : ''}>
-        <ResponsiveGridLayout
-          className="layout"
-          layouts={responsiveLayouts}
-          breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
-          cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
-          rowHeight={rowHeight}
-          isDraggable={isEditMode}
-          isResizable={isEditMode}
-          onLayoutChange={handleLayoutChange}
-          margin={[16, 16]}
-          containerPadding={[0, 0]}
-          useCSSTransforms={true}
-        >
+      {/* Widget Grid - Simple CSS grid on mobile, react-grid-layout on desktop */}
+      {isMobile ? (
+        // Mobile: Simple CSS grid with auto heights
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {visibleWidgets.map(widgetId => {
             const WidgetComponent = WIDGET_COMPONENTS[widgetId]
             if (!WidgetComponent) return null
 
+            // Set appropriate min-heights based on widget type
+            const getMinHeight = (id: string) => {
+              const tallWidgets = ['schedule', 'chores', 'timer', 'f1', 'routine']
+              const mediumWidgets = ['countdown', 'notes', 'shopping', 'bindicator']
+              if (tallWidgets.includes(id)) return 'min-h-[280px]'
+              if (mediumWidgets.includes(id)) return 'min-h-[220px]'
+              return 'min-h-[180px]'
+            }
+
             return (
-              <div key={widgetId} className="relative">
-                {/* Widget content - disable interactions in edit mode */}
-                <div className={`h-full ${isEditMode ? 'pointer-events-none' : ''}`}>
+              <div key={widgetId} className={`relative ${getMinHeight(widgetId)}`}>
+                <div className="h-full">
                   <WidgetComponent />
                 </div>
-                {/* Edit mode overlay and controls */}
                 {isEditMode && (
                   <>
-                    {/* Overlay to show it's in edit mode */}
-                    <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600" />
-                    {/* Remove button - larger for easy tapping */}
+                    <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600 pointer-events-none" />
                     <button
                       onClick={() => removeWidget(widgetId)}
                       className="absolute -top-2 -right-2 w-10 h-10 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg"
@@ -563,8 +508,49 @@ export default function Dashboard() {
               </div>
             )
           })}
-        </ResponsiveGridLayout>
-      </div>
+        </div>
+      ) : (
+        // Desktop: Draggable grid layout
+        <div className={isEditMode ? 'edit-mode' : ''}>
+          <ResponsiveGridLayout
+            className="layout"
+            layouts={layouts}
+            breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
+            cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
+            rowHeight={100}
+            isDraggable={isEditMode}
+            isResizable={isEditMode}
+            onLayoutChange={handleLayoutChange}
+            margin={[16, 16]}
+            containerPadding={[0, 0]}
+            useCSSTransforms={true}
+          >
+            {visibleWidgets.map(widgetId => {
+              const WidgetComponent = WIDGET_COMPONENTS[widgetId]
+              if (!WidgetComponent) return null
+
+              return (
+                <div key={widgetId} className="relative">
+                  <div className={`h-full ${isEditMode ? 'pointer-events-none' : ''}`}>
+                    <WidgetComponent />
+                  </div>
+                  {isEditMode && (
+                    <>
+                      <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600" />
+                      <button
+                        onClick={() => removeWidget(widgetId)}
+                        className="absolute -top-2 -right-2 w-10 h-10 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )
+            })}
+          </ResponsiveGridLayout>
+        </div>
+      )}
 
       {/* Widget Picker Modal */}
       {showWidgetPicker && (
