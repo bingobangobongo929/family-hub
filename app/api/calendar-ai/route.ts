@@ -82,6 +82,11 @@ PEOPLE DETECTION examples:
 - "Mormor babysitting the kids" → suggested_contacts: ["Mormor"]
 - "Swimming with Dad" → suggested_members: ["Dad"]
 
+IMPORTANT - Display Names:
+When a contact has an alias (shown as "also known as"), ALWAYS use that alias in the event title instead of their real name.
+Example: If "Hannah (also known as Mormor)" is in the contacts, and user says "Dinner with Hannah", the title should be "Dinner with Mormor".
+This makes the calendar more family-friendly by showing relationship names like "Mormor" instead of real names.
+
 ${context ? `Family context:\n${context}` : ''}
 
 Return a JSON response with this structure:
@@ -220,6 +225,10 @@ PEOPLE DETECTION examples:
 - "Grandma picking up Olivia" → suggested_members: ["Olivia"], suggested_contacts: ["Grandma"]
 - "Playdate at Emma's house" → suggested_contacts: ["Emma"]
 - "Mormor babysitting" → suggested_contacts: ["Mormor"]
+
+IMPORTANT - Display Names:
+When a contact has an alias (shown as "also known as"), ALWAYS use that alias in the event title instead of their real name.
+Example: If "Hannah (also known as Mormor)" is in the contacts, and user says "Dinner with Hannah", the title should be "Dinner with Mormor".
 
 ${context ? `Family context:\n${context}` : ''}
 
