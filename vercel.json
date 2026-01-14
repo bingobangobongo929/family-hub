@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/notifications/triggers/events",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/bins",
+      "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/chores",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}
