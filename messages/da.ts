@@ -471,6 +471,9 @@ export const da: Translations = {
     name: 'Navn',
     nameRequired: 'Navn *',
     namePlaceholder: 'Kontaktnavn...',
+    displayName: 'Visningsnavn',
+    displayNamePlaceholder: 'f.eks. Mormor, Onkel Peter...',
+    displayNameHelp: 'Navn vist på kalender/tavle. Lad tom for at bruge rigtigt navn.',
     dateOfBirth: 'Fødselsdato',
     showInCountdown: 'Vis i nedtælling',
     showInCountdownDescription: 'Inkluder denne fødselsdag i nedtællings-widget\'en',
@@ -506,6 +509,8 @@ export const da: Translations = {
     willLinkTo: 'Vil blive knyttet til',
     addLinks: 'Tilføj links',
     selectMember: 'Vælg et familiemedlem...',
+    whoseRelative: 'Hvis slægtning er dette?',
+    linkToChild: 'Knyt til barn',
     linkHelp: 'Knyt denne kontakt til familiemedlemmer for at gøre kalenderbegivenheder smartere',
   },
 

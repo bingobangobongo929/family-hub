@@ -14,6 +14,8 @@ interface ContactLink {
 interface ContactMemberLinkProps {
   links: ContactLink[]
   onChange: (links: ContactLink[]) => void
+  contactName?: string  // For suggesting display name
+  onDisplayNameSuggestion?: (displayName: string) => void
 }
 
 // Relationship patterns that apply to children
@@ -96,12 +98,36 @@ const RELATIONSHIP_GROUPS = {
   }
 }
 
-export default function ContactMemberLink({ links, onChange }: ContactMemberLinkProps) {
+// Suggest a display name based on relationship type
+// Grandparents: use role name (e.g., "Mormor")
+// Aunts/Uncles: use "Onkel [FirstName]" or just the role
+function suggestDisplayName(relationship: string, contactName: string): string {
+  const lower = relationship.toLowerCase().trim()
+  const firstName = contactName.split(' ')[0] || contactName
+
+  // Grandparents - just use the role name
+  if (GRANDPARENT_TYPES.some(t => lower.includes(t))) {
+    // Return the relationship as-is (properly cased)
+    return relationship.charAt(0).toUpperCase() + relationship.slice(1).toLowerCase()
+  }
+
+  // Aunts/Uncles - use "Role FirstName" format
+  if (AUNT_UNCLE_TYPES.some(t => lower.includes(t))) {
+    const role = relationship.charAt(0).toUpperCase() + relationship.slice(1).toLowerCase()
+    return `${role} ${firstName}`
+  }
+
+  // For others, return empty (use actual name)
+  return ''
+}
+
+export default function ContactMemberLink({ links, onChange, contactName, onDisplayNameSuggestion }: ContactMemberLinkProps) {
   const { members } = useFamily()
   const { t, locale } = useTranslation()
   const [mode, setMode] = useState<'idle' | 'quick' | 'manual'>('idle')
   const [selectedRelationship, setSelectedRelationship] = useState('')
   const [applyToAllChildren, setApplyToAllChildren] = useState(true)
+  const [selectedParentId, setSelectedParentId] = useState('') // Which parent this contact is related to
   const [selectedMemberId, setSelectedMemberId] = useState('')
 
   // Get children and parents
@@ -115,8 +141,8 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
     const newLinks: ContactLink[] = []
     const relationship = selectedRelationship.trim()
 
+    // Add to all children if it's a child-relevant relationship
     if (applyToAllChildren && isChildRelationship(relationship)) {
-      // Add to all children
       children.forEach(child => {
         if (!links.some(l => l.memberId === child.id)) {
           newLinks.push({ memberId: child.id, relationshipType: relationship })
@@ -124,25 +150,37 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
       })
     }
 
-    // Optionally add parent relationships (for Danish specific terms)
-    if (isMaternalRelationship(relationship) || isPaternalRelationship(relationship)) {
-      const isMaternal = isMaternalRelationship(relationship)
+    // Add parent relationship if a parent is selected
+    if (selectedParentId) {
+      const parentRel = getParentRelationship(relationship, true) // true = direct relationship
+      if (parentRel && !links.some(l => l.memberId === selectedParentId)) {
+        newLinks.push({ memberId: selectedParentId, relationshipType: parentRel })
+      }
 
-      parents.forEach((parent, idx) => {
-        // Assume first parent is "mor" for maternal, or "far" for paternal
-        // This is a simplification - ideally we'd know which parent is which
-        const parentRel = getParentRelationship(relationship, idx === (isMaternal ? 0 : 1))
-        if (parentRel && !links.some(l => l.memberId === parent.id)) {
-          newLinks.push({ memberId: parent.id, relationshipType: parentRel })
+      // Also add to the OTHER parent as in-law if applicable
+      const otherParent = parents.find(p => p.id !== selectedParentId)
+      if (otherParent) {
+        const inLawRel = getParentRelationship(relationship, false) // false = in-law relationship
+        if (inLawRel && !links.some(l => l.memberId === otherParent.id)) {
+          newLinks.push({ memberId: otherParent.id, relationshipType: inLawRel })
         }
-      })
+      }
     }
 
     if (newLinks.length > 0) {
       onChange([...links, ...newLinks])
+
+      // Suggest display name based on relationship
+      if (onDisplayNameSuggestion && contactName) {
+        const suggested = suggestDisplayName(relationship, contactName)
+        if (suggested) {
+          onDisplayNameSuggestion(suggested)
+        }
+      }
     }
 
     setSelectedRelationship('')
+    setSelectedParentId('')
     setMode('idle')
   }
 
@@ -295,8 +333,8 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
             />
           </div>
 
-          {/* Options */}
-          {selectedRelationship && isChildRelationship(selectedRelationship) && children.length > 1 && (
+          {/* Options for child relationships */}
+          {selectedRelationship && isChildRelationship(selectedRelationship) && children.length > 0 && (
             <label className="flex items-center gap-2 p-2 rounded-lg bg-white dark:bg-slate-700 cursor-pointer">
               <input
                 type="checkbox"
@@ -305,9 +343,53 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
                 className="w-4 h-4 rounded border-slate-300 text-teal-500 focus:ring-teal-500"
               />
               <span className="text-sm text-slate-700 dark:text-slate-300">
-                {t('contacts.applyToAllChildren', { count: children.length })}
+                {children.length > 1
+                  ? t('contacts.applyToAllChildren', { count: children.length })
+                  : `${t('contacts.linkToChild')}: ${children[0]?.name}`
+                }
               </span>
             </label>
+          )}
+
+          {/* Parent selector - whose parent/relative is this? */}
+          {selectedRelationship && isChildRelationship(selectedRelationship) && parents.length > 0 && (
+            <div className="p-3 rounded-lg bg-white dark:bg-slate-700">
+              <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-2">
+                {t('contacts.whoseRelative')}
+              </p>
+              <div className="flex gap-2">
+                {parents.map(parent => (
+                  <button
+                    key={parent.id}
+                    type="button"
+                    onClick={() => setSelectedParentId(selectedParentId === parent.id ? '' : parent.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors flex-1 ${
+                      selectedParentId === parent.id
+                        ? 'bg-teal-500 text-white'
+                        : 'bg-slate-100 dark:bg-slate-600 text-slate-700 dark:text-slate-300 hover:bg-teal-100 dark:hover:bg-teal-900/50'
+                    }`}
+                  >
+                    <AvatarDisplay
+                      photoUrl={parent.photo_url}
+                      emoji={parent.avatar}
+                      name={parent.name}
+                      color={parent.color}
+                      size="xs"
+                    />
+                    <span>{parent.name}</span>
+                  </button>
+                ))}
+              </div>
+              {selectedParentId && (
+                <p className="text-xs text-teal-600 dark:text-teal-400 mt-2">
+                  {(() => {
+                    const parent = parents.find(p => p.id === selectedParentId)
+                    const parentRel = getParentRelationship(selectedRelationship, true)
+                    return parentRel ? `→ ${parent?.name}'s ${parentRel}` : ''
+                  })()}
+                </p>
+              )}
+            </div>
           )}
 
           {/* Preview */}
@@ -315,11 +397,32 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
             <div className="p-2 rounded-lg bg-white/50 dark:bg-slate-800/50">
               <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{t('contacts.willLinkTo')}:</p>
               <div className="flex flex-wrap gap-1">
+                {/* Children */}
                 {(applyToAllChildren && isChildRelationship(selectedRelationship) ? children : []).map(child => (
                   <span key={child.id} className="px-2 py-0.5 rounded-full text-xs bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300">
-                    {child.name}
+                    {child.name} ({selectedRelationship})
                   </span>
                 ))}
+                {/* Selected parent */}
+                {selectedParentId && (() => {
+                  const parent = parents.find(p => p.id === selectedParentId)
+                  const parentRel = getParentRelationship(selectedRelationship, true)
+                  return parentRel ? (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
+                      {parent?.name} ({parentRel})
+                    </span>
+                  ) : null
+                })()}
+                {/* Other parent (in-law) */}
+                {selectedParentId && (() => {
+                  const otherParent = parents.find(p => p.id !== selectedParentId)
+                  const inLawRel = getParentRelationship(selectedRelationship, false)
+                  return otherParent && inLawRel ? (
+                    <span className="px-2 py-0.5 rounded-full text-xs bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-300">
+                      {otherParent.name} ({inLawRel})
+                    </span>
+                  ) : null
+                })()}
               </div>
             </div>
           )}
@@ -331,6 +434,7 @@ export default function ContactMemberLink({ links, onChange }: ContactMemberLink
               onClick={() => {
                 setMode('idle')
                 setSelectedRelationship('')
+                setSelectedParentId('')
               }}
               className="flex-1 px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-sm"
             >

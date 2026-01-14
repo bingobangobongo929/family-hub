@@ -469,6 +469,9 @@ export const en = {
     name: 'Name',
     nameRequired: 'Name *',
     namePlaceholder: 'Contact name...',
+    displayName: 'Display Name',
+    displayNamePlaceholder: 'e.g., Mormor, Uncle Will...',
+    displayNameHelp: 'Name shown on calendar/board. Leave empty to use real name.',
     dateOfBirth: 'Date of Birth',
     showInCountdown: 'Show in Countdown',
     showInCountdownDescription: 'Include this birthday in the countdown widget',
@@ -504,6 +507,8 @@ export const en = {
     willLinkTo: 'Will link to',
     addLinks: 'Add Links',
     selectMember: 'Select a family member...',
+    whoseRelative: 'Whose relative is this?',
+    linkToChild: 'Link to child',
     linkHelp: 'Link this contact to family members to make calendar events smarter',
   },
 

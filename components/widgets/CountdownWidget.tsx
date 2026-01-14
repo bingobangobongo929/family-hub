@@ -155,7 +155,7 @@ export default function CountdownWidget() {
 
       return {
         id: `contact-${contact.id}`,
-        title: t('countdown.birthday', { name: contact.name }),
+        title: t('countdown.birthday', { name: contact.display_name || contact.name }),
         date: getNextBirthdayDate(contact.date_of_birth!),
         emoji: '🎂',
         type: 'birthday' as const,

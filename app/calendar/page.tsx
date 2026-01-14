@@ -720,13 +720,14 @@ export default function CalendarPage() {
                                 })}
                                 {contactIds.slice(0, 2).map(id => {
                                   const c = getContact(id)
+                                  const displayName = c?.display_name || c?.name || ''
                                   return c ? (
                                     <span
                                       key={id}
                                       className="w-3 h-3 rounded-full bg-slate-400 text-white text-[7px] flex items-center justify-center font-bold flex-shrink-0"
-                                      title={c.name}
+                                      title={displayName}
                                     >
-                                      {c.name.charAt(0)}
+                                      {displayName.charAt(0)}
                                     </span>
                                   ) : null
                                 })}

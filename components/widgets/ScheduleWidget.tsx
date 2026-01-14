@@ -458,7 +458,7 @@ export default function ScheduleWidget() {
                     })
                     contactIds.forEach(id => {
                       const c = getContact(id)
-                      if (c) peopleNames.push(c.name)
+                      if (c) peopleNames.push(c.display_name || c.name)
                     })
 
                     return (

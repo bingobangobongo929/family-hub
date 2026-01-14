@@ -280,8 +280,9 @@ export default function EventDetailModal({
                           : 'bg-white dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-500'
                       }`}
                       style={isSelected ? { backgroundColor: contact.color || '#6b7280' } : undefined}
+                      title={contact.display_name && contact.display_name !== contact.name ? contact.name : undefined}
                     >
-                      {contact.name}
+                      {contact.display_name || contact.name}
                     </button>
                   )
                 })}
@@ -451,8 +452,9 @@ export default function EventDetailModal({
                         key={id}
                         className="px-2 py-0.5 rounded-full text-xs text-white"
                         style={{ backgroundColor: contact.color || '#6b7280' }}
+                        title={contact.display_name && contact.display_name !== contact.name ? contact.name : undefined}
                       >
-                        {contact.name}
+                        {contact.display_name || contact.name}
                       </span>
                     )
                   })}

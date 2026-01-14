@@ -175,12 +175,19 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
     try {
       // Build context about family members and contacts
+      // Include both real name and display_name so AI can match either
       const familyContext = [
         members.length > 0
           ? `${t('aiCalendar.boardMembers')} ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
           : '',
         contacts.length > 0
-          ? `${t('aiCalendar.extendedContacts')} ${contacts.map(c => c.name).join(', ')}`
+          ? `${t('aiCalendar.extendedContacts')} ${contacts.map(c => {
+              // Include display_name as alias if different from name
+              if (c.display_name && c.display_name !== c.name) {
+                return `${c.name} (also known as "${c.display_name}")`
+              }
+              return c.name
+            }).join(', ')}`
           : ''
       ].filter(Boolean).join('\n')
 
@@ -242,7 +249,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             }
           }
 
-          // Match suggested contacts - use flexible matching
+          // Match suggested contacts - use flexible matching on name and display_name
           let contactIds: string[] = []
           if (event.suggested_contacts && event.suggested_contacts.length > 0) {
             for (const suggestedName of event.suggested_contacts) {
@@ -251,18 +258,24 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
               // Try to find a matching contact with flexible matching
               const matchedContact = contacts.find(c => {
                 const contactName = c.name.toLowerCase().trim()
+                const displayName = c.display_name?.toLowerCase().trim() || ''
 
-                // Exact match
+                // Exact match on name or display_name
                 if (contactName === nameLower) return true
+                if (displayName && displayName === nameLower) return true
 
-                // Partial match (contact name contains suggested or vice versa)
+                // Partial match (contact name/display_name contains suggested or vice versa)
                 if (contactName.includes(nameLower) || nameLower.includes(contactName)) return true
+                if (displayName && (displayName.includes(nameLower) || nameLower.includes(displayName))) return true
 
                 // Word-based match (e.g., "Grandma Rose" matches "Grandma")
                 const contactWords = contactName.split(/\s+/)
+                const displayWords = displayName ? displayName.split(/\s+/) : []
                 const suggestedWords = nameLower.split(/\s+/)
                 if (contactWords.some(w => suggestedWords.includes(w))) return true
                 if (suggestedWords.some(w => contactWords.includes(w))) return true
+                if (displayWords.some(w => suggestedWords.includes(w))) return true
+                if (suggestedWords.some(w => displayWords.includes(w))) return true
 
                 return false
               })
@@ -598,8 +611,9 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                                           : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
                                       }`}
                                       style={isSelected ? { backgroundColor: contact.color || '#6b7280' } : undefined}
+                                      title={contact.display_name && contact.display_name !== contact.name ? contact.name : undefined}
                                     >
-                                      {contact.name}
+                                      {contact.display_name || contact.name}
                                     </button>
                                   )
                                 })}

@@ -113,6 +113,7 @@ export interface Contact {
   id: string
   user_id: string
   name: string
+  display_name: string | null  // Name shown on calendar/board (e.g., "Mormor" instead of "Hannah")
   date_of_birth: string | null
   relationship_group: RelationshipGroup
   notes: string | null

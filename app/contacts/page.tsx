@@ -21,6 +21,7 @@ export default function ContactsPage() {
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [formData, setFormData] = useState({
     name: '',
+    display_name: '',
     date_of_birth: '',
     relationship_group: 'friends' as RelationshipGroup,
     notes: '',
@@ -36,6 +37,7 @@ export default function ContactsPage() {
   const resetForm = () => {
     setFormData({
       name: '',
+      display_name: '',
       date_of_birth: '',
       relationship_group: 'friends',
       notes: '',
@@ -57,6 +59,7 @@ export default function ContactsPage() {
     setEditingContact(contact)
     setFormData({
       name: contact.name,
+      display_name: contact.display_name || '',
       date_of_birth: contact.date_of_birth || '',
       relationship_group: contact.relationship_group,
       notes: contact.notes || '',
@@ -76,6 +79,7 @@ export default function ContactsPage() {
 
     const contactData = {
       name: formData.name.trim(),
+      display_name: formData.display_name.trim() || null,
       date_of_birth: formData.date_of_birth || null,
       relationship_group: formData.relationship_group,
       notes: formData.notes.trim() || null,
@@ -224,6 +228,11 @@ export default function ContactsPage() {
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                         {contact.name}
+                        {contact.display_name && contact.display_name !== contact.name && (
+                          <span className="ml-2 text-sm font-normal text-teal-600 dark:text-teal-400">
+                            → {contact.display_name}
+                          </span>
+                        )}
                       </p>
                       {contact.date_of_birth && (
                         <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -296,6 +305,22 @@ export default function ContactsPage() {
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               placeholder={t('contacts.namePlaceholder')}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              {t('contacts.displayName')}
+            </label>
+            <input
+              type="text"
+              value={formData.display_name}
+              onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder={t('contacts.displayNamePlaceholder')}
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              {t('contacts.displayNameHelp')}
+            </p>
           </div>
 
           <div>
@@ -410,6 +435,13 @@ export default function ContactsPage() {
           <ContactMemberLink
             links={memberLinks}
             onChange={setMemberLinks}
+            contactName={formData.name}
+            onDisplayNameSuggestion={(suggested) => {
+              // Only suggest if display_name is currently empty
+              if (!formData.display_name) {
+                setFormData(prev => ({ ...prev, display_name: suggested }))
+              }
+            }}
           />
 
           <div className="flex justify-end gap-2 pt-4">
