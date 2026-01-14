@@ -126,11 +126,14 @@ export default function Dashboard() {
             setActiveWidgets(parsedWidgets)
 
             // Migrate to database
-            await supabase.from('widget_layouts').upsert({
-              user_id: user.id,
-              active_widgets: parsedWidgets,
-              layouts: parsedLayout,
-            })
+            await supabase.from('widget_layouts').upsert(
+              {
+                user_id: user.id,
+                active_widgets: parsedWidgets,
+                layouts: parsedLayout,
+              },
+              { onConflict: 'user_id' }
+            )
           }
         } catch (e) {
           console.error('Failed to load layout from database:', e)
@@ -177,11 +180,17 @@ export default function Dashboard() {
     // Debounce the database save (500ms)
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        await supabase.from('widget_layouts').upsert({
-          user_id: user.id,
-          active_widgets: widgets,
-          layouts: layoutData,
-        })
+        const { error } = await supabase.from('widget_layouts').upsert(
+          {
+            user_id: user.id,
+            active_widgets: widgets,
+            layouts: layoutData,
+          },
+          { onConflict: 'user_id' }
+        )
+        if (error) {
+          console.error('Failed to save layout to database:', error)
+        }
       } catch (e) {
         console.error('Failed to save layout to database:', e)
       }
