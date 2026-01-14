@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { Responsive, WidthProvider, Layout } from 'react-grid-layout'
 import {
@@ -73,48 +73,128 @@ export default function Dashboard() {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))
   const [mounted, setMounted] = useState(false)
   const [backgroundGradient, setBackgroundGradient] = useState<string>('default')
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const initialLoadDone = useRef(false)
 
-  // Load saved layout on mount
+  // Load saved layout on mount - from database if logged in, otherwise localStorage
   useEffect(() => {
     setMounted(true)
-    const savedLayout = localStorage.getItem(STORAGE_KEY)
-    const savedWidgets = localStorage.getItem(ACTIVE_WIDGETS_KEY)
-    const savedSettings = localStorage.getItem('family-hub-settings')
 
-    if (savedLayout) {
-      try {
-        setLayouts(JSON.parse(savedLayout))
-      } catch (e) {
-        console.error('Failed to parse saved layout')
-      }
-    }
-
-    if (savedWidgets) {
-      try {
-        setActiveWidgets(JSON.parse(savedWidgets))
-      } catch (e) {
-        console.error('Failed to parse saved widgets')
-      }
-    }
-
-    if (savedSettings) {
-      try {
-        const settings = JSON.parse(savedSettings)
-        if (settings.dashboard_gradient) {
-          setBackgroundGradient(settings.dashboard_gradient)
+    const loadLayout = async () => {
+      // Load background settings from localStorage (not synced)
+      const savedSettings = localStorage.getItem('family-hub-settings')
+      if (savedSettings) {
+        try {
+          const settings = JSON.parse(savedSettings)
+          if (settings.dashboard_gradient) {
+            setBackgroundGradient(settings.dashboard_gradient)
+          }
+        } catch (e) {
+          console.error('Failed to parse saved settings')
         }
-      } catch (e) {
-        console.error('Failed to parse saved settings')
       }
+
+      // If logged in, try to load from database first
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('widget_layouts')
+            .select('active_widgets, layouts')
+            .eq('user_id', user.id)
+            .single()
+
+          if (data && !error) {
+            // Found saved layout in database
+            setActiveWidgets(data.active_widgets)
+            setLayouts(data.layouts as { lg: Layout[] })
+            // Also update localStorage as cache
+            localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(data.active_widgets))
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data.layouts))
+            initialLoadDone.current = true
+            return
+          }
+
+          // No database record - check localStorage and migrate to database
+          const savedLayout = localStorage.getItem(STORAGE_KEY)
+          const savedWidgets = localStorage.getItem(ACTIVE_WIDGETS_KEY)
+
+          if (savedLayout || savedWidgets) {
+            const parsedLayout = savedLayout ? JSON.parse(savedLayout) : { lg: DEFAULT_LAYOUT }
+            const parsedWidgets = savedWidgets ? JSON.parse(savedWidgets) : DEFAULT_LAYOUT.map(l => l.i)
+
+            setLayouts(parsedLayout)
+            setActiveWidgets(parsedWidgets)
+
+            // Migrate to database
+            await supabase.from('widget_layouts').upsert({
+              user_id: user.id,
+              active_widgets: parsedWidgets,
+              layouts: parsedLayout,
+            })
+          }
+        } catch (e) {
+          console.error('Failed to load layout from database:', e)
+          // Fall back to localStorage
+          const savedLayout = localStorage.getItem(STORAGE_KEY)
+          const savedWidgets = localStorage.getItem(ACTIVE_WIDGETS_KEY)
+          if (savedLayout) setLayouts(JSON.parse(savedLayout))
+          if (savedWidgets) setActiveWidgets(JSON.parse(savedWidgets))
+        }
+      } else {
+        // Not logged in - use localStorage only
+        const savedLayout = localStorage.getItem(STORAGE_KEY)
+        const savedWidgets = localStorage.getItem(ACTIVE_WIDGETS_KEY)
+        if (savedLayout) {
+          try {
+            setLayouts(JSON.parse(savedLayout))
+          } catch (e) {
+            console.error('Failed to parse saved layout')
+          }
+        }
+        if (savedWidgets) {
+          try {
+            setActiveWidgets(JSON.parse(savedWidgets))
+          } catch (e) {
+            console.error('Failed to parse saved widgets')
+          }
+        }
+      }
+      initialLoadDone.current = true
     }
-  }, [])
+
+    loadLayout()
+  }, [user])
+
+  // Debounced save to database
+  const saveToDatabase = useCallback((widgets: string[], layoutData: { lg: Layout[] }) => {
+    if (!user || !initialLoadDone.current) return
+
+    // Clear any pending save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+    }
+
+    // Debounce the database save (500ms)
+    saveTimeoutRef.current = setTimeout(async () => {
+      try {
+        await supabase.from('widget_layouts').upsert({
+          user_id: user.id,
+          active_widgets: widgets,
+          layouts: layoutData,
+        })
+      } catch (e) {
+        console.error('Failed to save layout to database:', e)
+      }
+    }, 500)
+  }, [user])
 
   // Save layout changes
   const handleLayoutChange = useCallback((currentLayout: Layout[], allLayouts: { lg: Layout[] }) => {
     if (!mounted) return
     setLayouts(allLayouts)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(allLayouts))
-  }, [mounted])
+    saveToDatabase(activeWidgets, allLayouts)
+  }, [mounted, activeWidgets, saveToDatabase])
 
   // Add widget
   const addWidget = useCallback((widgetId: string) => {
@@ -142,8 +222,9 @@ export default function Dashboard() {
     setLayouts(newLayouts)
     localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(newActiveWidgets))
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newLayouts))
+    saveToDatabase(newActiveWidgets, newLayouts)
     setShowWidgetPicker(false)
-  }, [activeWidgets, layouts])
+  }, [activeWidgets, layouts, saveToDatabase])
 
   // Remove widget
   const removeWidget = useCallback((widgetId: string) => {
@@ -156,16 +237,19 @@ export default function Dashboard() {
     setLayouts(newLayouts)
     localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(newActiveWidgets))
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newLayouts))
-  }, [activeWidgets, layouts])
+    saveToDatabase(newActiveWidgets, newLayouts)
+  }, [activeWidgets, layouts, saveToDatabase])
 
   // Reset to default
   const resetLayout = useCallback(() => {
     const defaultWidgets = DEFAULT_LAYOUT.map(l => l.i)
+    const defaultLayouts = { lg: DEFAULT_LAYOUT }
     setActiveWidgets(defaultWidgets)
-    setLayouts({ lg: DEFAULT_LAYOUT })
+    setLayouts(defaultLayouts)
     localStorage.setItem(ACTIVE_WIDGETS_KEY, JSON.stringify(defaultWidgets))
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ lg: DEFAULT_LAYOUT }))
-  }, [])
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultLayouts))
+    saveToDatabase(defaultWidgets, defaultLayouts)
+  }, [saveToDatabase])
 
   // Fetch stats
   useEffect(() => {
