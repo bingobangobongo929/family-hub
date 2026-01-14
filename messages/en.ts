@@ -789,12 +789,6 @@ export const en = {
     // Account
     signedIn: 'Signed in',
     signOut: 'Sign Out',
-
-    // Birthday
-    showBirthdaysOnCalendar: 'Show Birthdays on Calendar',
-    showBirthdaysDescription: 'Display contact birthdays as calendar events',
-    countdownWidgetGroups: 'Countdown Widget Groups',
-    countdownWidgetGroupsDescription: 'Select which contact groups appear in the birthday countdown widget',
   },
 
   // Countdown event types
