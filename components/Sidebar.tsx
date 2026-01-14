@@ -22,7 +22,8 @@ import {
   Flag,
   ChevronUp,
   ChevronDown,
-  X
+  X,
+  Edit3
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -63,7 +64,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { t } = useTranslation()
   const { members, reorderMembers } = useFamily()
   const { rewardsEnabled, sidebarNavOrder, updateSetting } = useSettings()
-  const { isEditMode } = useEditMode()
+  const { isEditMode, setIsEditMode } = useEditMode()
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
 
   // Close sidebar on route change (mobile)
@@ -287,8 +288,19 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                   {t('nav.admin')}
                 </p>
               </div>
-              {/* Language and theme toggles */}
+              {/* Edit, Language and theme toggles */}
               <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                    isEditMode
+                      ? 'bg-teal-500 text-white'
+                      : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-300'
+                  }`}
+                  title={isEditMode ? t('common.done') : t('nav.editDashboard')}
+                >
+                  {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                </button>
                 <LanguageToggle />
                 <button
                   onClick={toggleTheme}

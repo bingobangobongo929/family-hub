@@ -106,6 +106,7 @@ export const en = {
     switchToDanish: 'Skift til dansk',
     switchToEnglish: 'Switch to English',
     more: 'More',
+    editDashboard: 'Edit dashboard',
   },
 
   // Dashboard

@@ -258,25 +258,12 @@ export default function Dashboard() {
 
   return (
     <div className={`max-w-7xl mx-auto ${gradientClass ? `-mx-4 -mt-4 px-4 pt-4 pb-8 min-h-screen bg-gradient-to-br ${gradientClass}` : ''}`}>
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-3xl font-semibold text-slate-800 dark:text-slate-100">
-            {t(`dashboard.greeting.${getTimeOfDay()}`)}
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
-        </div>
-        <button
-          onClick={() => setIsEditMode(!isEditMode)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-medium ${
-            isEditMode
-              ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-lg shadow-teal-500/25'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400'
-          } shadow-card`}
-        >
-          {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-          {isEditMode ? t('common.done') : t('common.edit')}
-        </button>
+      {/* Header - with left padding on mobile for hamburger menu */}
+      <div className="mb-8 pl-14 lg:pl-0">
+        <h1 className="font-display text-2xl sm:text-3xl font-semibold text-slate-800 dark:text-slate-100">
+          {t(`dashboard.greeting.${getTimeOfDay()}`)}
+        </h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
       </div>
 
       {/* Quick Stats Bar */}
