@@ -1,38 +1,19 @@
 'use client'
 
-import { Menu, Users } from 'lucide-react'
-import { useTranslation } from '@/lib/i18n-context'
+import { Menu } from 'lucide-react'
 
 interface MobileHeaderProps {
   onMenuClick: () => void
 }
 
 export default function MobileHeader({ onMenuClick }: MobileHeaderProps) {
-  const { t } = useTranslation()
-
   return (
-    <header className="lg:hidden fixed top-0 left-0 right-0 z-40 glass safe-top">
-      <div className="flex items-center justify-between px-4 py-3">
-        <button
-          onClick={onMenuClick}
-          className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors touch-target"
-          aria-label="Open menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
-
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-            <Users className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="font-display text-lg font-semibold bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-400 dark:to-teal-500 bg-clip-text text-transparent">
-            {t('nav.appName')}
-          </h1>
-        </div>
-
-        {/* Spacer for balance */}
-        <div className="w-10" />
-      </div>
-    </header>
+    <button
+      onClick={onMenuClick}
+      className="lg:hidden fixed top-3 left-3 z-40 w-11 h-11 flex items-center justify-center rounded-xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-lg border border-slate-200/50 dark:border-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all touch-target safe-top"
+      aria-label="Open menu"
+    >
+      <Menu className="w-5 h-5" />
+    </button>
   )
 }
