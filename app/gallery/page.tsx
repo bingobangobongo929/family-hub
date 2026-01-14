@@ -107,20 +107,19 @@ export default function GalleryPage() {
   // Not connected state
   if (!user || !googlePhotosAlbumId) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <Link
-              href="/"
-              className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-            >
-              <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
-            </Link>
-            <h1 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100">
-              {t('gallery.title')}
-            </h1>
-          </div>
+      <div className="page-container py-6">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link
+            href="/"
+            className="p-2 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors tap-highlight"
+          >
+            <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
+          </Link>
+          <h1 className="page-header">
+            {t('gallery.title')}
+          </h1>
+        </div>
 
           {/* Empty state */}
           <div className="bg-white dark:bg-slate-800 rounded-3xl p-12 text-center shadow-sm">
@@ -142,16 +141,14 @@ export default function GalleryPage() {
               </Button>
             </Link>
           </div>
-        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+    <div className="page-container py-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
             <Link
               href="/"

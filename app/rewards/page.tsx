@@ -259,7 +259,7 @@ export default function RewardsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="page-container">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl" />
@@ -271,7 +271,7 @@ export default function RewardsPage() {
   // Show disabled message when rewards are off
   if (!rewardsEnabled) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="page-container">
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-6">
             <Gift className="w-10 h-10 text-slate-400 dark:text-slate-500" />
@@ -294,13 +294,13 @@ export default function RewardsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="page-container">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('rewards.title')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('rewards.subtitle')}</p>
+          <h1 className="page-header">{t('rewards.title')}</h1>
+          <p className="page-subtitle">{t('rewards.subtitle')}</p>
         </div>
-        <Button onClick={() => { resetForm(); setEditingReward(null); setShowAddModal(true) }}>
+        <Button onClick={() => { resetForm(); setEditingReward(null); setShowAddModal(true) }} className="w-full sm:w-auto">
           <Plus className="w-5 h-5 mr-2" />
           {t('rewards.addReward')}
         </Button>

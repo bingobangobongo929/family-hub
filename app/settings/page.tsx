@@ -554,7 +554,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="page-container">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl" />
@@ -564,17 +564,17 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('settings.title')}</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('settings.subtitle')}</p>
+    <div className="page-container">
+      <div className="mb-6">
+        <h1 className="page-header">{t('settings.title')}</h1>
+        <p className="page-subtitle">{t('settings.subtitle')}</p>
       </div>
 
       {/* Appearance */}
       <Card className="mb-6">
         <CardHeader title={t('settings.appearance')} icon={<Sun className="w-5 h-5" />} />
         <div className="mt-4 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.theme')}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.themeDescription')}</p>
@@ -588,14 +588,14 @@ export default function SettingsPage() {
                 <button
                   key={opt.id}
                   onClick={() => setTheme(opt.id as 'light' | 'dark' | 'system')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl transition-all min-h-[44px] tap-highlight ${
                     theme === opt.id
-                      ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300'
+                      ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   <opt.icon className="w-4 h-4" />
-                  {opt.label}
+                  <span className="text-sm">{opt.label}</span>
                 </button>
               ))}
             </div>

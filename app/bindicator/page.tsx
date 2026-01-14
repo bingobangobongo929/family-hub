@@ -66,15 +66,15 @@ export default function BindicatorPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="page-container">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
-            <Trash2 className="w-8 h-8 text-amber-500" />
+          <h1 className="page-header flex items-center gap-3">
+            <Trash2 className="w-7 h-7 sm:w-8 sm:h-8 text-amber-500" />
             {t('bindicator.title')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('bindicator.subtitle')}</p>
+          <p className="page-subtitle">{t('bindicator.subtitle')}</p>
         </div>
 
         {/* View mode toggle */}

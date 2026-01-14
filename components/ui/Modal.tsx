@@ -42,38 +42,39 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
 
   if (!isOpen || !mounted) return null
 
+  // Mobile-first sizing: full width on mobile, constrained on larger screens
   const sizeClasses = {
-    sm: 'max-w-sm',
-    md: 'max-w-md',
-    lg: 'max-w-lg',
-    xl: 'max-w-xl',
-    '2xl': 'max-w-2xl',
-    '3xl': 'max-w-3xl',
-    '4xl': 'max-w-4xl',
-    full: 'max-w-[90vw]',
+    sm: 'max-w-[calc(100vw-2rem)] sm:max-w-sm',
+    md: 'max-w-[calc(100vw-2rem)] sm:max-w-md',
+    lg: 'max-w-[calc(100vw-2rem)] sm:max-w-lg',
+    xl: 'max-w-[calc(100vw-2rem)] sm:max-w-xl',
+    '2xl': 'max-w-[calc(100vw-2rem)] sm:max-w-2xl',
+    '3xl': 'max-w-[calc(100vw-2rem)] sm:max-w-3xl',
+    '4xl': 'max-w-[calc(100vw-2rem)] sm:max-w-4xl',
+    full: 'max-w-[calc(100vw-2rem)]',
   }
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
       <div
-        className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-slate-800 rounded-2xl shadow-2xl animate-scale-in max-h-[90vh] overflow-hidden flex flex-col`}
+        className={`relative w-full ${sizeClasses[size]} bg-white dark:bg-slate-800 rounded-t-3xl sm:rounded-2xl shadow-2xl animate-slide-up sm:animate-scale-in max-h-[90vh] sm:max-h-[85vh] overflow-hidden flex flex-col safe-bottom`}
       >
         {title && (
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
             <button
               onClick={onClose}
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors touch-target tap-highlight"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         )}
-        <div className="p-4 overflow-y-auto flex-1">{children}</div>
+        <div className="p-4 overflow-y-auto flex-1 overscroll-contain">{children}</div>
       </div>
     </div>
   )

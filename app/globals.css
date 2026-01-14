@@ -157,6 +157,47 @@ body {
     min-width: 44px;
   }
 
+  /* Larger touch targets for primary actions */
+  .touch-target-lg {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Active tap feedback */
+  .tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s ease-out, background-color 0.15s ease;
+  }
+
+  .tap-highlight:active {
+    transform: scale(0.98);
+  }
+
+  /* Page container with consistent padding */
+  .page-container {
+    @apply px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto;
+  }
+
+  /* Page header with responsive typography */
+  .page-header {
+    @apply text-2xl sm:text-3xl font-bold text-slate-800 dark:text-slate-100;
+  }
+
+  /* Page subtitle */
+  .page-subtitle {
+    @apply text-slate-500 dark:text-slate-400 mt-1 text-sm sm:text-base;
+  }
+
+  /* Form input base style for consistency */
+  .form-input {
+    @apply w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 min-h-[44px] transition-all focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500;
+  }
+
+  /* Checkbox/toggle container for larger touch area */
+  .checkbox-touch {
+    @apply relative flex items-center justify-center w-11 h-11 -m-2;
+  }
+
   /* Safe area insets for notched phones */
   .safe-top {
     padding-top: env(safe-area-inset-top, 0px);

@@ -479,7 +479,7 @@ export default function RoutinesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto">
+      <div className="page-container">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-2xl" />
@@ -489,13 +489,13 @@ export default function RoutinesPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="page-container">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('routines.title')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('routines.subtitle')}</p>
+          <h1 className="page-header">{t('routines.title')}</h1>
+          <p className="page-subtitle">{t('routines.subtitle')}</p>
         </div>
-        <Button onClick={() => setShowAddModal(true)}>
+        <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
           <Plus className="w-5 h-5 mr-2" />
           {t('routines.addRoutine')}
         </Button>

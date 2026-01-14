@@ -210,7 +210,7 @@ export default function NotesPage() {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto">
+      <div className="page-container">
         <div className="animate-pulse space-y-4">
           <div className="h-8 w-48 bg-slate-200 dark:bg-slate-700 rounded" />
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -224,13 +224,13 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="page-container">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('notes.title')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('notes.subtitle')}</p>
+          <h1 className="page-header">{t('notes.title')}</h1>
+          <p className="page-subtitle">{t('notes.subtitle')}</p>
         </div>
-        <Button onClick={() => { resetForm(); setEditingNote(null); setShowAddModal(true) }}>
+        <Button onClick={() => { resetForm(); setEditingNote(null); setShowAddModal(true) }} className="w-full sm:w-auto">
           <Plus className="w-5 h-5 mr-2" />
           {t('notes.addNote')}
         </Button>

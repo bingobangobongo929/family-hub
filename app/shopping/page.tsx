@@ -221,18 +221,18 @@ export default function ShoppingPage() {
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto flex items-center justify-center min-h-[400px]">
-        <RefreshCw className="w-8 h-8 animate-spin text-primary-500" />
+      <div className="page-container flex items-center justify-center min-h-[400px]">
+        <RefreshCw className="w-8 h-8 animate-spin text-teal-500" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8 flex items-center justify-between">
+    <div className="page-container">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">{t('shopping.title')}</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="page-header">{t('shopping.title')}</h1>
+          <p className="page-subtitle">
             {isConnected ? (
               <span className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
@@ -243,19 +243,19 @@ export default function ShoppingPage() {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {isConnected && (
             <button
               onClick={fetchShoppingList}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors min-h-[44px] tap-highlight"
             >
               <RefreshCw className="w-4 h-4" />
-              {t('shopping.refresh')}
+              <span className="hidden sm:inline">{t('shopping.refresh')}</span>
             </button>
           )}
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 bg-teal-500 text-white rounded-xl hover:bg-teal-600 transition-colors min-h-[44px] tap-highlight"
           >
             <Plus className="w-5 h-5" />
             {t('shopping.addItem')}
@@ -369,24 +369,24 @@ export default function ShoppingPage() {
                   {categoryItems.map(item => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-slate-50 transition-colors group"
+                      className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group"
                     >
                       <button
                         onClick={() => toggleItem(item.id)}
-                        className="w-5 h-5 rounded border-2 border-slate-300 hover:border-green-500 transition-colors flex items-center justify-center flex-shrink-0"
+                        className="w-7 h-7 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-teal-500 transition-colors flex items-center justify-center flex-shrink-0 tap-highlight"
                       />
-                      <span className="flex-1 text-sm text-slate-700 truncate">{item.item_name}</span>
+                      <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate">{item.item_name}</span>
                       {item.quantity && (
                         <span className="text-xs text-slate-400">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</span>
                       )}
                       {item.recipe_name && (
-                        <ChefHat className="w-3 h-3 text-purple-500 flex-shrink-0" />
+                        <ChefHat className="w-4 h-4 text-purple-500 flex-shrink-0" />
                       )}
                       <button
                         onClick={() => deleteItem(item.id)}
-                        className="p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                        className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))}
@@ -420,20 +420,20 @@ export default function ShoppingPage() {
             {checkedItems.map(item => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 py-1 px-2 -mx-2 rounded-lg bg-green-50/50 group"
+                className="flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl bg-green-50/50 dark:bg-green-900/10 group"
               >
                 <button
                   onClick={() => toggleItem(item.id)}
-                  className="w-5 h-5 rounded bg-green-500 text-white flex items-center justify-center flex-shrink-0"
+                  className="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center flex-shrink-0 tap-highlight"
                 >
-                  <Check className="w-3 h-3" />
+                  <Check className="w-4 h-4" />
                 </button>
                 <span className="flex-1 text-sm text-slate-400 line-through truncate">{item.item_name}</span>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="p-1 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+                  className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             ))}

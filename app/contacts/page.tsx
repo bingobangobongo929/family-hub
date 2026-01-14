@@ -142,14 +142,14 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="page-container">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('contacts.title')}</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('contacts.subtitle')}</p>
+          <h1 className="page-header">{t('contacts.title')}</h1>
+          <p className="page-subtitle">{t('contacts.subtitle')}</p>
         </div>
-        <Button onClick={handleOpenAdd} className="gap-2">
+        <Button onClick={handleOpenAdd} className="gap-2 w-full sm:w-auto">
           <Plus className="w-5 h-5" />
           {t('contacts.addContact')}
         </Button>
