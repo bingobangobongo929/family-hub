@@ -496,6 +496,17 @@ export const da: Translations = {
     addLink: 'Tilføj link',
     contactsTagged: '{count} kontakter tagget',
     contactTagged: '1 kontakt tagget',
+    // New family role linking
+    familyLinks: 'Knyttet til familien',
+    addFamilyRole: 'Tilføj familierolle',
+    addIndividual: 'Tilføj enkeltperson',
+    selectFamilyRole: 'Vælg deres rolle i familien',
+    customRelationship: 'Eller skriv en brugerdefineret relation...',
+    applyToAllChildren: 'Anvend på alle {count} børn',
+    willLinkTo: 'Vil blive knyttet til',
+    addLinks: 'Tilføj links',
+    selectMember: 'Vælg et familiemedlem...',
+    linkHelp: 'Knyt denne kontakt til familiemedlemmer for at gøre kalenderbegivenheder smartere',
   },
 
   // Relationship groups

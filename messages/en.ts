@@ -494,6 +494,17 @@ export const en = {
     addLink: 'Add Link',
     contactsTagged: '{count} contacts tagged',
     contactTagged: '1 contact tagged',
+    // New family role linking
+    familyLinks: 'Linked to Family',
+    addFamilyRole: 'Add Family Role',
+    addIndividual: 'Add Individual',
+    selectFamilyRole: 'Select their role in the family',
+    customRelationship: 'Or type a custom relationship...',
+    applyToAllChildren: 'Apply to all {count} children',
+    willLinkTo: 'Will link to',
+    addLinks: 'Add Links',
+    selectMember: 'Select a family member...',
+    linkHelp: 'Link this contact to family members to make calendar events smarter',
   },
 
   // Relationship groups
