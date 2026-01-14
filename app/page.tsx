@@ -58,6 +58,36 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
 const STORAGE_KEY = 'family-hub-widget-layout'
 const ACTIVE_WIDGETS_KEY = 'family-hub-active-widgets'
 
+// Generate layouts for all breakpoints from lg layout
+// Mobile layouts make widgets taller to compensate for being wider
+function generateResponsiveLayouts(lgLayout: Layout[]): Record<string, Layout[]> {
+  // For mobile (1-2 cols), stack widgets vertically with increased height
+  const generateMobileLayout = (layout: Layout[], cols: number, heightMultiplier: number): Layout[] => {
+    let currentY = 0
+    return layout.map((item) => {
+      const w = Math.min(item.w, cols) // Can't be wider than available cols
+      const h = Math.ceil(item.h * heightMultiplier) // Increase height
+      const result = {
+        ...item,
+        x: 0, // Stack in single column
+        y: currentY,
+        w: cols, // Full width on mobile
+        h,
+      }
+      currentY += h
+      return result
+    })
+  }
+
+  return {
+    lg: lgLayout,
+    md: lgLayout, // 4 cols - use same layout
+    sm: generateMobileLayout(lgLayout, 2, 1.3), // 2 cols, 30% taller
+    xs: generateMobileLayout(lgLayout, 2, 1.5), // 2 cols, 50% taller
+    xxs: generateMobileLayout(lgLayout, 1, 1.8), // 1 col, 80% taller
+  }
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const { members } = useFamily()
@@ -370,6 +400,11 @@ export default function Dashboard() {
     return activeWidgets
   }, [activeWidgets, rewardsEnabled])
 
+  // Generate responsive layouts for all breakpoints
+  const responsiveLayouts = useMemo(() => {
+    return generateResponsiveLayouts(layouts.lg)
+  }, [layouts.lg])
+
   // Available widgets that aren't active (also hide stars when rewards disabled)
   const availableToAdd = AVAILABLE_WIDGETS.filter(w => {
     if (!activeWidgets.includes(w.id)) {
@@ -490,7 +525,7 @@ export default function Dashboard() {
       <div className={isEditMode ? 'edit-mode' : ''}>
         <ResponsiveGridLayout
           className="layout"
-          layouts={layouts}
+          layouts={responsiveLayouts}
           breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
           cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
           rowHeight={rowHeight}
