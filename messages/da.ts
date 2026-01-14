@@ -111,8 +111,8 @@ export const da: Translations = {
 
   // Clock widget
   clock: {
-    week: 'Uge {number}',
-    weekShort: 'U{number}',
+    week: 'Uge',
+    weekShort: 'U',
   },
 
   // Dashboard

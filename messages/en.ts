@@ -144,8 +144,8 @@ export const en = {
 
   // Clock widget
   clock: {
-    week: 'Week {number}',
-    weekShort: 'W{number}',
+    week: 'Week',
+    weekShort: 'W',
   },
 
   // Login page
