@@ -264,7 +264,6 @@ export default function GalleryPage() {
             </Link>
           </div>
         )}
-      </div>
 
       {/* Lightbox */}
       <PhotoLightbox
