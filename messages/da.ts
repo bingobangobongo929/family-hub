@@ -41,6 +41,7 @@ export const da: Translations = {
     and: 'og',
     optional: 'valgfri',
     required: 'påkrævet',
+    emoji: 'Emoji',
   },
 
   // Time and date related
@@ -108,6 +109,12 @@ export const da: Translations = {
     switchToEnglish: 'Switch to English',
   },
 
+  // Clock widget
+  clock: {
+    week: 'Uge {number}',
+    weekShort: 'U{number}',
+  },
+
   // Dashboard
   dashboard: {
     greeting: {
@@ -122,6 +129,7 @@ export const da: Translations = {
     resetLayout: 'Nulstil layout',
     allWidgetsAdded: 'Alle widgets er allerede tilføjet!',
     dragInstructions: 'Træk widgets for at flytte, ændr størrelse fra hjørnerne',
+    editModeHint: 'Træk widgets for at flytte, ændr størrelse fra hjørnerne',
     todayCard: 'I dag',
     choresCard: 'Opgaver',
     shoppingCard: 'Indkøb',
@@ -135,6 +143,11 @@ export const da: Translations = {
     item: '1 vare',
     members: '{count} medlemmer',
     member: '1 medlem',
+    stats: {
+      events: '{count} begivenheder',
+      items: '{count} varer',
+      totalStars: 'Stjerner i alt',
+    },
   },
 
   // Login page
@@ -146,6 +159,7 @@ export const da: Translations = {
     emailPlaceholder: 'din@email.dk',
     passwordPlaceholder: 'Indtast din adgangskode',
     sameAccountNote: 'Brug samme konto som Recipe Vault',
+    sameAccountHint: 'Brug samme konto som Recipe Vault',
   },
 
   // Calendar page and widget
@@ -241,6 +255,34 @@ export const da: Translations = {
     noChores: 'Ingen opgaver endnu. Tilføj én for at komme i gang!',
   },
 
+  // Tasks (alias for chores - used on tasks page)
+  tasks: {
+    title: 'Opgaver',
+    subtitle: 'Optjen stjerner ved at udføre opgaver!',
+    todaysChores: 'Dagens opgaver',
+    addChore: 'Tilføj opgave',
+    saveChore: 'Gem opgave',
+    choreTitle: 'Opgavetitel',
+    choreTitlePlaceholder: 'Hvad skal gøres?',
+    assignTo: 'Tildel til',
+    category: 'Kategori',
+    unassigned: 'Ikke tildelt',
+    stars: 'Stjerner',
+    icon: 'Ikon',
+    repeat: 'Gentag',
+    oneTime: 'Én gang',
+    daily: 'Dagligt',
+    weekly: 'Ugentligt',
+    monthly: 'Månedligt',
+    toDo: 'At gøre',
+    done: 'Færdig',
+    allDone: 'Alt færdigt!',
+    completed: 'Udført',
+    starsToday: 'Stjerner i dag',
+    progress: 'Fremgang',
+    noChores: 'Ingen opgaver endnu. Tilføj én for at komme i gang!',
+  },
+
   // Chore categories
   choreCategories: {
     bedroom: 'Værelse',
@@ -297,14 +339,18 @@ export const da: Translations = {
   // Notes
   notes: {
     title: 'Familienoter',
+    subtitle: 'Hurtige noter og påmindelser til alle',
     pageSubtitle: 'Hurtige noter og påmindelser til alle',
     widgetTitle: 'Fastgjorte noter',
     addNote: 'Tilføj note',
     newNote: 'Ny note',
     editNote: 'Rediger note',
+    createFirst: 'Opret første note',
     createFirstNote: 'Opret første note',
     noteTitle: 'Titel (valgfri)',
+    titleOptional: 'Titel (valgfri)',
     noteTitlePlaceholder: 'Notetitel...',
+    titlePlaceholder: 'Notetitel...',
     content: 'Indhold',
     contentPlaceholder: 'Skriv din note...',
     from: 'Fra',
@@ -314,12 +360,15 @@ export const da: Translations = {
     allNotes: 'Alle noter',
     noNotes: 'Ingen noter endnu',
     noNotesDescription: 'Tilføj noter til påmindelser, lister og familiebeskeder',
+    noNotesHint: 'Tilføj noter til påmindelser, lister og familiebeskeder',
     noPinnedNotes: 'Ingen fastgjorte noter',
+    color: 'Farve',
   },
 
   // Rewards / Stars
   rewards: {
     title: 'Belønninger',
+    subtitle: 'Optjen stjerner, indløs præmier!',
     pageSubtitle: 'Optjen stjerner, indløs præmier!',
     widgetTitle: 'Stjerner',
     starLeaderboard: 'Stjerne-rangliste',
@@ -345,13 +394,27 @@ export const da: Translations = {
     rewardsDisabled: 'Belønningssystem deaktiveret',
     rewardsDisabledDescription: 'Stjerne-belønningssystemet er i øjeblikket slået fra. Når du er klar til at motivere børnene med point og præmier, kan du aktivere det i Indstillinger.',
     enableInSettings: 'Aktiver i Indstillinger',
+    goToSettings: 'Gå til Indstillinger',
+    redeemedBy: 'Indløst af {name}',
+    systemDisabled: 'Belønningssystem deaktiveret',
+    systemDisabledHint: 'Aktiver belønninger i Indstillinger for at optjene stjerner!',
+  },
+
+  // Stars (alias for rewards widget)
+  stars: {
+    title: 'Stjerner',
+    noChildren: 'Ingen børn i familien endnu',
+    rewardsDisabled: 'Belønningssystem deaktiveret',
+    enableInSettings: 'Aktiver i Indstillinger',
   },
 
   // Routines
   routines: {
     title: 'Rutiner',
+    subtitle: 'Daglige rutiner med trin-for-trin vejledning',
     pageSubtitle: 'Daglige rutiner med trin-for-trin vejledning',
     addRoutine: 'Tilføj rutine',
+    createFirst: 'Opret første rutine',
     createFirstRoutine: 'Opret første rutine',
     newRoutine: 'Ny rutine',
     editRoutine: 'Rediger rutine',
@@ -362,21 +425,34 @@ export const da: Translations = {
     typeMorning: 'Morgen',
     typeEvening: 'Aften',
     typeCustom: 'Tilpasset',
+    morning: 'Morgen',
+    evening: 'Aften',
+    custom: 'Tilpasset',
     assignedTo: 'Tildelt til',
     everyone: 'Alle',
     startTime: 'Starttid',
     steps: 'Trin',
     addStep: '+ Tilføj trin',
     stepPlaceholder: 'Trintitel...',
+    stepTitlePlaceholder: 'Trintitel...',
     progress: '{completed}/{total} færdig',
     duration: '~{duration} min',
     startsAt: 'Starter kl. {time}',
     allDone: 'Alt færdigt! Godt klaret!',
+    allDoneGreat: 'Alt færdigt! Godt klaret!',
+    done: 'Færdig',
     completionMorning: 'Hav en god dag!',
     completionEvening: 'Sov godt!',
     completionCustom: 'Godt klaret!',
+    haveGreatDay: 'Hav en god dag!',
+    sweetDreams: 'Sov godt!',
+    wellDone: 'Godt klaret!',
     noRoutines: 'Ingen rutiner endnu',
     noRoutinesDescription: 'Opret morgen- og aftenrutiner for familien',
+    noRoutinesHint: 'Opret morgen- og aftenrutiner for familien',
+    viewFull: 'Se fuld rutine',
+    reset: 'Nulstil',
+    routine: 'Rutine',
   },
 
   // Contacts
@@ -511,21 +587,51 @@ export const da: Translations = {
       name: 'Bioaffald',
       shortName: 'Bio',
       description: 'Have- og madaffald',
+      items: {
+        garden: 'Haveaffald (græs, blade, grene)',
+        food: 'Madaffald (rå og tilberedt)',
+        compostable: 'Komposterbare poser',
+      },
     },
     main: {
       name: 'Restaffald',
       shortName: 'Rest',
       description: 'Almindeligt affald',
+      items: {
+        nonRecyclable: 'Ikke-genanvendeligt affald',
+        nappies: 'Bleer og hygiejneartikler',
+        polystyrene: 'Flamingo/styropor',
+      },
     },
     paper: {
       name: 'Papiraffald',
       shortName: 'Papir',
       description: 'Papir og pap',
+      items: {
+        cardboard: 'Papkasser (foldede)',
+        newspapers: 'Aviser og blade',
+        paper: 'Papir og kuverter',
+      },
     },
     plastic: {
       name: 'PMG-genbrug',
       shortName: 'PMG',
       description: 'Plast, metal og glas',
+      items: {
+        plastic: 'Plastflasker og -beholdere',
+        metal: 'Metalkonserves og dåser',
+        glass: 'Glasflasker og -glas',
+      },
+    },
+    pmg: {
+      name: 'PMG-genbrug',
+      shortName: 'PMG',
+      description: 'Plast, metal og glas',
+      items: {
+        plastic: 'Plastflasker og -beholdere',
+        metal: 'Metalkonserves og dåser',
+        glass: 'Glasflasker og -glas',
+      },
     },
   },
 
@@ -621,6 +727,13 @@ export const da: Translations = {
     planTonight: 'Planlæg aftensmad',
   },
 
+  // Meals (alias for mealPlan)
+  meals: {
+    title: 'Madplan',
+    tonight: 'I aften',
+    planTonight: 'Planlæg aftensmad',
+  },
+
   // Announcements
   announcements: {
     title: 'Meddelelser',
@@ -674,6 +787,7 @@ export const da: Translations = {
     connectGooglePhotos: 'Forbind Google Fotos',
     photoCount: '{current} af {total}',
     noAlbumSelected: 'Intet album valgt',
+    tryAgain: 'Prøv igen',
   },
 
   // Gallery page
@@ -761,6 +875,8 @@ export const da: Translations = {
     showBirthdaysDescription: 'Vis kontakters fødselsdage som kalenderbegivenheder',
     countdownGroups: 'Nedtællings-widget grupper',
     countdownGroupsDescription: 'Vælg hvilke kontaktgrupper der vises i fødselsdags-nedtællingen',
+    countdownWidgetGroups: 'Nedtællings-widget grupper',
+    countdownWidgetGroupsDescription: 'Vælg hvilke kontaktgrupper der vises i fødselsdags-nedtællingen',
 
     // Countdown events
     countdownEventsDescription: 'Helligdage og begivenheder der vises i nedtællings-widget\'en. Familiemedlemmers fødselsdage inkluderes automatisk.',

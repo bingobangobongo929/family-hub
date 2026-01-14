@@ -39,6 +39,7 @@ export const en = {
     and: 'and',
     optional: 'optional',
     required: 'required',
+    emoji: 'Emoji',
   },
 
   // Time and date related
@@ -120,6 +121,7 @@ export const en = {
     resetLayout: 'Reset Layout',
     allWidgetsAdded: 'All widgets are already added!',
     dragInstructions: 'Drag widgets to reorder, resize from corners',
+    editModeHint: 'Drag widgets to reorder, resize from corners',
     todayCard: 'Today',
     choresCard: 'Chores',
     shoppingCard: 'Shopping',
@@ -133,6 +135,17 @@ export const en = {
     item: '1 item',
     members: '{count} members',
     member: '1 member',
+    stats: {
+      events: '{count} events',
+      items: '{count} items',
+      totalStars: 'Total Stars',
+    },
+  },
+
+  // Clock widget
+  clock: {
+    week: 'Week {number}',
+    weekShort: 'W{number}',
   },
 
   // Login page
@@ -144,6 +157,7 @@ export const en = {
     emailPlaceholder: 'your@email.com',
     passwordPlaceholder: 'Enter your password',
     sameAccountNote: 'Use the same account as Recipe Vault',
+    sameAccountHint: 'Use the same account as Recipe Vault',
   },
 
   // Calendar page and widget
@@ -239,6 +253,34 @@ export const en = {
     noChores: 'No chores yet. Add one to get started!',
   },
 
+  // Tasks (alias for chores - used on tasks page)
+  tasks: {
+    title: 'Chores',
+    subtitle: 'Earn stars by completing tasks!',
+    todaysChores: "Today's Chores",
+    addChore: 'Add Chore',
+    saveChore: 'Save Chore',
+    choreTitle: 'Chore Title',
+    choreTitlePlaceholder: 'What needs to be done?',
+    assignTo: 'Assign To',
+    category: 'Category',
+    unassigned: 'Unassigned',
+    stars: 'Stars',
+    icon: 'Icon',
+    repeat: 'Repeat',
+    oneTime: 'One time',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    toDo: 'To Do',
+    done: 'Done',
+    allDone: 'All done!',
+    completed: 'Completed',
+    starsToday: 'Stars Today',
+    progress: 'Progress',
+    noChores: 'No chores yet. Add one to get started!',
+  },
+
   // Chore categories
   choreCategories: {
     bedroom: 'Bedroom',
@@ -295,14 +337,18 @@ export const en = {
   // Notes
   notes: {
     title: 'Family Notes',
+    subtitle: 'Quick notes and reminders for everyone',
     pageSubtitle: 'Quick notes and reminders for everyone',
     widgetTitle: 'Pinned Notes',
     addNote: 'Add Note',
     newNote: 'New Note',
     editNote: 'Edit Note',
+    createFirst: 'Create First Note',
     createFirstNote: 'Create First Note',
     noteTitle: 'Title (optional)',
+    titleOptional: 'Title (optional)',
     noteTitlePlaceholder: 'Note title...',
+    titlePlaceholder: 'Note title...',
     content: 'Content',
     contentPlaceholder: 'Write your note...',
     from: 'From',
@@ -312,12 +358,15 @@ export const en = {
     allNotes: 'All Notes',
     noNotes: 'No notes yet',
     noNotesDescription: 'Add notes for reminders, lists, and family messages',
+    noNotesHint: 'Add notes for reminders, lists, and family messages',
     noPinnedNotes: 'No pinned notes',
+    color: 'Color',
   },
 
   // Rewards / Stars
   rewards: {
     title: 'Rewards',
+    subtitle: 'Earn stars, redeem prizes!',
     pageSubtitle: 'Earn stars, redeem prizes!',
     widgetTitle: 'Stars',
     starLeaderboard: 'Star Leaderboard',
@@ -343,13 +392,27 @@ export const en = {
     rewardsDisabled: 'Rewards System Disabled',
     rewardsDisabledDescription: 'The star rewards system is currently turned off. When you\'re ready to motivate the kids with points and prizes, enable it in Settings.',
     enableInSettings: 'Enable in Settings',
+    goToSettings: 'Go to Settings',
+    redeemedBy: 'Redeemed by {name}',
+    systemDisabled: 'Rewards System Disabled',
+    systemDisabledHint: 'Enable rewards in Settings to start earning stars!',
+  },
+
+  // Stars (alias for rewards widget)
+  stars: {
+    title: 'Stars',
+    noChildren: 'No children in the family yet',
+    rewardsDisabled: 'Rewards System Disabled',
+    enableInSettings: 'Enable in Settings',
   },
 
   // Routines
   routines: {
     title: 'Routines',
+    subtitle: 'Daily routines with step-by-step guidance',
     pageSubtitle: 'Daily routines with step-by-step guidance',
     addRoutine: 'Add Routine',
+    createFirst: 'Create First Routine',
     createFirstRoutine: 'Create First Routine',
     newRoutine: 'New Routine',
     editRoutine: 'Edit Routine',
@@ -360,21 +423,34 @@ export const en = {
     typeMorning: 'Morning',
     typeEvening: 'Evening',
     typeCustom: 'Custom',
+    morning: 'Morning',
+    evening: 'Evening',
+    custom: 'Custom',
     assignedTo: 'Assigned To',
     everyone: 'Everyone',
     startTime: 'Start Time',
     steps: 'Steps',
     addStep: '+ Add Step',
     stepPlaceholder: 'Step title...',
+    stepTitlePlaceholder: 'Step title...',
     progress: '{completed}/{total} done',
     duration: '~{duration} min',
     startsAt: 'Starts at {time}',
     allDone: 'All done! Great job!',
+    allDoneGreat: 'All done! Great job!',
+    done: 'Done',
     completionMorning: 'Have a great day!',
     completionEvening: 'Sweet dreams!',
     completionCustom: 'Well done!',
+    haveGreatDay: 'Have a great day!',
+    sweetDreams: 'Sweet dreams!',
+    wellDone: 'Well done!',
     noRoutines: 'No routines yet',
     noRoutinesDescription: 'Create morning and evening routines for the family',
+    noRoutinesHint: 'Create morning and evening routines for the family',
+    viewFull: 'View Full Routine',
+    reset: 'Reset',
+    routine: 'Routine',
   },
 
   // Contacts
@@ -509,21 +585,51 @@ export const en = {
       name: 'Bio Bin',
       shortName: 'Bio',
       description: 'Garden & Food Waste',
+      items: {
+        garden: 'Garden waste (grass, leaves, branches)',
+        food: 'Food waste (cooked & uncooked)',
+        compostable: 'Compostable bags',
+      },
     },
     main: {
       name: 'Main Bin',
       shortName: 'Main',
       description: 'General Waste',
+      items: {
+        nonRecyclable: 'Non-recyclable waste',
+        nappies: 'Nappies and sanitary items',
+        polystyrene: 'Polystyrene',
+      },
     },
     paper: {
       name: 'Paper Recycling',
       shortName: 'Paper',
       description: 'Paper & Cardboard',
+      items: {
+        cardboard: 'Cardboard boxes (flattened)',
+        newspapers: 'Newspapers and magazines',
+        paper: 'Paper and envelopes',
+      },
     },
     plastic: {
       name: 'PMG Recycling',
       shortName: 'PMG',
       description: 'Plastic, Metal & Glass',
+      items: {
+        plastic: 'Plastic bottles and containers',
+        metal: 'Metal cans and tins',
+        glass: 'Glass bottles and jars',
+      },
+    },
+    pmg: {
+      name: 'PMG Recycling',
+      shortName: 'PMG',
+      description: 'Plastic, Metal & Glass',
+      items: {
+        plastic: 'Plastic bottles and containers',
+        metal: 'Metal cans and tins',
+        glass: 'Glass bottles and jars',
+      },
     },
   },
 
@@ -619,6 +725,13 @@ export const en = {
     planTonight: "Plan tonight's dinner",
   },
 
+  // Meals (alias for mealPlan)
+  meals: {
+    title: 'Meal Plan',
+    tonight: 'Tonight',
+    planTonight: "Plan tonight's dinner",
+  },
+
   // Announcements
   announcements: {
     title: 'Announcements',
@@ -672,6 +785,7 @@ export const en = {
     connectGooglePhotos: 'Connect Google Photos',
     photoCount: '{current} of {total}',
     noAlbumSelected: 'No album selected',
+    tryAgain: 'Try again',
   },
 
   // Gallery page
@@ -759,6 +873,8 @@ export const en = {
     showBirthdaysDescription: 'Display contact birthdays as calendar events',
     countdownGroups: 'Countdown Widget Groups',
     countdownGroupsDescription: 'Select which contact groups appear in the birthday countdown widget',
+    countdownWidgetGroups: 'Countdown Widget Groups',
+    countdownWidgetGroupsDescription: 'Select which contact groups appear in the birthday countdown widget',
 
     // Countdown events
     countdownEventsDescription: 'Holidays and events that appear in the countdown widget. Family member birthdays are automatically included.',
