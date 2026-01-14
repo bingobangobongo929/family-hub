@@ -37,16 +37,21 @@ export default function ShoppingPage() {
   const [newItemQuantity, setNewItemQuantity] = useState('')
   const [newItemCategory, setNewItemCategory] = useState('other')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
 
   // Check if Recipe Vault Supabase is configured
   const isSupabaseConfigured = () => {
-    return process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL &&
-           process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL !== 'your-supabase-url'
+    const url = process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL
+    return url && url !== '' && url !== 'your-supabase-url' && url.includes('supabase')
   }
 
   // Fetch shopping list from Supabase
   const fetchShoppingList = async () => {
+    setConnectionError(null)
+
     if (!isSupabaseConfigured()) {
+      const url = process.env.NEXT_PUBLIC_RECIPE_VAULT_SUPABASE_URL
+      setConnectionError(`Recipe Vault not configured (URL: ${url ? url.substring(0, 20) + '...' : 'not set'})`)
       setItems(demoItems)
       setLoading(false)
       return
@@ -61,12 +66,32 @@ export default function ShoppingPage() {
 
       if (listError) {
         console.error('Error fetching list:', listError)
+        setConnectionError(`Failed to fetch list: ${listError.message}`)
         setItems(demoItems)
         setLoading(false)
         return
       }
 
-      const list = (listData as ShoppingList[] | null)?.[0]
+      let list = (listData as ShoppingList[] | null)?.[0]
+
+      // If no list exists, create one
+      if (!list) {
+        const { data: newList, error: createError } = await recipeVaultSupabase
+          .from('shopping_lists')
+          .insert({ name: 'Family Shopping List' })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('Error creating list:', createError)
+          setConnectionError(`No list found and couldn't create one: ${createError.message}`)
+          setItems(demoItems)
+          setLoading(false)
+          return
+        }
+
+        list = newList as ShoppingList
+      }
 
       if (list) {
         setListId(list.id)
@@ -82,15 +107,14 @@ export default function ShoppingPage() {
 
         if (itemsError) {
           console.error('Error fetching items:', itemsError)
+          setConnectionError(`Connected but failed to fetch items: ${itemsError.message}`)
         } else {
           setItems((itemsData as ShoppingListItem[] | null) || [])
         }
-      } else {
-        // No list found, use demo data
-        setItems(demoItems)
       }
     } catch (error) {
       console.error('Supabase error:', error)
+      setConnectionError(`Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`)
       setItems(demoItems)
     }
 
@@ -237,6 +261,11 @@ export default function ShoppingPage() {
               <span className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                 {t('shopping.connectedToRecipeVault')}
+              </span>
+            ) : connectionError ? (
+              <span className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                {connectionError}
               </span>
             ) : (
               t('shopping.demoMode')
