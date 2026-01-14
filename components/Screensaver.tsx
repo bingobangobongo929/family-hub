@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface ScreensaverProps {
   mode: 'clock' | 'photos' | 'gradient' | 'blank'
@@ -29,6 +31,8 @@ export default function Screensaver({
   sleepEnd,
   onWake
 }: ScreensaverProps) {
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [isActive, setIsActive] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [gradientIndex, setGradientIndex] = useState(0)
@@ -141,11 +145,11 @@ export default function Screensaver({
               {format(currentTime, 'HH:mm')}
             </div>
             <div className="text-4xl font-light text-slate-400 mt-4">
-              {format(currentTime, 'EEEE, MMMM d')}
+              {format(currentTime, 'EEEE, MMMM d', { locale: dateLocale })}
             </div>
           </div>
           <p className="absolute bottom-8 text-slate-600 text-sm">
-            Tap anywhere to wake
+            {t('screensaver.tapToWake')}
           </p>
         </div>
       )}
@@ -157,11 +161,11 @@ export default function Screensaver({
               {format(currentTime, 'HH:mm')}
             </div>
             <div className="text-3xl font-light text-white/80 mt-4">
-              {format(currentTime, 'EEEE, MMMM d')}
+              {format(currentTime, 'EEEE, MMMM d', { locale: dateLocale })}
             </div>
           </div>
           <p className="absolute bottom-8 text-white/40 text-sm">
-            Tap anywhere to wake
+            {t('screensaver.tapToWake')}
           </p>
         </div>
       )}
@@ -175,11 +179,11 @@ export default function Screensaver({
               {format(currentTime, 'HH:mm')}
             </div>
             <div className="text-2xl font-light text-slate-400 mt-4">
-              {format(currentTime, 'EEEE, MMMM d')}
+              {format(currentTime, 'EEEE, MMMM d', { locale: dateLocale })}
             </div>
           </div>
           <p className="absolute bottom-8 text-slate-600 text-sm">
-            Tap anywhere to wake
+            {t('screensaver.tapToWake')}
           </p>
         </div>
       )}

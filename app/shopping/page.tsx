@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import { ShoppingCart, Plus, Trash2, Check, RefreshCw, ChefHat, ExternalLink } from 'lucide-react'
 import { recipeVaultSupabase } from '@/lib/supabase'
+import { useTranslation } from '@/lib/i18n-context'
 import {
   type ShoppingList,
   type ShoppingListItem,
@@ -27,6 +28,7 @@ const demoItems: ShoppingListItem[] = [
 const CATEGORIES = Object.keys(CATEGORY_CONFIG)
 
 export default function ShoppingPage() {
+  const { t } = useTranslation()
   const [items, setItems] = useState<ShoppingListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
@@ -229,15 +231,15 @@ export default function ShoppingPage() {
     <div className="max-w-4xl mx-auto">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800">Shopping List</h1>
+          <h1 className="text-3xl font-bold text-slate-800">{t('shopping.title')}</h1>
           <p className="text-slate-500 mt-1">
             {isConnected ? (
               <span className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                Connected to Recipe Vault
+                {t('shopping.connectedToRecipeVault')}
               </span>
             ) : (
-              'Demo mode - connect Supabase for sync'
+              t('shopping.demoMode')
             )}
           </p>
         </div>
@@ -248,7 +250,7 @@ export default function ShoppingPage() {
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
-              Refresh
+              {t('shopping.refresh')}
             </button>
           )}
           <button
@@ -256,7 +258,7 @@ export default function ShoppingPage() {
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Add Item
+            {t('shopping.addItem')}
           </button>
         </div>
       </div>
@@ -264,14 +266,14 @@ export default function ShoppingPage() {
       {/* Add Item Form */}
       {showAddForm && (
         <Card className="mb-6" hover={false}>
-          <h3 className="font-semibold text-slate-800 mb-4">Add Item</h3>
+          <h3 className="font-semibold text-slate-800 mb-4">{t('shopping.addItem')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
             <input
               type="text"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addItem()}
-              placeholder="Item name..."
+              placeholder={t('shopping.itemNamePlaceholder')}
               className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
               autoFocus
             />
@@ -279,7 +281,7 @@ export default function ShoppingPage() {
               type="text"
               value={newItemQuantity}
               onChange={(e) => setNewItemQuantity(e.target.value)}
-              placeholder="Quantity (optional)"
+              placeholder={t('shopping.quantityOptional')}
               className="px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all"
             />
             <select
@@ -299,13 +301,13 @@ export default function ShoppingPage() {
               onClick={() => setShowAddForm(false)}
               className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={addItem}
               className="px-6 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
             >
-              Add
+              {t('common.add')}
             </button>
           </div>
         </Card>
@@ -315,16 +317,16 @@ export default function ShoppingPage() {
       <div className="flex gap-3 mb-4">
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-orange-100 text-orange-700">
           <ShoppingCart className="w-4 h-4" />
-          <span className="text-sm font-medium">{uncheckedItems.length} to buy</span>
+          <span className="text-sm font-medium">{t('shopping.toBuy', { count: uncheckedItems.length })}</span>
         </div>
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-green-100 text-green-700">
           <Check className="w-4 h-4" />
-          <span className="text-sm font-medium">{checkedItems.length} done</span>
+          <span className="text-sm font-medium">{t('shopping.done', { count: checkedItems.length })}</span>
         </div>
         {recipeItems.length > 0 && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-purple-100 text-purple-700">
             <ChefHat className="w-4 h-4" />
-            <span className="text-sm font-medium">{recipeItems.length} from recipes</span>
+            <span className="text-sm font-medium">{t('shopping.fromRecipes', { count: recipeItems.length })}</span>
           </div>
         )}
       </div>
@@ -339,7 +341,7 @@ export default function ShoppingPage() {
         >
           <div className="flex items-center gap-2">
             <ChefHat className="w-5 h-5 text-purple-600" />
-            <span className="text-sm font-medium text-slate-700">Add from Recipe Vault</span>
+            <span className="text-sm font-medium text-slate-700">{t('shopping.addFromRecipeVault')}</span>
           </div>
           <ExternalLink className="w-4 h-4 text-purple-500 group-hover:translate-x-0.5 transition-transform" />
         </a>
@@ -396,13 +398,13 @@ export default function ShoppingPage() {
       ) : (
         <Card className="text-center py-12" hover={false}>
           <ShoppingCart className="w-16 h-16 mx-auto mb-4 text-slate-300" />
-          <p className="text-slate-500 mb-4">Your shopping list is empty</p>
+          <p className="text-slate-500 mb-4">{t('shopping.emptyList')}</p>
           <button
             onClick={() => setShowAddForm(true)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-xl hover:bg-primary-600 transition-colors"
           >
             <Plus className="w-5 h-5" />
-            Add your first item
+            {t('shopping.addFirstItem')}
           </button>
         </Card>
       )}
@@ -412,7 +414,7 @@ export default function ShoppingPage() {
         <Card className="mt-4 p-4" hover={false}>
           <div className="flex items-center gap-2 mb-2 text-slate-500">
             <Check className="w-4 h-4" />
-            <span className="text-sm font-medium">Completed ({checkedItems.length})</span>
+            <span className="text-sm font-medium">{t('shopping.completed')} ({checkedItems.length})</span>
           </div>
           <div className="space-y-1">
             {checkedItems.map(item => (

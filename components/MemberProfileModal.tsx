@@ -8,6 +8,8 @@ import { FamilyMember, CalendarEvent } from '@/lib/database.types'
 import { AvatarDisplay } from './PhotoUpload'
 import { supabase } from '@/lib/supabase'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface MemberProfileModalProps {
   member: FamilyMember | null
@@ -17,6 +19,8 @@ interface MemberProfileModalProps {
 
 export default function MemberProfileModal({ member, isOpen, onClose }: MemberProfileModalProps) {
   const { rewardsEnabled } = useSettings()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -110,15 +114,15 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
   // Get fun fact based on role
   const getFunFact = () => {
     if (member.role === 'child') {
-      if (member.points >= 100) return { emoji: '🌟', text: 'Super Star!' }
-      if (member.points >= 50) return { emoji: '⭐', text: 'Rising Star!' }
-      if (member.points >= 25) return { emoji: '✨', text: 'Star in Training' }
-      return { emoji: '🚀', text: 'Just Getting Started!' }
+      if (member.points >= 100) return { emoji: '🌟', text: t('memberProfile.badges.superStar') }
+      if (member.points >= 50) return { emoji: '⭐', text: t('memberProfile.badges.risingStar') }
+      if (member.points >= 25) return { emoji: '✨', text: t('memberProfile.badges.starInTraining') }
+      return { emoji: '🚀', text: t('memberProfile.badges.justStarted') }
     }
     if (member.role === 'pet') {
-      return { emoji: '🐾', text: 'Best Friend' }
+      return { emoji: '🐾', text: t('memberProfile.badges.bestFriend') }
     }
-    return { emoji: '🏠', text: 'Family Captain' }
+    return { emoji: '🏠', text: t('memberProfile.badges.familyCaptain') }
   }
 
   const funFact = getFunFact()
@@ -195,17 +199,17 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
                     </p>
                     <p className="text-xs text-pink-500/70 dark:text-pink-400/70">
                       {birthdayInfo.daysUntil === 0 ? (
-                        <span className="font-bold">Today! 🎉</span>
+                        <span className="font-bold">{t('memberProfile.birthdayToday')} 🎉</span>
                       ) : birthdayInfo.daysUntil === 1 ? (
-                        <span>Tomorrow! Turning {birthdayInfo.turningAge}</span>
+                        <span>{t('memberProfile.birthdayTomorrow', { age: birthdayInfo.turningAge })}</span>
                       ) : (
-                        <span>{birthdayInfo.daysUntil} days until turning {birthdayInfo.turningAge}</span>
+                        <span>{t('memberProfile.daysUntilBirthday', { days: birthdayInfo.daysUntil, age: birthdayInfo.turningAge })}</span>
                       )}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">{birthdayInfo.age}</p>
-                    <p className="text-xs text-pink-500/70 dark:text-pink-400/70">years old</p>
+                    <p className="text-xs text-pink-500/70 dark:text-pink-400/70">{t('memberProfile.yearsOld')}</p>
                   </div>
                 </div>
               </div>
@@ -220,15 +224,15 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">
-                      Star Points
+                      {t('memberProfile.starPoints')}
                     </p>
                     <p className="text-xs text-amber-500/70 dark:text-amber-400/70">
-                      Earned from chores
+                      {t('memberProfile.earnedFromChores')}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{member.points}</p>
-                    <p className="text-xs text-amber-500/70 dark:text-amber-400/70">stars</p>
+                    <p className="text-xs text-amber-500/70 dark:text-amber-400/70">{t('memberProfile.stars')}</p>
                   </div>
                 </div>
               </div>
@@ -239,7 +243,7 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
               <div className="flex items-center gap-2 mb-3">
                 <Calendar className="w-4 h-4 text-teal-500" />
                 <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Coming Up
+                  {t('memberProfile.comingUp')}
                 </p>
               </div>
 
@@ -274,7 +278,7 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-3">
-                  No upcoming events
+                  {t('memberProfile.noUpcomingEvents')}
                 </p>
               )}
             </div>

@@ -3,6 +3,7 @@ import { Inter, Poppins } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import { ThemeProvider } from '@/lib/theme-context'
+import { I18nProvider } from '@/lib/i18n-context'
 import { FamilyProvider } from '@/lib/family-context'
 import { SettingsProvider } from '@/lib/settings-context'
 import { CategoriesProvider } from '@/lib/categories-context'
@@ -37,21 +38,23 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${poppins.variable} font-sans`}>
         <ThemeProvider>
-          <AuthProvider>
-            <FamilyProvider>
-              <SettingsProvider>
-                <CategoriesProvider>
-                  <ContactsProvider>
-                    <EditModeProvider>
-                      <AppLayout>
-                        {children}
-                      </AppLayout>
-                    </EditModeProvider>
-                  </ContactsProvider>
-                </CategoriesProvider>
-              </SettingsProvider>
-            </FamilyProvider>
-          </AuthProvider>
+          <I18nProvider>
+            <AuthProvider>
+              <FamilyProvider>
+                <SettingsProvider>
+                  <CategoriesProvider>
+                    <ContactsProvider>
+                      <EditModeProvider>
+                        <AppLayout>
+                          {children}
+                        </AppLayout>
+                      </EditModeProvider>
+                    </ContactsProvider>
+                  </CategoriesProvider>
+                </SettingsProvider>
+              </FamilyProvider>
+            </AuthProvider>
+          </I18nProvider>
         </ThemeProvider>
       </body>
     </html>

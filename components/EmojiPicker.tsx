@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { X } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface EmojiPickerProps {
   value: string
@@ -80,6 +81,7 @@ const EMOJI_CATEGORIES = {
 type CategoryKey = keyof typeof EMOJI_CATEGORIES
 
 export default function EmojiPicker({ value, onChange, onClose }: EmojiPickerProps) {
+  const { t } = useTranslation()
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('people')
 
   const handleSelect = (emoji: string) => {
@@ -92,7 +94,7 @@ export default function EmojiPicker({ value, onChange, onClose }: EmojiPickerPro
       {/* Header */}
       <div className="flex items-center justify-between p-3 border-b border-slate-200 dark:border-slate-700">
         <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
-          Choose an emoji
+          {t('emojiPicker.title')}
         </span>
         <button
           onClick={onClose}
@@ -143,13 +145,13 @@ export default function EmojiPicker({ value, onChange, onClose }: EmojiPickerPro
       {/* Selected preview */}
       {value && (
         <div className="p-3 border-t border-slate-200 dark:border-slate-700 flex items-center gap-2">
-          <span className="text-sm text-slate-500 dark:text-slate-400">Selected:</span>
+          <span className="text-sm text-slate-500 dark:text-slate-400">{t('emojiPicker.selected')}</span>
           <span className="text-3xl">{value}</span>
           <button
             onClick={() => onChange('')}
             className="ml-auto text-xs text-slate-500 hover:text-red-500 transition-colors"
           >
-            Clear
+            {t('emojiPicker.clear')}
           </button>
         </div>
       )}

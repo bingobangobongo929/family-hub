@@ -14,9 +14,13 @@ import {
   formatCollectionDate,
 } from '@/lib/bin-schedule'
 import Link from 'next/link'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 export default function BindicatorWidget() {
   const [ref, { size, isWide }] = useWidgetSize()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
 
   // Get upcoming collections for next 14 days
   const upcoming = useMemo(() => getUpcomingCollections(14), [])
@@ -70,11 +74,11 @@ export default function BindicatorWidget() {
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <h3 className={`${titleSize} font-semibold text-slate-700 dark:text-slate-200`}>
-              Bindicator
+              {t('bindicator.title')}
             </h3>
             {todayBins.length > 0 && (
               <span className="px-2 py-0.5 bg-red-500 text-white text-xs rounded-full font-medium animate-pulse">
-                Put out tonight!
+                {t('bindicator.putOutTonight')}
               </span>
             )}
           </div>
@@ -100,11 +104,11 @@ export default function BindicatorWidget() {
                     {bin.shortName}
                   </span>
                   <span className={`${daysSize} font-bold ${urgencyStyles.text}`}>
-                    {bin.daysUntil === 0 ? 'Today!' : bin.daysUntil === 1 ? '1d' : `${bin.daysUntil}d`}
+                    {bin.daysUntil === 0 ? t('bindicator.today') : bin.daysUntil === 1 ? `1${t('bindicator.daysShort')}` : `${bin.daysUntil}${t('bindicator.daysShort')}`}
                   </span>
                   {bin.nextDate && (
                     <span className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      {bin.nextDate.toLocaleDateString('en-GB', { weekday: 'short' })}
+                      {bin.nextDate.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { weekday: 'short' })}
                     </span>
                   )}
                 </div>
@@ -128,7 +132,7 @@ export default function BindicatorWidget() {
               : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
           }`}>
             <div className="font-semibold text-sm">
-              {todayBins.length > 0 ? 'Put out tonight!' : 'Put out tomorrow!'}
+              {todayBins.length > 0 ? t('bindicator.putOutTonight') : t('bindicator.putOutTomorrow')}
             </div>
             <div className="flex justify-center gap-1 mt-1">
               {(todayBins.length > 0 ? todayBins : tomorrowBins).map(bin => (
@@ -161,12 +165,12 @@ export default function BindicatorWidget() {
                   </p>
                   {bin.nextDate && size !== 'small' && (
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {bin.nextDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+                      {bin.nextDate.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
                     </p>
                   )}
                 </div>
                 <div className={`font-bold ${urgencyStyles.text} ${size === 'small' ? 'text-sm' : 'text-base'}`}>
-                  {bin.daysUntil === 0 ? 'Today' : bin.daysUntil === 1 ? '1d' : `${bin.daysUntil}d`}
+                  {bin.daysUntil === 0 ? t('bindicator.today') : bin.daysUntil === 1 ? `1${t('bindicator.daysShort')}` : `${bin.daysUntil}${t('bindicator.daysShort')}`}
                 </div>
               </div>
             )
@@ -177,7 +181,7 @@ export default function BindicatorWidget() {
         {upcoming.length > 0 && size !== 'small' && (
           <div className="mt-2 pt-2 border-t border-amber-200 dark:border-slate-600">
             <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-              Next: {formatCollectionDate(upcoming[0].date)} ({upcoming[0].bins.map(b => getBinInfo(b).emoji).join('')})
+              {t('bindicator.nextCollection')}: {formatCollectionDate(upcoming[0].date, locale)} ({upcoming[0].bins.map(b => getBinInfo(b).emoji).join('')})
             </p>
           </div>
         )}

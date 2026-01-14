@@ -3,18 +3,20 @@
 import { Star, Trophy, Gift } from 'lucide-react'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
 
 export default function StarsWidget() {
   const { members } = useFamily()
   const { rewardsEnabled } = useSettings()
+  const { t } = useTranslation()
 
   // If rewards disabled, show a placeholder
   if (!rewardsEnabled) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark text-center">
         <Gift className="w-8 h-8 text-slate-300 dark:text-slate-600 mb-2" />
-        <p className="text-sm text-slate-400 dark:text-slate-500">Rewards disabled</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Enable in Settings</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500">{t('stars.rewardsDisabled')}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{t('stars.enableInSettings')}</p>
       </div>
     )
   }
@@ -28,7 +30,7 @@ export default function StarsWidget() {
     <div className="h-full flex flex-col p-4 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
       <div className="flex items-center gap-2 mb-3">
         <Trophy className="w-4 h-4 text-amber-500" />
-        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Stars</h3>
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">{t('stars.title')}</h3>
       </div>
 
       <div className="flex-1 space-y-2">
@@ -64,7 +66,7 @@ export default function StarsWidget() {
 
         {kids.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-slate-400 dark:text-slate-500">No children added yet</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('stars.noChildren')}</p>
           </div>
         )}
       </div>

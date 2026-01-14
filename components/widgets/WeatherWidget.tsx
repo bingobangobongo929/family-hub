@@ -2,6 +2,7 @@
 
 import { CloudSun, Sun, Cloud, CloudRain, Snowflake, Wind, Droplets } from 'lucide-react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
+import { useTranslation } from '@/lib/i18n-context'
 
 // Demo weather data
 const DEMO_WEATHER = {
@@ -47,8 +48,9 @@ const getWeatherIcon = (condition: string, className: string = 'w-10 h-10') => {
 
 export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' | 'fahrenheit' }) {
   const [ref, { size, isWide, isTall, width, height }] = useWidgetSize()
+  const { t } = useTranslation()
 
-  const convertTemp = (t: number) => unit === 'fahrenheit' ? Math.round(t * 9/5 + 32) : t
+  const convertTemp = (temp: number) => unit === 'fahrenheit' ? Math.round(temp * 9/5 + 32) : temp
   const temp = convertTemp(DEMO_WEATHER.temp)
   const unitLabel = unit === 'fahrenheit' ? 'F' : 'C'
 
@@ -116,7 +118,7 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
             <span>{DEMO_WEATHER.wind}km/h</span>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-            <span className="text-teal-500 text-[10px]">Feels</span>
+            <span className="text-teal-500 text-[10px]">{t('weather.feels')}</span>
             <span>{convertTemp(DEMO_WEATHER.feelsLike)}°</span>
           </div>
         </div>
@@ -125,7 +127,7 @@ export default function WeatherWidget({ unit = 'celsius' }: { unit?: 'celsius' |
       {/* Hourly forecast (for tall widgets like 2x3) */}
       {showHourly && (
         <div className="flex-1 flex flex-col gap-1 min-h-0 overflow-hidden">
-          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1">Hourly</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mb-1">{t('weather.hourly')}</p>
           {DEMO_WEATHER.hourly.slice(0, hourlyCount).map((hour, i) => (
             <div
               key={hour.time}

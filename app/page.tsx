@@ -30,6 +30,7 @@ import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useEditMode } from '@/lib/edit-mode-context'
 import { DEFAULT_SETTINGS, DASHBOARD_GRADIENTS } from '@/lib/database.types'
+import { useTranslation } from '@/lib/i18n-context'
 
 const ResponsiveGridLayout = WidthProvider(Responsive)
 
@@ -62,6 +63,7 @@ export default function Dashboard() {
   const { members } = useFamily()
   const { rewardsEnabled } = useSettings()
   const { isEditMode, setIsEditMode } = useEditMode()
+  const { t } = useTranslation()
   const [shoppingCount, setShoppingCount] = useState(0)
   const [choreStats, setChoreStats] = useState({ completed: 0, total: 0 })
   const [eventCount, setEventCount] = useState(0)
@@ -251,7 +253,7 @@ export default function Dashboard() {
   const gradientClass = gradientConfig?.class || ''
 
   if (!mounted) {
-    return <div className="max-w-7xl mx-auto animate-pulse">Loading...</div>
+    return <div className="max-w-7xl mx-auto animate-pulse">{t('common.loading')}</div>
   }
 
   return (
@@ -260,9 +262,9 @@ export default function Dashboard() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-semibold text-slate-800 dark:text-slate-100">
-            Good <span className="text-teal-600 dark:text-teal-400">{getTimeOfDay()}</span>!
+            {t(`dashboard.greeting.${getTimeOfDay()}`)}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Here's what's happening with your family today.</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <button
           onClick={() => setIsEditMode(!isEditMode)}
@@ -273,7 +275,7 @@ export default function Dashboard() {
           } shadow-card`}
         >
           {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
-          {isEditMode ? 'Done' : 'Edit'}
+          {isEditMode ? t('common.done') : t('common.edit')}
         </button>
       </div>
 
@@ -284,8 +286,8 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <Calendar className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-teal-100 text-sm font-medium">Today</p>
-                <p className="text-2xl font-bold">{loading ? '...' : eventCount} events</p>
+                <p className="text-teal-100 text-sm font-medium">{t('common.today')}</p>
+                <p className="text-2xl font-bold">{loading ? '...' : t('dashboard.stats.events', { count: eventCount })}</p>
               </div>
             </div>
           </div>
@@ -296,7 +298,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <CheckSquare className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-emerald-100 text-sm font-medium">Chores</p>
+                <p className="text-emerald-100 text-sm font-medium">{t('chores.title')}</p>
                 <p className="text-2xl font-bold">{loading ? '...' : `${choreStats.completed}/${choreStats.total}`}</p>
               </div>
             </div>
@@ -308,8 +310,8 @@ export default function Dashboard() {
             <div className="flex items-center gap-3">
               <ShoppingCart className="w-8 h-8 opacity-90" />
               <div>
-                <p className="text-coral-100 text-sm font-medium">Shopping</p>
-                <p className="text-2xl font-bold">{loading ? '...' : shoppingCount} items</p>
+                <p className="text-coral-100 text-sm font-medium">{t('shopping.title')}</p>
+                <p className="text-2xl font-bold">{loading ? '...' : t('dashboard.stats.items', { count: shoppingCount })}</p>
               </div>
             </div>
           </div>
@@ -321,7 +323,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <Star className="w-8 h-8 opacity-90" />
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Total Stars</p>
+                  <p className="text-purple-100 text-sm font-medium">{t('dashboard.stats.totalStars')}</p>
                   <p className="text-2xl font-bold">{totalStars}</p>
                 </div>
               </div>
@@ -333,7 +335,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <Star className="w-8 h-8 opacity-90" />
                 <div>
-                  <p className="text-purple-100 text-sm font-medium">Family</p>
+                  <p className="text-purple-100 text-sm font-medium">{t('nav.family')}</p>
                   <p className="text-2xl font-bold">{members.length}</p>
                 </div>
               </div>
@@ -350,17 +352,17 @@ export default function Dashboard() {
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
-            Add Widget
+            {t('dashboard.addWidget')}
           </button>
           <button
             onClick={resetLayout}
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
           >
             <RotateCcw className="w-4 h-4" />
-            Reset Layout
+            {t('dashboard.resetLayout')}
           </button>
           <span className="text-sm text-slate-500 dark:text-slate-400 ml-auto">
-            Drag widgets to reorder, resize from corners
+            {t('dashboard.editModeHint')}
           </span>
         </div>
       )}
@@ -408,7 +410,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl max-w-lg w-full max-h-[80vh] overflow-hidden animate-scale-in">
             <div className="p-5 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="font-display text-xl font-semibold text-slate-800 dark:text-slate-100">Add Widget</h2>
+              <h2 className="font-display text-xl font-semibold text-slate-800 dark:text-slate-100">{t('dashboard.addWidget')}</h2>
               <button
                 onClick={() => setShowWidgetPicker(false)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition-colors"
@@ -419,7 +421,7 @@ export default function Dashboard() {
             <div className="p-5 overflow-y-auto max-h-[60vh]">
               {availableToAdd.length === 0 ? (
                 <p className="text-center text-slate-500 dark:text-slate-400 py-8">
-                  All widgets are already added!
+                  {t('dashboard.allWidgetsAdded')}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
@@ -458,6 +460,7 @@ function getTimeOfDay() {
 
 // Quick Routine Widget (inline for dashboard)
 function QuickRoutineWidget() {
+  const { t } = useTranslation()
   const [routineTime, setRoutineTime] = useState<'morning' | 'evening'>(() => {
     const hour = new Date().getHours()
     return hour < 14 ? 'morning' : 'evening'
@@ -512,7 +515,7 @@ function QuickRoutineWidget() {
             <Moon className="w-4 h-4 text-indigo-500" />
           )}
           <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-            {routineTime === 'morning' ? 'Morning' : 'Evening'} Routine
+            {routineTime === 'morning' ? t('routines.morning') : t('routines.evening')} {t('routines.routine')}
           </h3>
         </div>
         <div className="flex items-center gap-1">
@@ -556,7 +559,7 @@ function QuickRoutineWidget() {
 
       {progress === steps.length && (
         <div className="mt-2 text-center text-sm text-teal-600 dark:text-teal-400 font-medium">
-          All done! Great job!
+          {t('routines.allDone')}
         </div>
       )}
 
@@ -564,7 +567,7 @@ function QuickRoutineWidget() {
         href="/routines"
         className="mt-2 text-center text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium"
       >
-        View full routines
+        {t('routines.viewFull')}
       </Link>
     </div>
   )

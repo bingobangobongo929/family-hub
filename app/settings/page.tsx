@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
 import { useFamily } from '@/lib/family-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS, CountdownEvent, CountdownEventType, COUNTDOWN_EVENT_TYPES, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
 import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
   const { members, refreshMembers, reorderMembers } = useFamily()
+  const { t } = useTranslation()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
   const [showMemberModal, setShowMemberModal] = useState(false)
@@ -564,24 +566,24 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Settings</h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">Customize your Family Hub</p>
+        <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('settings.title')}</h1>
+        <p className="text-slate-500 dark:text-slate-400 mt-1">{t('settings.subtitle')}</p>
       </div>
 
       {/* Appearance */}
       <Card className="mb-6">
-        <CardHeader title="Appearance" icon={<Sun className="w-5 h-5" />} />
+        <CardHeader title={t('settings.appearance')} icon={<Sun className="w-5 h-5" />} />
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-800 dark:text-slate-100">Theme</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Choose your preferred color scheme</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.theme')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.themeDescription')}</p>
             </div>
             <div className="flex gap-2">
               {[
-                { id: 'light', icon: Sun, label: 'Light' },
-                { id: 'dark', icon: Moon, label: 'Dark' },
-                { id: 'system', icon: Monitor, label: 'System' }
+                { id: 'light', icon: Sun, label: t('settings.themeLight') },
+                { id: 'dark', icon: Moon, label: t('settings.themeDark') },
+                { id: 'system', icon: Monitor, label: t('settings.themeSystem') }
               ].map(opt => (
                 <button
                   key={opt.id}
@@ -603,10 +605,10 @@ export default function SettingsPage() {
 
       {/* Dashboard Background */}
       <Card className="mb-6">
-        <CardHeader title="Dashboard Background" icon={<Palette className="w-5 h-5" />} />
+        <CardHeader title={t('settings.dashboardBackground')} icon={<Palette className="w-5 h-5" />} />
         <div className="mt-4 space-y-4">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Choose a background style for your dashboard
+            {t('settings.dashboardBackgroundDescription')}
           </p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {DASHBOARD_GRADIENTS.map(gradient => (
@@ -631,12 +633,12 @@ export default function SettingsPage() {
 
       {/* Features */}
       <Card className="mb-6">
-        <CardHeader title="Features" icon={<Sparkles className="w-5 h-5" />} />
+        <CardHeader title={t('settings.features')} icon={<Sparkles className="w-5 h-5" />} />
         <div className="mt-4 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-800 dark:text-slate-100">Rewards System</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Enable stars and points for completing chores</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.rewardsSystem')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.rewardsSystemDescription')}</p>
             </div>
             <button
               onClick={() => updateSetting('rewards_enabled', !settings.rewards_enabled)}
@@ -654,8 +656,8 @@ export default function SettingsPage() {
 
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-800 dark:text-slate-100">Calendar AI Model</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">AI for smart calendar entry</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.calendarAiModel')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.calendarAiModelDescription')}</p>
             </div>
             <div className="flex gap-2">
               {[
@@ -681,7 +683,7 @@ export default function SettingsPage() {
 
       {/* Calendar Integrations */}
       <Card className="mb-6">
-        <CardHeader title="Calendar Integrations" icon={<Calendar className="w-5 h-5" />} />
+        <CardHeader title={t('settings.calendarIntegrations')} icon={<Calendar className="w-5 h-5" />} />
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
             <div className="flex items-center gap-4">
@@ -694,14 +696,14 @@ export default function SettingsPage() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-slate-800 dark:text-slate-100">Google Calendar</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.googleCalendar')}</p>
                 {googleConnected ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 dark:text-green-400">Connected: {googleEmail}</span>
+                    <span className="text-sm text-green-600 dark:text-green-400">{t('settings.connected')}: {googleEmail}</span>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Sync your family calendar</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.syncYourCalendar')}</p>
                 )}
               </div>
             </div>
@@ -731,18 +733,18 @@ export default function SettingsPage() {
             ) : (
               <Button size="sm" onClick={handleConnectGoogle} disabled={!user}>
                 <Link className="w-4 h-4 mr-2" />
-                Connect
+                {t('settings.connect')}
               </Button>
             )}
           </div>
           {googleLastSync && (
             <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
-              Last synced: {new Date(googleLastSync).toLocaleString()}
+              {t('settings.lastSynced')}: {new Date(googleLastSync).toLocaleString()}
             </p>
           )}
           {!user && (
             <p className="text-sm text-amber-600 dark:text-amber-400">
-              Sign in to connect Google Calendar
+              {t('settings.signInToConnect')}
             </p>
           )}
 
@@ -750,8 +752,8 @@ export default function SettingsPage() {
           {googleConnected && (
             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700 mt-4">
               <div>
-                <p className="font-medium text-slate-800 dark:text-slate-100">Auto-Push to Google</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Automatically sync new events to Google Calendar</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.autoPushToGoogle')}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.autoPushDescription')}</p>
               </div>
               <button
                 onClick={() => updateSetting('google_calendar_auto_push', !settings.google_calendar_auto_push)}
@@ -772,7 +774,7 @@ export default function SettingsPage() {
 
       {/* Google Photos Integration */}
       <Card className="mb-6">
-        <CardHeader title="Google Photos" icon={<ImageIcon className="w-5 h-5" />} />
+        <CardHeader title={t('settings.googlePhotos')} icon={<ImageIcon className="w-5 h-5" />} />
         <div className="mt-4 space-y-4">
           {/* Connection status */}
           <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
@@ -787,14 +789,14 @@ export default function SettingsPage() {
                 </svg>
               </div>
               <div>
-                <p className="font-medium text-slate-800 dark:text-slate-100">Google Photos</p>
+                <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.googlePhotos')}</p>
                 {googlePhotosConnected ? (
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-500" />
-                    <span className="text-sm text-green-600 dark:text-green-400">Connected: {googlePhotosEmail}</span>
+                    <span className="text-sm text-green-600 dark:text-green-400">{t('settings.connected')}: {googlePhotosEmail}</span>
                   </div>
                 ) : (
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Display your family photos</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.displayYourPhotos')}</p>
                 )}
               </div>
             </div>
@@ -806,7 +808,7 @@ export default function SettingsPage() {
                 className="text-red-600 hover:text-red-700"
               >
                 <Unlink className="w-4 h-4 mr-1" />
-                Disconnect
+                {t('settings.disconnect')}
               </Button>
             ) : (
               <Button
@@ -815,7 +817,7 @@ export default function SettingsPage() {
                 className="gap-2"
               >
                 <Link className="w-4 h-4" />
-                Connect
+                {t('settings.connect')}
               </Button>
             )}
           </div>
@@ -868,12 +870,12 @@ export default function SettingsPage() {
 
       {/* Birthday Settings */}
       <Card className="mb-6">
-        <CardHeader title="Birthday Settings" icon={<Cake className="w-5 h-5" />} />
+        <CardHeader title={t('settings.birthdaySettings')} icon={<Cake className="w-5 h-5" />} />
         <div className="mt-4 space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-800 dark:text-slate-100">Show Birthdays on Calendar</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Display contact birthdays as calendar events</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.showBirthdaysOnCalendar')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.showBirthdaysDescription')}</p>
             </div>
             <button
               onClick={() => updateSetting('show_birthdays_on_calendar', !settings.show_birthdays_on_calendar)}
@@ -891,8 +893,8 @@ export default function SettingsPage() {
 
           <div>
             <div className="mb-3">
-              <p className="font-medium text-slate-800 dark:text-slate-100">Countdown Widget Groups</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Select which contact groups appear in the birthday countdown widget</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.countdownWidgetGroups')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.countdownWidgetGroupsDescription')}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               {RELATIONSHIP_GROUPS.map(group => {
@@ -1121,10 +1123,10 @@ export default function SettingsPage() {
       {/* Family Members */}
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <CardHeader title="Family Members" icon={<Users className="w-5 h-5" />} />
+          <CardHeader title={t('settings.familyMembers')} icon={<Users className="w-5 h-5" />} />
           <Button size="sm" onClick={() => { resetMemberForm(); setEditingMember(null); setShowMemberModal(true) }}>
             <Plus className="w-4 h-4 mr-1" />
-            Add Member
+            {t('settings.addMember')}
           </Button>
         </div>
         <div className="space-y-3">
@@ -1198,15 +1200,15 @@ export default function SettingsPage() {
       {/* Account */}
       {user && (
         <Card>
-          <CardHeader title="Account" icon={<Settings className="w-5 h-5" />} />
+          <CardHeader title={t('settings.account')} icon={<Settings className="w-5 h-5" />} />
           <div className="mt-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium text-slate-800 dark:text-slate-100">{user.email}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Signed in</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.signedIn')}</p>
               </div>
               <Button variant="secondary" onClick={() => signOut()}>
-                Sign Out
+                {t('settings.signOut')}
               </Button>
             </div>
           </div>
@@ -1217,7 +1219,7 @@ export default function SettingsPage() {
       <Modal
         isOpen={showMemberModal}
         onClose={() => { setShowMemberModal(false); setEditingMember(null); resetMemberForm() }}
-        title={editingMember ? 'Edit Family Member' : 'Add Family Member'}
+        title={editingMember ? t('settings.editFamilyMember') : t('settings.addFamilyMember')}
       >
         <div className="space-y-4">
           <div>

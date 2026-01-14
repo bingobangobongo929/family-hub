@@ -3,10 +3,14 @@
 import { useState, useEffect } from 'react'
 import { format, getISOWeek } from 'date-fns'
 import { useWidgetSize } from '@/lib/useWidgetSize'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 export default function ClockWidget() {
   const [time, setTime] = useState(new Date())
   const [ref, { size, isWide, isTall }] = useWidgetSize()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
 
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 1000)
@@ -46,15 +50,15 @@ export default function ClockWidget() {
         {format(time, timeFormat)}
       </div>
       <div className={`${dateSize} text-slate-500 dark:text-slate-400 mt-2 text-center font-medium`}>
-        {format(time, 'EEEE, MMMM d')}
+        {format(time, 'EEEE, MMMM d', { locale: dateLocale })}
         {showYear && <span className="ml-1">{format(time, 'yyyy')}</span>}
         {showWeekInline && (
-          <span className="ml-2 text-teal-600 dark:text-teal-400">W{weekNumber}</span>
+          <span className="ml-2 text-teal-600 dark:text-teal-400">{t('clock.weekShort')}{weekNumber}</span>
         )}
       </div>
       {showWeekBadge && (
         <div className="mt-4 text-xs text-teal-600 dark:text-teal-400 font-medium bg-teal-50 dark:bg-teal-900/30 px-3 py-1 rounded-full">
-          Week {weekNumber}
+          {t('clock.week')} {weekNumber}
         </div>
       )}
     </div>

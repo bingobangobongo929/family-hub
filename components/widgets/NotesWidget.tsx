@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Pin } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { Note } from '@/lib/database.types'
 
 // Demo notes
@@ -14,6 +15,7 @@ const DEMO_NOTES: Note[] = [
 
 export default function NotesWidget() {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const [notes, setNotes] = useState<Note[]>([])
 
   const fetchNotes = useCallback(async () => {
@@ -47,7 +49,7 @@ export default function NotesWidget() {
     <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
       <div className="flex items-center gap-2 mb-3">
         <Pin className="w-4 h-4 text-teal-500" />
-        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Pinned Notes</h3>
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">{t('notes.widgetTitle')}</h3>
       </div>
 
       <div className="flex-1 space-y-2 overflow-hidden">
@@ -66,7 +68,7 @@ export default function NotesWidget() {
 
         {notes.length === 0 && (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-slate-400 dark:text-slate-500">No pinned notes</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('notes.noPinnedNotes')}</p>
           </div>
         )}
       </div>

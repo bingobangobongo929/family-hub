@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Image, Settings, Loader2, RefreshCw, ChevronLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
 import Button from '@/components/ui/Button'
 import PhotoLightbox from '@/components/PhotoLightbox'
 
@@ -20,6 +21,7 @@ interface Photo {
 export default function GalleryPage() {
   const { user } = useAuth()
   const { googlePhotosAlbumId, googlePhotosAlbumTitle } = useSettings()
+  const { t } = useTranslation()
 
   const [photos, setPhotos] = useState<Photo[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -116,7 +118,7 @@ export default function GalleryPage() {
               <ChevronLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
             </Link>
             <h1 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100">
-              Photo Gallery
+              {t('gallery.title')}
             </h1>
           </div>
 
@@ -126,17 +128,17 @@ export default function GalleryPage() {
               <Image className="w-10 h-10 text-slate-400" />
             </div>
             <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-2">
-              {!user ? 'Sign in to view photos' : 'Connect Google Photos'}
+              {!user ? t('gallery.signInToView') : t('gallery.connectGooglePhotos')}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
               {!user
-                ? 'Sign in to your account to connect Google Photos and view your family albums.'
-                : 'Go to Settings to connect your Google Photos account and select an album to display.'}
+                ? t('gallery.signInDescription')
+                : t('gallery.connectDescription')}
             </p>
             <Link href="/settings">
               <Button className="gap-2">
                 <Settings className="w-4 h-4" />
-                Go to Settings
+                {t('gallery.goToSettings')}
               </Button>
             </Link>
           </div>
@@ -159,10 +161,10 @@ export default function GalleryPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-display font-bold text-slate-800 dark:text-slate-100">
-                {googlePhotosAlbumTitle || 'Photo Gallery'}
+                {googlePhotosAlbumTitle || t('gallery.title')}
               </h1>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {photos.length} photos
+                {t('gallery.photoCount', { count: photos.length })}
               </p>
             </div>
           </div>
@@ -192,7 +194,7 @@ export default function GalleryPage() {
               onClick={() => fetchPhotos()}
               className="ml-2 underline hover:no-underline"
             >
-              Try again
+              {t('common.tryAgain')}
             </button>
           </div>
         )}
@@ -216,7 +218,7 @@ export default function GalleryPage() {
                 >
                   <img
                     src={getThumbnailUrl(photo)}
-                    alt={photo.description || 'Photo'}
+                    alt={photo.description || t('gallery.photo')}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     loading="lazy"
                   />
@@ -235,10 +237,10 @@ export default function GalleryPage() {
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Loading...
+                      {t('common.loading')}
                     </>
                   ) : (
-                    'Load more photos'
+                    t('gallery.loadMore')
                   )}
                 </Button>
               </div>
@@ -253,14 +255,14 @@ export default function GalleryPage() {
               <Image className="w-8 h-8 text-slate-400" />
             </div>
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
-              No photos in this album
+              {t('gallery.noPhotos')}
             </h2>
             <p className="text-slate-500 dark:text-slate-400 mb-4">
-              This album appears to be empty. Select a different album in Settings.
+              {t('gallery.noPhotosDescription')}
             </p>
             <Link href="/settings">
               <Button variant="secondary" size="sm">
-                Change Album
+                {t('gallery.changeAlbum')}
               </Button>
             </Link>
           </div>

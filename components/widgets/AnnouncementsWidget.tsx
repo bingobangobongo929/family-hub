@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Megaphone, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useFamily } from '@/lib/family-context'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface Announcement {
   id: string
@@ -21,13 +22,14 @@ const DEMO_ANNOUNCEMENTS: Announcement[] = [
 
 export default function AnnouncementsWidget() {
   const { getMember } = useFamily()
+  const { t } = useTranslation()
   const [announcements] = useState<Announcement[]>(DEMO_ANNOUNCEMENTS)
   const [currentIndex, setCurrentIndex] = useState(0)
 
   if (announcements.length === 0) {
     return (
       <div className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
-        <p className="text-slate-500 dark:text-slate-400 text-sm">No announcements</p>
+        <p className="text-slate-500 dark:text-slate-400 text-sm">{t('announcements.noAnnouncements')}</p>
       </div>
     )
   }
@@ -46,7 +48,7 @@ export default function AnnouncementsWidget() {
     }`}>
       <div className="flex items-center gap-2 mb-3">
         <Megaphone className={`w-4 h-4 ${current.priority === 'important' ? 'text-rose-500' : 'text-teal-500'}`} />
-        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Announcements</h3>
+        <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">{t('announcements.title')}</h3>
         {announcements.length > 1 && (
           <span className="text-xs text-slate-500 ml-auto">
             {currentIndex + 1}/{announcements.length}

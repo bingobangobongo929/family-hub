@@ -8,6 +8,7 @@ import { StickyNote, Plus, Pin, Edit2, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { Note, NOTE_COLORS } from '@/lib/database.types'
 
 // Demo notes
@@ -23,6 +24,7 @@ const DEMO_NOTES: Note[] = [
 export default function NotesPage() {
   const { user } = useAuth()
   const { members, getMember } = useFamily()
+  const { t } = useTranslation()
   const [notes, setNotes] = useState<Note[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -225,12 +227,12 @@ export default function NotesPage() {
     <div className="max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Family Notes</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Quick notes and reminders for everyone</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('notes.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('notes.subtitle')}</p>
         </div>
         <Button onClick={() => { resetForm(); setEditingNote(null); setShowAddModal(true) }}>
           <Plus className="w-5 h-5 mr-2" />
-          Add Note
+          {t('notes.addNote')}
         </Button>
       </div>
 
@@ -239,7 +241,7 @@ export default function NotesPage() {
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
             <Pin className="w-5 h-5" />
-            Pinned
+            {t('notes.pinned')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {pinnedNotes.map(note => (
@@ -261,7 +263,7 @@ export default function NotesPage() {
         {pinnedNotes.length > 0 && unpinnedNotes.length > 0 && (
           <h2 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
             <StickyNote className="w-5 h-5" />
-            All Notes
+            {t('notes.allNotes')}
           </h2>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -281,11 +283,11 @@ export default function NotesPage() {
       {notes.length === 0 && (
         <Card className="text-center py-12">
           <StickyNote className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">No notes yet</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">Add notes for reminders, lists, and family messages</p>
+          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">{t('notes.noNotes')}</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{t('notes.noNotesHint')}</p>
           <Button onClick={() => { resetForm(); setShowAddModal(true) }}>
             <Plus className="w-5 h-5 mr-2" />
-            Create First Note
+            {t('notes.createFirst')}
           </Button>
         </Card>
       )}
@@ -294,30 +296,30 @@ export default function NotesPage() {
       <Modal
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setEditingNote(null); resetForm() }}
-        title={editingNote ? 'Edit Note' : 'New Note'}
+        title={editingNote ? t('notes.editNote') : t('notes.newNote')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Title (optional)
+              {t('notes.titleOptional')}
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Note title..."
+              placeholder={t('notes.titlePlaceholder')}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Content
+              {t('notes.content')}
             </label>
             <textarea
               value={formData.content}
               onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              placeholder="Write your note..."
+              placeholder={t('notes.contentPlaceholder')}
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent resize-none"
             />
@@ -325,7 +327,7 @@ export default function NotesPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Color
+              {t('notes.color')}
             </label>
             <div className="flex gap-2">
               {NOTE_COLORS.map(c => (
@@ -345,14 +347,14 @@ export default function NotesPage() {
           <div className="flex items-center gap-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                From
+                {t('notes.from')}
               </label>
               <select
                 value={formData.author_id || ''}
                 onChange={(e) => setFormData({ ...formData, author_id: e.target.value || null })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               >
-                <option value="">No author</option>
+                <option value="">{t('notes.noAuthor')}</option>
                 {members.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
@@ -370,17 +372,17 @@ export default function NotesPage() {
                 >
                   <Pin className="w-5 h-5" />
                 </button>
-                <span className="text-sm text-slate-600 dark:text-slate-400">Pin to top</span>
+                <span className="text-sm text-slate-600 dark:text-slate-400">{t('notes.pinToTop')}</span>
               </label>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingNote(null); resetForm() }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={editingNote ? handleEditNote : handleAddNote}>
-              {editingNote ? 'Save Changes' : 'Add Note'}
+              {editingNote ? t('common.saveChanges') : t('notes.addNote')}
             </Button>
           </div>
         </div>

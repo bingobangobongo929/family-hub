@@ -11,6 +11,8 @@ import {
   getCountdown,
   toDanishTime,
 } from '@/lib/f1-api'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface F1Data {
   isRaceWeekend: boolean
@@ -26,16 +28,10 @@ function SessionIcon({ sessionName, className = "w-4 h-4" }: { sessionName: stri
   return <Flag className={className} />
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatDay(date: Date): string {
-  return date.toLocaleDateString('en-GB', { weekday: 'short' })
-}
-
 export default function F1Widget() {
   const [ref, { isWide }] = useWidgetSize()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [data, setData] = useState<F1Data | null>(null)
   const [loading, setLoading] = useState(true)
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, text: '' })
@@ -74,10 +70,18 @@ export default function F1Widget() {
     return () => clearInterval(interval)
   }, [nextSession])
 
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString(locale === 'da' ? 'da-DK' : 'en-GB', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const formatDay = (date: Date): string => {
+    return date.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { weekday: 'short' })
+  }
+
   if (loading) {
     return (
       <div ref={ref} className="h-full flex items-center justify-center p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl">
-        <div className="animate-pulse text-red-600 dark:text-red-400 text-sm">Loading...</div>
+        <div className="animate-pulse text-red-600 dark:text-red-400 text-sm">{t('common.loading')}</div>
       </div>
     )
   }
@@ -87,7 +91,7 @@ export default function F1Widget() {
       <Link href="/f1" className="block h-full">
         <div ref={ref} className="h-full flex flex-col items-center justify-center p-3 bg-gradient-to-br from-red-50 to-red-100 dark:from-slate-800 dark:to-slate-700 rounded-3xl">
           <Flag className="w-8 h-8 text-red-500 mb-2" />
-          <span className="text-slate-600 dark:text-slate-300 text-sm">No races</span>
+          <span className="text-slate-600 dark:text-slate-300 text-sm">{t('f1.noRaces')}</span>
         </div>
       </Link>
     )

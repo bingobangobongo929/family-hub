@@ -8,6 +8,7 @@ import { Sun, Moon, RotateCcw, Plus, Clock, Edit2, Trash2, GripVertical, X, Play
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineCompletion } from '@/lib/database.types'
 
 // Demo routines for when not logged in
@@ -56,6 +57,7 @@ const DEMO_ROUTINES: (Routine & { steps: RoutineStep[] })[] = [
 export default function RoutinesPage() {
   const { user } = useAuth()
   const { members, getMember } = useFamily()
+  const { t } = useTranslation()
   const [routines, setRoutines] = useState<(Routine & { steps: RoutineStep[] })[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedRoutine, setSelectedRoutine] = useState<(Routine & { steps: RoutineStep[] }) | null>(null)
@@ -490,12 +492,12 @@ export default function RoutinesPage() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Routines</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Daily routines with step-by-step guidance</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('routines.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('routines.subtitle')}</p>
         </div>
         <Button onClick={() => setShowAddModal(true)}>
           <Plus className="w-5 h-5 mr-2" />
-          Add Routine
+          {t('routines.addRoutine')}
         </Button>
       </div>
 
@@ -524,7 +526,7 @@ export default function RoutinesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{routine.title}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{progress.completed}/{progress.total} done</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{progress.completed}/{progress.total} {t('routines.done')}</p>
                 </div>
                 {isComplete && <span className="text-2xl">✓</span>}
               </div>
@@ -554,7 +556,7 @@ export default function RoutinesPage() {
                     ~{getTotalDuration(selectedRoutine)} min
                   </span>
                   {selectedRoutine.scheduled_time && (
-                    <span>Starts at {selectedRoutine.scheduled_time}</span>
+                    <span>{t('routines.startsAt')} {selectedRoutine.scheduled_time}</span>
                   )}
                   {selectedRoutine.assigned_to && (
                     <span className="flex items-center gap-1">
@@ -580,7 +582,7 @@ export default function RoutinesPage() {
                 className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                Reset
+                {t('routines.reset')}
               </button>
             </div>
           </div>
@@ -650,9 +652,9 @@ export default function RoutinesPage() {
 
           {getProgress(selectedRoutine).completed === selectedRoutine.steps.length && (
             <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 text-green-700 dark:text-green-300 text-center">
-              <p className="text-xl font-bold mb-1">All done! Great job!</p>
+              <p className="text-xl font-bold mb-1">{t('routines.allDoneGreat')}</p>
               <p className="text-sm">
-                {selectedRoutine.type === 'morning' ? 'Have a great day!' : selectedRoutine.type === 'evening' ? 'Sweet dreams!' : 'Well done!'}
+                {selectedRoutine.type === 'morning' ? t('routines.haveGreatDay') : selectedRoutine.type === 'evening' ? t('routines.sweetDreams') : t('routines.wellDone')}
               </p>
             </div>
           )}
@@ -662,11 +664,11 @@ export default function RoutinesPage() {
       {routines.length === 0 && (
         <Card className="text-center py-12">
           <div className="text-5xl mb-4">📋</div>
-          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">No routines yet</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-6">Create morning and evening routines for the family</p>
+          <h3 className="text-xl font-bold text-slate-700 dark:text-slate-200 mb-2">{t('routines.noRoutines')}</h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-6">{t('routines.noRoutinesHint')}</p>
           <Button onClick={() => setShowAddModal(true)}>
             <Plus className="w-5 h-5 mr-2" />
-            Create First Routine
+            {t('routines.createFirst')}
           </Button>
         </Card>
       )}
@@ -680,14 +682,14 @@ export default function RoutinesPage() {
           setEditingRoutine(null)
           resetForm()
         }}
-        title={showEditModal ? 'Edit Routine' : 'New Routine'}
+        title={showEditModal ? t('routines.editRoutine') : t('routines.newRoutine')}
         size="lg"
       >
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Routine Name
+                {t('routines.routineName')}
               </label>
               <input
                 type="text"
@@ -699,7 +701,7 @@ export default function RoutinesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Emoji
+                {t('common.emoji')}
               </label>
               <input
                 type="text"
@@ -713,28 +715,28 @@ export default function RoutinesPage() {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Type
+                {t('routines.type')}
               </label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as 'morning' | 'evening' | 'custom' })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               >
-                <option value="morning">Morning</option>
-                <option value="evening">Evening</option>
-                <option value="custom">Custom</option>
+                <option value="morning">{t('routines.morning')}</option>
+                <option value="evening">{t('routines.evening')}</option>
+                <option value="custom">{t('routines.custom')}</option>
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Assigned To
+                {t('routines.assignedTo')}
               </label>
               <select
                 value={formData.assigned_to || ''}
                 onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value || null })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               >
-                <option value="">Everyone</option>
+                <option value="">{t('routines.everyone')}</option>
                 {members.map(m => (
                   <option key={m.id} value={m.id}>{m.name}</option>
                 ))}
@@ -742,7 +744,7 @@ export default function RoutinesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Start Time
+                {t('routines.startTime')}
               </label>
               <input
                 type="time"
@@ -756,13 +758,13 @@ export default function RoutinesPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                Steps
+                {t('routines.steps')}
               </label>
               <button
                 onClick={addStep}
                 className="text-sm text-sage-600 dark:text-sage-400 hover:text-sage-700 dark:hover:text-sage-300"
               >
-                + Add Step
+                + {t('routines.addStep')}
               </button>
             </div>
             <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -779,7 +781,7 @@ export default function RoutinesPage() {
                     type="text"
                     value={step.title}
                     onChange={(e) => updateStep(index, 'title', e.target.value)}
-                    placeholder="Step title..."
+                    placeholder={t('routines.stepTitlePlaceholder')}
                     className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
                   />
                   <div className="flex items-center gap-1">
@@ -815,7 +817,7 @@ export default function RoutinesPage() {
                 }}
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Delete
+                {t('common.delete')}
               </Button>
             )}
             <div className="flex-1" />
@@ -828,10 +830,10 @@ export default function RoutinesPage() {
                 resetForm()
               }}
             >
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={showEditModal ? handleEditRoutine : handleAddRoutine}>
-              {showEditModal ? 'Save Changes' : 'Create Routine'}
+              {showEditModal ? t('common.saveChanges') : t('routines.createRoutine')}
             </Button>
           </div>
         </div>

@@ -9,10 +9,14 @@ import Modal from '@/components/ui/Modal'
 import ContactMemberLink, { ContactMemberLinkDisplay } from '@/components/ContactMemberLink'
 import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
 import { useContacts } from '@/lib/contacts-context'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 import { Contact, RelationshipGroup, RELATIONSHIP_GROUPS, MEMBER_COLORS } from '@/lib/database.types'
 
 export default function ContactsPage() {
   const { contacts, addContact, updateContact, deleteContact, getContactsByGroup, getUpcomingBirthdays, linkContactToMember, unlinkContactFromMember, getContactLinks } = useContacts()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingContact, setEditingContact] = useState<Contact | null>(null)
   const [formData, setFormData] = useState({
@@ -117,7 +121,7 @@ export default function ContactsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this contact?')) {
+    if (confirm(t('contacts.confirmDelete'))) {
       await deleteContact(id)
     }
   }
@@ -138,12 +142,12 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Contacts</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Manage birthdays and contacts</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('contacts.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('contacts.subtitle')}</p>
         </div>
         <Button onClick={handleOpenAdd} className="gap-2">
           <Plus className="w-5 h-5" />
-          Add Contact
+          {t('contacts.addContact')}
         </Button>
       </div>
 
@@ -153,7 +157,7 @@ export default function ContactsPage() {
           <div className="flex items-center gap-2 mb-4">
             <Cake className="w-5 h-5 text-pink-500" />
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-              Upcoming Birthdays
+              {t('contacts.upcomingBirthdays')}
             </h2>
           </div>
           <div className="flex gap-3 overflow-x-auto pb-2">
@@ -175,10 +179,10 @@ export default function ContactsPage() {
                   {contact.name}
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {contact.daysUntil === 0 ? 'Today!' : `${contact.daysUntil} days`}
+                  {contact.daysUntil === 0 ? t('common.today') : t('contacts.daysUntil', { count: contact.daysUntil })}
                 </p>
                 <p className="text-xs text-pink-600 dark:text-pink-400 font-medium">
-                  Turning {contact.age}
+                  {t('contacts.turningAge', { age: contact.age })}
                 </p>
               </div>
             ))}
@@ -197,7 +201,7 @@ export default function ContactsPage() {
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-xl">{group.emoji}</span>
                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-                  {group.label}
+                  {t(`relationships.${group.id}`)}
                 </h2>
                 <span className="text-sm text-slate-500 dark:text-slate-400">
                   ({groupContacts.length})
@@ -224,7 +228,7 @@ export default function ContactsPage() {
                       {contact.date_of_birth && (
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           <Cake className="w-3 h-3 inline mr-1" />
-                          {format(parseISO(contact.date_of_birth), 'MMM d')} ({calculateAge(contact.date_of_birth)} yrs)
+                          {format(parseISO(contact.date_of_birth), 'd MMM', { locale: dateLocale })} ({t('contacts.yearsOld', { age: calculateAge(contact.date_of_birth) })})
                         </p>
                       )}
                       <ContactMemberLinkDisplay
@@ -261,12 +265,12 @@ export default function ContactsPage() {
             <Cake className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2">
-            No contacts yet
+            {t('contacts.noContactsYet')}
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-4">
-            Add contacts to track birthdays and important dates
+            {t('contacts.noContactsDescription')}
           </p>
-          <Button onClick={handleOpenAdd}>Add your first contact</Button>
+          <Button onClick={handleOpenAdd}>{t('contacts.addFirstContact')}</Button>
         </Card>
       )}
 
@@ -277,26 +281,26 @@ export default function ContactsPage() {
           setShowAddModal(false)
           resetForm()
         }}
-        title={editingContact ? 'Edit Contact' : 'Add Contact'}
+        title={editingContact ? t('contacts.editContact') : t('contacts.addContact')}
         size="md"
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Name *
+              {t('contacts.name')} *
             </label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Contact name..."
+              placeholder={t('contacts.namePlaceholder')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Date of Birth
+              {t('contacts.dateOfBirth')}
             </label>
             <input
               type="date"
@@ -312,8 +316,8 @@ export default function ContactsPage() {
               <div className="flex items-center gap-2">
                 <Cake className="w-4 h-4 text-pink-500" />
                 <div>
-                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">Show in Countdown</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Include this birthday in the countdown widget</p>
+                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{t('contacts.showInCountdown')}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{t('contacts.showInCountdownDescription')}</p>
                 </div>
               </div>
               <button
@@ -334,7 +338,7 @@ export default function ContactsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Relationship
+              {t('contacts.relationship')}
             </label>
             <select
               value={formData.relationship_group}
@@ -343,7 +347,7 @@ export default function ContactsPage() {
             >
               {RELATIONSHIP_GROUPS.map(group => (
                 <option key={group.id} value={group.id}>
-                  {group.emoji} {group.label}
+                  {group.emoji} {t(`relationships.${group.id}`)}
                 </option>
               ))}
             </select>
@@ -351,7 +355,7 @@ export default function ContactsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Color
+              {t('contacts.color')}
             </label>
             <div className="flex gap-2 flex-wrap">
               {MEMBER_COLORS.map(c => (
@@ -370,13 +374,13 @@ export default function ContactsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Avatar
+              {t('contacts.avatar')}
             </label>
             <div className="flex justify-center">
               <PhotoUpload
                 photoUrl={formData.photo_url}
                 emoji={formData.avatar}
-                name={formData.name || 'New Contact'}
+                name={formData.name || t('contacts.newContact')}
                 color={formData.color}
                 onPhotoChange={(url) => setFormData(prev => ({ ...prev, photo_url: url, avatar: url ? '' : prev.avatar }))}
                 onEmojiChange={(emoji) => setFormData(prev => ({ ...prev, avatar: emoji, photo_url: emoji ? null : prev.photo_url }))}
@@ -385,20 +389,20 @@ export default function ContactsPage() {
               />
             </div>
             <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
-              Tap to upload a photo or choose an emoji
+              {t('contacts.avatarHelp')}
             </p>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Notes
+              {t('contacts.notes')}
             </label>
             <textarea
               value={formData.notes}
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
               rows={2}
-              placeholder="Any notes about this contact..."
+              placeholder={t('contacts.notesPlaceholder')}
             />
           </div>
 
@@ -413,10 +417,10 @@ export default function ContactsPage() {
               setShowAddModal(false)
               resetForm()
             }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSave} disabled={!formData.name.trim()}>
-              {editingContact ? 'Save Changes' : 'Add Contact'}
+              {editingContact ? t('common.saveChanges') : t('contacts.addContact')}
             </Button>
           </div>
         </div>

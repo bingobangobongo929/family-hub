@@ -8,6 +8,7 @@ import { useSettings } from '@/lib/settings-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
 import { useContacts } from '@/lib/contacts-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { MEMBER_COLORS, RecurrencePattern, RecurrenceFrequency, DAYS_OF_WEEK } from '@/lib/database.types'
 import CategorySelector from './CategorySelector'
 import { patternToRRule, describeRecurrence } from '@/lib/rrule'
@@ -99,6 +100,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const { members } = useFamily()
   const { categories, getCategoryByName } = useCategories()
   const { contacts } = useContacts()
+  const { t } = useTranslation()
   const [inputText, setInputText] = useState('')
 
   // Get the latest aiModel - check localStorage directly to ensure we have the most recent value
@@ -140,7 +142,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
     if (!file) return
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be less than 5MB')
+      setError(t('aiCalendar.imageTooLarge'))
       return
     }
 
@@ -164,7 +166,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
   const handleProcess = async () => {
     if (!inputText && !image) {
-      setError('Please enter some text or upload an image')
+      setError(t('aiCalendar.enterTextOrImage'))
       return
     }
 
@@ -175,10 +177,10 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
       // Build context about family members and contacts
       const familyContext = [
         members.length > 0
-          ? `Board family members (core family): ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
+          ? `${t('aiCalendar.boardMembers')} ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
           : '',
         contacts.length > 0
-          ? `Extended contacts (grandparents, friends, etc.): ${contacts.map(c => c.name).join(', ')}`
+          ? `${t('aiCalendar.extendedContacts')} ${contacts.map(c => c.name).join(', ')}`
           : ''
       ].filter(Boolean).join('\n')
 
@@ -296,7 +298,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         setSummary(data.summary)
         setStep('preview')
       } else {
-        setError('No events could be extracted. Try being more specific.')
+        setError(t('aiCalendar.noEventsExtracted'))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process input')
@@ -343,12 +345,12 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const selectedCount = extractedEvents.filter(e => e.selected).length
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Smart Add" size="3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('aiCalendar.title')} size="3xl">
       <div className="space-y-6">
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
           <Sparkles className="w-5 h-5" />
-          <span>Using {aiModel === 'claude' ? 'Claude Sonnet 4.5' : 'Gemini 3.0 Flash'}</span>
+          <span>{aiModel === 'claude' ? t('aiCalendar.usingClaude') : t('aiCalendar.usingGemini')}</span>
         </div>
 
         {step === 'input' ? (
@@ -356,12 +358,12 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             {/* Text Input */}
             <div>
               <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
-                Describe the event(s)
+                {t('aiCalendar.describeEvents')}
               </label>
               <textarea
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="e.g., Olivia has swimming lessons every Tuesday at 4pm at the leisure centre, or Doctor's appointment tomorrow at 10am..."
+                placeholder={t('aiCalendar.placeholder')}
                 className="w-full px-5 py-4 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-lg focus:ring-2 focus:ring-sage-500 focus:border-transparent resize-none"
                 rows={6}
               />
@@ -370,10 +372,10 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             {/* Image Upload */}
             <div>
               <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
-                Or upload an image (optional)
+                {t('aiCalendar.uploadImage')}
               </label>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                Screenshot a school newsletter, appointment letter, or any schedule
+                {t('aiCalendar.uploadDescription')}
               </p>
 
               {imagePreview ? (
@@ -396,7 +398,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                   className="w-full p-8 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-sage-400 dark:hover:border-sage-500 transition-colors flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400"
                 >
                   <Image className="w-12 h-12" />
-                  <span className="text-base">Tap to upload image</span>
+                  <span className="text-base">{t('aiCalendar.tapToUpload')}</span>
                 </button>
               )}
               <input
@@ -419,7 +421,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             {/* Actions */}
             <div className="flex justify-end gap-3 pt-6 border-t border-slate-200 dark:border-slate-700">
               <Button variant="secondary" onClick={onClose} className="px-6 py-3 text-base">
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={handleProcess}
@@ -429,12 +431,12 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                    Processing...
+                    {t('aiCalendar.processing')}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-5 h-5 mr-2" />
-                    Extract Events
+                    {t('aiCalendar.extractEvents')}
                   </>
                 )}
               </Button>
@@ -604,7 +606,9 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                               </div>
                               {(event.contact_ids?.length ?? 0) > 0 && (
                                 <p className="text-xs text-slate-400 mt-1">
-                                  {event.contact_ids?.length} contact{event.contact_ids?.length !== 1 ? 's' : ''} tagged
+                                  {event.contact_ids?.length === 1
+                                    ? t('contacts.contactTagged')
+                                    : t('contacts.contactsTagged', { count: event.contact_ids?.length })}
                                 </p>
                               )}
                             </div>
@@ -643,18 +647,20 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
             {/* Actions */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-700">
               <Button variant="secondary" onClick={handleBack}>
-                Back
+                {t('common.back')}
               </Button>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-500 dark:text-slate-400">
-                  {selectedCount} event{selectedCount !== 1 ? 's' : ''} selected
+                  {selectedCount === 1
+                    ? t('aiCalendar.eventSelected')
+                    : t('aiCalendar.eventsSelected', { count: selectedCount })}
                 </span>
                 <Button
                   onClick={handleAddSelected}
                   disabled={selectedCount === 0}
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Add to Calendar
+                  {t('aiCalendar.addToCalendar')}
                 </Button>
               </div>
             </div>

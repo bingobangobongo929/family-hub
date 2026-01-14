@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { Repeat, Calendar, ChevronDown } from 'lucide-react'
 import { RecurrencePattern, RecurrenceFrequency, DAYS_OF_WEEK } from '@/lib/database.types'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface RecurrenceSelectorProps {
   value: RecurrencePattern | null
@@ -22,6 +23,7 @@ export default function RecurrenceSelector({
   onChange,
   startDate = new Date(),
 }: RecurrenceSelectorProps) {
+  const { t } = useTranslation()
   // Default pattern if none provided
   const pattern = value || {
     frequency: 'weekly' as RecurrenceFrequency,
@@ -92,7 +94,7 @@ export default function RecurrenceSelector({
       {/* Frequency */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Repeat
+          {t('recurrence.repeat')}
         </label>
         <div className="grid grid-cols-4 gap-2">
           {FREQUENCY_OPTIONS.map((option) => (
@@ -115,7 +117,7 @@ export default function RecurrenceSelector({
       {/* Interval */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Every
+          {t('recurrence.every')}
         </label>
         <div className="flex items-center gap-3">
           <input
@@ -139,7 +141,7 @@ export default function RecurrenceSelector({
       {pattern.frequency === 'weekly' && (
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            On these days
+            {t('recurrence.onTheseDays')}
           </label>
           <div className="flex gap-2">
             {DAYS_OF_WEEK.map((day) => {
@@ -177,7 +179,7 @@ export default function RecurrenceSelector({
       {pattern.frequency === 'monthly' && (
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-            On day
+            {t('recurrence.onDay')}
           </label>
           <select
             value={pattern.dayOfMonth || startDate.getDate()}
@@ -196,7 +198,7 @@ export default function RecurrenceSelector({
       {/* End Options */}
       <div>
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-          Ends
+          {t('recurrence.ends')}
         </label>
         <div className="space-y-3">
           {/* Never */}
@@ -208,7 +210,7 @@ export default function RecurrenceSelector({
               onChange={() => updatePattern({ endType: 'never', endDate: undefined, occurrences: undefined })}
               className="w-5 h-5 text-teal-500"
             />
-            <span className="text-slate-700 dark:text-slate-300">Never</span>
+            <span className="text-slate-700 dark:text-slate-300">{t('recurrence.never')}</span>
           </label>
 
           {/* Until date */}
@@ -220,7 +222,7 @@ export default function RecurrenceSelector({
               onChange={() => updatePattern({ endType: 'until', occurrences: undefined })}
               className="w-5 h-5 text-teal-500"
             />
-            <span className="text-slate-700 dark:text-slate-300 flex-shrink-0">Until</span>
+            <span className="text-slate-700 dark:text-slate-300 flex-shrink-0">{t('recurrence.until')}</span>
             {pattern.endType === 'until' && (
               <input
                 type="date"
@@ -241,7 +243,7 @@ export default function RecurrenceSelector({
               onChange={() => updatePattern({ endType: 'count', endDate: undefined, occurrences: 10 })}
               className="w-5 h-5 text-teal-500"
             />
-            <span className="text-slate-700 dark:text-slate-300 flex-shrink-0">After</span>
+            <span className="text-slate-700 dark:text-slate-300 flex-shrink-0">{t('recurrence.after')}</span>
             {pattern.endType === 'count' && (
               <>
                 <input
@@ -252,7 +254,7 @@ export default function RecurrenceSelector({
                   onChange={(e) => updatePattern({ occurrences: Math.max(1, parseInt(e.target.value) || 1) })}
                   className="w-20 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 text-center"
                 />
-                <span className="text-slate-700 dark:text-slate-300">times</span>
+                <span className="text-slate-700 dark:text-slate-300">{t('recurrence.times')}</span>
               </>
             )}
           </label>

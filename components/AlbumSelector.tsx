@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { ChevronDown, Image, Loader2, RefreshCw } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface Album {
   id: string
@@ -19,6 +20,7 @@ interface AlbumSelectorProps {
 
 export default function AlbumSelector({ selectedAlbumId, selectedAlbumTitle, onSelect }: AlbumSelectorProps) {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const [albums, setAlbums] = useState<Album[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
@@ -66,7 +68,7 @@ export default function AlbumSelector({ selectedAlbumId, selectedAlbumTitle, onS
       >
         <Image className="w-4 h-4 text-slate-400" />
         <span className="flex-1 text-left text-sm text-slate-700 dark:text-slate-200 truncate">
-          {selectedAlbumTitle || 'Select album...'}
+          {selectedAlbumTitle || t('albumSelector.selectAlbum')}
         </span>
         <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
@@ -76,7 +78,7 @@ export default function AlbumSelector({ selectedAlbumId, selectedAlbumTitle, onS
           {/* Header with refresh */}
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
             <span className="text-xs text-slate-500 dark:text-slate-400">
-              {albums.length} albums
+              {t('albumSelector.albumCount', { count: albums.length })}
             </span>
             <button
               onClick={fetchAlbums}
@@ -100,12 +102,12 @@ export default function AlbumSelector({ selectedAlbumId, selectedAlbumTitle, onS
                   onClick={fetchAlbums}
                   className="mt-2 text-xs text-sage-600 dark:text-sage-400 hover:underline"
                 >
-                  Try again
+                  {t('common.tryAgain')}
                 </button>
               </div>
             ) : albums.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                No albums found
+                {t('albumSelector.noAlbums')}
               </div>
             ) : (
               albums.map(album => (
@@ -132,7 +134,7 @@ export default function AlbumSelector({ selectedAlbumId, selectedAlbumTitle, onS
                       {album.title}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {album.mediaItemsCount} photos
+                      {t('albumSelector.photoCount', { count: album.mediaItemsCount })}
                     </p>
                   </div>
                   {selectedAlbumId === album.id && (

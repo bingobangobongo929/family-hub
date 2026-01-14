@@ -15,6 +15,8 @@ import {
   formatDanishDate,
   getTeamColor,
 } from '@/lib/f1-api'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 // Session icon component
 function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: string; className?: string }) {
@@ -61,6 +63,8 @@ interface StandingsData {
 type TabType = 'calendar' | 'drivers' | 'constructors'
 
 export default function F1Page() {
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [activeTab, setActiveTab] = useState<TabType>('calendar')
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
@@ -142,9 +146,9 @@ export default function F1Page() {
           {/* Tabs */}
           <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700">
             {[
-              { id: 'calendar', label: 'Calendar', icon: '📅' },
-              { id: 'drivers', label: 'Drivers', icon: '👤' },
-              { id: 'constructors', label: 'Teams', icon: '🏢' },
+              { id: 'calendar', label: t('f1.calendar'), icon: '📅' },
+              { id: 'drivers', label: t('f1.drivers'), icon: '👤' },
+              { id: 'constructors', label: t('f1.teams'), icon: '🏢' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -173,13 +177,15 @@ export default function F1Page() {
                   races={schedule.schedule}
                   upcomingRaces={upcomingRaces}
                   pastRaces={pastRaces}
+                  t={t}
+                  locale={locale}
                 />
               )}
               {activeTab === 'drivers' && standings && (
-                <DriversStandings drivers={standings.drivers} />
+                <DriversStandings drivers={standings.drivers} t={t} />
               )}
               {activeTab === 'constructors' && standings && (
-                <ConstructorsStandings constructors={standings.constructors} />
+                <ConstructorsStandings constructors={standings.constructors} t={t} />
               )}
             </>
           )}
@@ -191,6 +197,8 @@ export default function F1Page() {
 
 // Next race countdown component
 function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: OpenF1Session[] } }) {
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, text: '' })
 
   // Find next session
@@ -220,7 +228,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
         <div className="flex items-start gap-4">
           <CountryFlag flagUrl={meeting.country_flag} size="lg" />
           <div>
-            <p className="text-sm text-white/80 uppercase tracking-wide">Next Race</p>
+            <p className="text-sm text-white/80 uppercase tracking-wide">{t('f1.nextRace')}</p>
             <p className="text-xl md:text-2xl font-bold">{meeting.meeting_name}</p>
             <p className="text-sm text-white/80">
               {meeting.circuit_short_name} • {meeting.country_name}
@@ -232,20 +240,20 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
         </div>
         <div className="text-center md:text-right">
           <p className="text-sm text-white/80 mb-1">
-            {nextSession ? `Until ${SESSION_NAMES[nextSession.session_name] || nextSession.session_name}` : 'Countdown'}
+            {nextSession ? t('f1.untilSession', { session: SESSION_NAMES[nextSession.session_name] || nextSession.session_name }) : t('f1.countdown')}
           </p>
           <div className="flex gap-3 justify-center md:justify-end">
             <div className="text-center">
               <p className="text-3xl md:text-4xl font-bold font-mono">{countdown.days}</p>
-              <p className="text-xs text-white/70">days</p>
+              <p className="text-xs text-white/70">{t('f1.days')}</p>
             </div>
             <div className="text-center">
               <p className="text-3xl md:text-4xl font-bold font-mono">{countdown.hours}</p>
-              <p className="text-xs text-white/70">hours</p>
+              <p className="text-xs text-white/70">{t('f1.hours')}</p>
             </div>
             <div className="text-center">
               <p className="text-3xl md:text-4xl font-bold font-mono">{countdown.minutes}</p>
-              <p className="text-xs text-white/70">mins</p>
+              <p className="text-xs text-white/70">{t('f1.mins')}</p>
             </div>
           </div>
         </div>
@@ -254,7 +262,7 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
       {/* Sessions preview with icons */}
       {meeting.sessions && meeting.sessions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-white/20">
-          <p className="text-xs text-white/70 mb-2">Sessions (Local Time)</p>
+          <p className="text-xs text-white/70 mb-2">{t('f1.sessionsLocalTime')}</p>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {meeting.sessions.map(session => {
               const sessionDate = toDanishTime(new Date(session.date_start))
@@ -272,9 +280,9 @@ function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: 
                     </p>
                   </div>
                   <p className="text-xs text-white/70">
-                    {sessionDate.toLocaleDateString('en-GB', { weekday: 'short' })} {formatDanishTime(sessionDate)}
+                    {sessionDate.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { weekday: 'short' })} {formatDanishTime(sessionDate)}
                   </p>
-                  {isPast && <span className="text-xs text-white/50">Done</span>}
+                  {isPast && <span className="text-xs text-white/50">{t('f1.done')}</span>}
                 </div>
               )
             })}
@@ -290,10 +298,14 @@ function CalendarView({
   races,
   upcomingRaces,
   pastRaces,
+  t,
+  locale,
 }: {
   races: (OpenF1Meeting & { sessions: OpenF1Session[] })[]
   upcomingRaces: OpenF1Meeting[]
   pastRaces: OpenF1Meeting[]
+  t: (key: string, params?: Record<string, any>) => string
+  locale: string
 }) {
   return (
     <div className="space-y-6">
@@ -301,7 +313,7 @@ function CalendarView({
       {upcomingRaces.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
-            Upcoming Races ({upcomingRaces.length})
+            {t('f1.upcomingRaces', { count: upcomingRaces.length })}
           </h2>
           <div className="grid gap-3">
             {upcomingRaces.map((race, index) => (
@@ -309,6 +321,8 @@ function CalendarView({
                 key={race.meeting_key}
                 race={race as OpenF1Meeting & { sessions: OpenF1Session[] }}
                 isNext={index === 0}
+                t={t}
+                locale={locale}
               />
             ))}
           </div>
@@ -319,7 +333,7 @@ function CalendarView({
       {pastRaces.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mb-3">
-            Completed Races ({pastRaces.length})
+            {t('f1.completedRaces', { count: pastRaces.length })}
           </h2>
           <div className="grid gap-3">
             {pastRaces.map(race => (
@@ -327,6 +341,8 @@ function CalendarView({
                 key={race.meeting_key}
                 race={race as OpenF1Meeting & { sessions: OpenF1Session[] }}
                 isPast
+                t={t}
+                locale={locale}
               />
             ))}
           </div>
@@ -341,10 +357,14 @@ function RaceCard({
   race,
   isNext = false,
   isPast = false,
+  t,
+  locale,
 }: {
   race: OpenF1Meeting & { sessions: OpenF1Session[] }
   isNext?: boolean
   isPast?: boolean
+  t: (key: string, params?: Record<string, any>) => string
+  locale: string
 }) {
   const [expanded, setExpanded] = useState(false)
   const raceDate = toDanishTime(new Date(race.date_start))
@@ -372,12 +392,12 @@ function RaceCard({
               </p>
               {isNext && (
                 <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs rounded-full font-medium">
-                  Next
+                  {t('f1.next')}
                 </span>
               )}
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {race.circuit_short_name} • {raceDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+              {race.circuit_short_name} • {raceDate.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { day: 'numeric', month: 'short' })}
             </p>
           </div>
         </div>
@@ -410,13 +430,13 @@ function RaceCard({
                     </p>
                   </div>
                   <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    {sessionDate.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
+                    {sessionDate.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'short' })}
                   </p>
                   <p className="text-sm font-medium text-red-600 dark:text-red-400">
                     {formatDanishTime(sessionDate)}
                   </p>
                   {isSessionPast && (
-                    <span className="text-xs text-slate-400">Completed</span>
+                    <span className="text-xs text-slate-400">{t('f1.completed')}</span>
                   )}
                 </div>
               )
@@ -429,12 +449,12 @@ function RaceCard({
 }
 
 // Drivers standings component
-function DriversStandings({ drivers }: { drivers: F1Driver[] }) {
+function DriversStandings({ drivers, t }: { drivers: F1Driver[]; t: (key: string, params?: Record<string, any>) => string }) {
   if (!drivers.length) {
     return (
       <div className="text-center py-12 text-slate-500">
-        <p>No driver standings available yet</p>
-        <p className="text-sm mt-2">Standings will appear once the season starts</p>
+        <p>{t('f1.noDriverStandings')}</p>
+        <p className="text-sm mt-2">{t('f1.standingsWillAppear')}</p>
       </div>
     )
   }
@@ -444,10 +464,10 @@ function DriversStandings({ drivers }: { drivers: F1Driver[] }) {
       <table className="w-full">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-700/50">
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Pos</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Driver</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Team</th>
-            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Points</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.pos')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.driver')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">{t('f1.team')}</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.points')}</th>
           </tr>
         </thead>
         <tbody>
@@ -499,12 +519,12 @@ function DriversStandings({ drivers }: { drivers: F1Driver[] }) {
 }
 
 // Constructors standings component
-function ConstructorsStandings({ constructors }: { constructors: F1Constructor[] }) {
+function ConstructorsStandings({ constructors, t }: { constructors: F1Constructor[]; t: (key: string, params?: Record<string, any>) => string }) {
   if (!constructors.length) {
     return (
       <div className="text-center py-12 text-slate-500">
-        <p>No constructor standings available yet</p>
-        <p className="text-sm mt-2">Standings will appear once the season starts</p>
+        <p>{t('f1.noConstructorStandings')}</p>
+        <p className="text-sm mt-2">{t('f1.standingsWillAppear')}</p>
       </div>
     )
   }
@@ -514,9 +534,9 @@ function ConstructorsStandings({ constructors }: { constructors: F1Constructor[]
       <table className="w-full">
         <thead>
           <tr className="bg-slate-50 dark:bg-slate-700/50">
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Pos</th>
-            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Team</th>
-            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Points</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.pos')}</th>
+            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.team')}</th>
+            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">{t('f1.points')}</th>
           </tr>
         </thead>
         <tbody>

@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { Chore } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 
@@ -23,6 +24,7 @@ export default function ChoresWidget() {
   const { user } = useAuth()
   const { getMember, updateMemberPoints } = useFamily()
   const { rewardsEnabled } = useSettings()
+  const { t } = useTranslation()
   const [chores, setChores] = useState<Chore[]>([])
   const [ref, { size, isWide }] = useWidgetSize()
 
@@ -114,7 +116,7 @@ export default function ChoresWidget() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <CheckSquare className="w-4 h-4 text-teal-500" />
-          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">Chores</h3>
+          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">{t('chores.title')}</h3>
         </div>
         <div className="flex items-center gap-2">
           {rewardsEnabled && (size === 'medium' || size === 'large' || size === 'xlarge') && totalPoints > 0 && (
@@ -134,7 +136,7 @@ export default function ChoresWidget() {
         <div className="flex-1 grid grid-cols-2 gap-3 overflow-hidden">
           {/* Pending column */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">To Do</p>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">{t('chores.toDo')}</p>
             {pendingChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
               <ChoreItem
                 key={chore.id}
@@ -148,7 +150,7 @@ export default function ChoresWidget() {
           </div>
           {/* Completed column */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 mb-1">Done</p>
+            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 mb-1">{t('chores.done')}</p>
             {completedChores.slice(0, Math.ceil(maxChores / 2)).map(chore => (
               <ChoreItem
                 key={chore.id}
@@ -180,13 +182,13 @@ export default function ChoresWidget() {
               <div className="w-12 h-12 rounded-full bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center mb-2">
                 <Check className="w-6 h-6 text-teal-500" />
               </div>
-              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">All done!</p>
+              <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('chores.allDone')}</p>
             </div>
           )}
 
           {pendingChores.length > maxChores && (
             <p className="text-xs text-teal-600 dark:text-teal-400 text-center pt-1 font-medium">
-              +{pendingChores.length - maxChores} more
+              {t('common.more', { count: pendingChores.length - maxChores })}
             </p>
           )}
         </div>

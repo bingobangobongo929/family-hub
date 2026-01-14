@@ -172,13 +172,13 @@ export function getAllCollections(binType: BinType): Date[] {
 }
 
 // Format date for display
-export function formatCollectionDate(date: Date): string {
+export function formatCollectionDate(date: Date, locale: string = 'en'): string {
   const options: Intl.DateTimeFormatOptions = {
     weekday: 'long',
     day: 'numeric',
     month: 'short'
   }
-  return date.toLocaleDateString('en-GB', options)
+  return date.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', options)
 }
 
 // Get urgency level based on days until collection

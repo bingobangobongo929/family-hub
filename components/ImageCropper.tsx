@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { Check, X, RotateCcw } from 'lucide-react'
 import Modal from './ui/Modal'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface ImageCropperProps {
   isOpen: boolean
@@ -18,6 +19,7 @@ interface CropArea {
 }
 
 export default function ImageCropper({ isOpen, imageSrc, onClose, onCrop }: ImageCropperProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [image, setImage] = useState<HTMLImageElement | null>(null)
   const [displaySize, setDisplaySize] = useState({ width: 0, height: 0 })
@@ -196,11 +198,11 @@ export default function ImageCropper({ isOpen, imageSrc, onClose, onCrop }: Imag
   const cornerSize = 20
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Crop Image" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('common.edit')} size="lg">
       <div className="flex flex-col items-center">
         {/* Instructions */}
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
-          Drag the box to move. Drag corners to resize.
+          {t('imageCropper.instructions')}
         </p>
 
         {/* Crop area */}
@@ -314,14 +316,14 @@ export default function ImageCropper({ isOpen, imageSrc, onClose, onCrop }: Imag
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors font-medium"
           >
             <X className="w-5 h-5" />
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleCrop}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-teal-500 text-white hover:bg-teal-600 transition-colors font-medium"
           >
             <Check className="w-5 h-5" />
-            Apply
+            {t('common.apply')}
           </button>
         </div>
       </div>

@@ -9,6 +9,8 @@ import { useSettings } from '@/lib/settings-context'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 import { CountdownEvent as DbCountdownEvent, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 interface DisplayCountdownEvent {
   id: string
@@ -48,6 +50,8 @@ export default function CountdownWidget() {
   const { contacts, getContactLinks } = useContacts()
   const { members, getMember } = useFamily()
   const { countdownRelationshipGroups } = useSettings()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
 
   // Fetch custom countdown events from database
   const fetchCustomEvents = useCallback(async () => {
@@ -123,13 +127,13 @@ export default function CountdownWidget() {
       .filter(member => member.date_of_birth)
       .map(member => ({
         id: `family-${member.id}`,
-        title: `${member.name}'s Birthday`,
+        title: t('countdown.birthday', { name: member.name }),
         date: getNextBirthdayDate(member.date_of_birth!),
         emoji: '🎂',
         type: 'family_birthday' as const,
         color: member.color,
       }))
-  }, [members])
+  }, [members, t])
 
   // Contact birthdays - only those with show_birthday_countdown enabled
   const contactBirthdays: DisplayCountdownEvent[] = useMemo(() => {
@@ -151,7 +155,7 @@ export default function CountdownWidget() {
 
       return {
         id: `contact-${contact.id}`,
-        title: `${contact.name}'s Birthday`,
+        title: t('countdown.birthday', { name: contact.name }),
         date: getNextBirthdayDate(contact.date_of_birth!),
         emoji: '🎂',
         type: 'birthday' as const,
@@ -159,7 +163,7 @@ export default function CountdownWidget() {
         linkedRelationships: linkedRelationships.length > 0 ? linkedRelationships : undefined,
       }
     })
-  }, [contacts, countdownRelationshipGroups, getContactLinks, getMember])
+  }, [contacts, countdownRelationshipGroups, getContactLinks, getMember, t])
 
   // Combine all events
   const allCountdowns = useMemo(() => {
@@ -218,7 +222,7 @@ export default function CountdownWidget() {
   if (!nextEvent) {
     return (
       <div ref={ref} className="h-full flex items-center justify-center p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
-        <p className="text-slate-500 dark:text-slate-400">No upcoming events</p>
+        <p className="text-slate-500 dark:text-slate-400">{t('countdown.noUpcoming')}</p>
       </div>
     )
   }
@@ -249,10 +253,10 @@ export default function CountdownWidget() {
               </p>
             )}
             <div className={`font-bold ${gridDays}`}>
-              {event.daysLeft === 0 ? 'Today!' : event.daysLeft === 1 ? '1 day' : `${event.daysLeft}d`}
+              {event.daysLeft === 0 ? t('countdown.today') : event.daysLeft === 1 ? t('countdown.oneDay') : `${event.daysLeft}${t('countdown.daysShort')}`}
             </div>
             <p className={`${gridDate} opacity-75 mt-1`}>
-              {format(parseISO(event.date), 'MMM d')}
+              {format(parseISO(event.date), 'MMM d', { locale: dateLocale })}
             </p>
           </div>
         ))}
@@ -273,15 +277,15 @@ export default function CountdownWidget() {
         )}
         <div className={`font-display ${countdownSize} font-bold`}>
           {nextEvent.daysLeft === 0 ? (
-            <span>Today!</span>
+            <span>{t('countdown.today')}</span>
           ) : nextEvent.daysLeft === 1 ? (
-            <span>Tomorrow!</span>
+            <span>{t('countdown.tomorrow')}</span>
           ) : (
-            <span>{nextEvent.daysLeft} days</span>
+            <span>{t('countdown.days', { count: nextEvent.daysLeft })}</span>
           )}
         </div>
         <p className="text-xs opacity-75 mt-1 font-medium">
-          {format(parseISO(nextEvent.date), 'EEEE, MMM d')}
+          {format(parseISO(nextEvent.date), 'EEEE, MMM d', { locale: dateLocale })}
         </p>
       </div>
 
@@ -292,7 +296,7 @@ export default function CountdownWidget() {
             <div key={event.id} className="flex items-center gap-2 text-sm bg-white/50 dark:bg-slate-700/30 px-2 py-1.5 rounded-xl">
               <span>{event.emoji}</span>
               <span className="flex-1 text-slate-700 dark:text-slate-300 truncate font-medium">{event.title}</span>
-              <span className="text-teal-600 dark:text-teal-400 font-semibold">{event.daysLeft}d</span>
+              <span className="text-teal-600 dark:text-teal-400 font-semibold">{event.daysLeft}{t('countdown.daysShort')}</span>
             </div>
           ))}
         </div>

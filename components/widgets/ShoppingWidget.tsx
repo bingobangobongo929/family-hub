@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { recipeVaultSupabase } from '@/lib/supabase'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { ShoppingListItem } from '@/lib/database.types'
+import { useTranslation } from '@/lib/i18n-context'
 
 // Demo shopping items
 const DEMO_ITEMS: ShoppingListItem[] = [
@@ -30,6 +31,7 @@ export default function ShoppingWidget() {
   const [listId, setListId] = useState<string | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [ref, { size, isWide, isTall, width, height }] = useWidgetSize()
+  const { t } = useTranslation()
 
   const fetchItems = useCallback(async () => {
     if (!isRecipeVaultConfigured()) {
@@ -128,7 +130,7 @@ export default function ShoppingWidget() {
         <div className="flex items-center gap-2 min-w-0">
           <ShoppingCart className={`${headerIconSize} text-amber-600 flex-shrink-0`} />
           <h3 className={`font-display font-semibold text-slate-800 dark:text-slate-100 ${headerTextSize} truncate`}>
-            Shopping
+            {t('shopping.title')}
           </h3>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -149,7 +151,7 @@ export default function ShoppingWidget() {
         <div className="flex-1 flex flex-col items-center justify-center text-center">
           <Check className={`${size === 'xlarge' ? 'w-10 h-10' : 'w-6 h-6'} text-green-500 mb-1`} />
           <p className={`text-slate-500 dark:text-slate-400 ${size === 'small' ? 'text-[10px]' : 'text-xs'}`}>
-            All done!
+            {t('shopping.allDone')}
           </p>
         </div>
       ) : (
@@ -191,7 +193,7 @@ export default function ShoppingWidget() {
               href="/shopping"
               className={`block text-amber-600 dark:text-amber-400 text-center mt-1 hover:underline ${size === 'small' ? 'text-[10px]' : 'text-xs'}`}
             >
-              +{uncheckedItems.length - maxItems} more
+              {t('common.more', { count: uncheckedItems.length - maxItems })}
             </Link>
           )}
         </div>
@@ -201,7 +203,7 @@ export default function ShoppingWidget() {
       {checkedItems.length > 0 && size !== 'small' && (
         <div className="mt-2 pt-2 border-t border-amber-200/50 dark:border-slate-600/50 flex-shrink-0">
           <p className="text-[10px] text-slate-400 dark:text-slate-500">
-            {checkedItems.length} in trolley
+            {t('shopping.inTrolley', { count: checkedItems.length })}
           </p>
         </div>
       )}

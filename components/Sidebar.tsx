@@ -25,32 +25,36 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useEditMode } from '@/lib/edit-mode-context'
 import { AvatarDisplay } from './PhotoUpload'
 import MemberProfileModal from './MemberProfileModal'
+import LanguageToggle from './LanguageToggle'
 import { FamilyMember } from '@/lib/database.types'
 
+// Nav items with translation keys
 const DEFAULT_NAV_ITEMS = [
-  { href: '/', label: 'Dashboard', icon: Home },
-  { href: '/routines', label: 'Routines', icon: Sun },
-  { href: '/calendar', label: 'Calendar', icon: Calendar },
-  { href: '/tasks', label: 'Tasks', icon: CheckSquare },
-  { href: '/rewards', label: 'Rewards', icon: Gift, requiresRewards: true },
-  { href: '/shopping', label: 'Shopping', icon: ShoppingCart },
-  { href: '/gallery', label: 'Gallery', icon: Image },
-  { href: '/bindicator', label: 'Bindicator', icon: Trash2 },
-  { href: '/f1', label: 'Formula 1', icon: Flag },
-  { href: '/notes', label: 'Notes', icon: StickyNote },
-  { href: '/contacts', label: 'Contacts', icon: UserCircle },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/', labelKey: 'nav.dashboard', icon: Home },
+  { href: '/routines', labelKey: 'nav.routines', icon: Sun },
+  { href: '/calendar', labelKey: 'nav.calendar', icon: Calendar },
+  { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+  { href: '/rewards', labelKey: 'nav.rewards', icon: Gift, requiresRewards: true },
+  { href: '/shopping', labelKey: 'nav.shopping', icon: ShoppingCart },
+  { href: '/gallery', labelKey: 'nav.gallery', icon: Image },
+  { href: '/bindicator', labelKey: 'nav.bindicator', icon: Trash2 },
+  { href: '/f1', labelKey: 'nav.f1', icon: Flag },
+  { href: '/notes', labelKey: 'nav.notes', icon: StickyNote },
+  { href: '/contacts', labelKey: 'nav.contacts', icon: UserCircle },
+  { href: '/settings', labelKey: 'nav.settings', icon: Settings },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { user, signOut } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { t } = useTranslation()
   const { members, reorderMembers } = useFamily()
   const { rewardsEnabled, sidebarNavOrder, updateSetting } = useSettings()
   const { isEditMode } = useEditMode()
@@ -106,16 +110,19 @@ export default function Sidebar() {
               <Users className="w-6 h-6 text-white" />
             </div>
             <h1 className="font-display text-xl font-semibold bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-400 dark:to-teal-500 bg-clip-text text-transparent">
-              Family Hub
+              {t('nav.appName')}
             </h1>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
-            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-          >
-            {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
-          </button>
+          <div className="flex items-center gap-1">
+            <LanguageToggle />
+            <button
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-teal-50 dark:hover:bg-slate-700 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+              title={theme === 'light' ? t('nav.switchToDark') : t('nav.switchToLight')}
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}
@@ -158,7 +165,7 @@ export default function Sidebar() {
                     } ${isEditMode ? 'cursor-default' : ''}`}
                   >
                     <Icon className={`w-5 h-5 ${isActive && !isEditMode ? '' : 'text-teal-600 dark:text-teal-400'}`} />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-medium">{t(item.labelKey)}</span>
                   </Link>
                 </div>
               )
@@ -168,7 +175,7 @@ export default function Sidebar() {
         {/* Family Section */}
         <div className="mt-6 pt-6 border-t border-slate-200/60 dark:border-slate-700/60">
           <h3 className="font-display text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 px-2">
-            Family
+            {t('nav.family')}
           </h3>
           <div className="space-y-1">
             {members.map((member, index) => {
@@ -233,7 +240,7 @@ export default function Sidebar() {
                 Ed
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500">
-                Admin
+                {t('nav.admin')}
               </p>
             </div>
           </div>
@@ -242,7 +249,7 @@ export default function Sidebar() {
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-coral-50 dark:hover:bg-coral-900/20 hover:text-coral-600 dark:hover:text-coral-400 rounded-xl transition-colors"
           >
             <LogOut className="w-4 h-4" />
-            Sign Out
+            {t('nav.signOut')}
           </button>
         </div>
       )}

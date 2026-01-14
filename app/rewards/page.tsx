@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
 import { Reward, RewardRedemption } from '@/lib/database.types'
 import Link from 'next/link'
 
@@ -26,6 +27,7 @@ export default function RewardsPage() {
   const { user } = useAuth()
   const { members, updateMemberPoints, getMember } = useFamily()
   const { rewardsEnabled } = useSettings()
+  const { t } = useTranslation()
   const [rewards, setRewards] = useState<Reward[]>([])
   const [redemptions, setRedemptions] = useState<RewardRedemption[]>([])
   const [loading, setLoading] = useState(true)
@@ -275,15 +277,15 @@ export default function RewardsPage() {
             <Gift className="w-10 h-10 text-slate-400 dark:text-slate-500" />
           </div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-            Rewards System Disabled
+            {t('rewards.systemDisabled')}
           </h1>
           <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
-            The star rewards system is currently turned off. When you're ready to motivate the kids with points and prizes, enable it in Settings.
+            {t('rewards.systemDisabledHint')}
           </p>
           <Link href="/settings">
             <Button>
               <Settings className="w-5 h-5 mr-2" />
-              Go to Settings
+              {t('rewards.goToSettings')}
             </Button>
           </Link>
         </div>
@@ -295,18 +297,18 @@ export default function RewardsPage() {
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Rewards</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Earn stars, redeem prizes!</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('rewards.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('rewards.subtitle')}</p>
         </div>
         <Button onClick={() => { resetForm(); setEditingReward(null); setShowAddModal(true) }}>
           <Plus className="w-5 h-5 mr-2" />
-          Add Reward
+          {t('rewards.addReward')}
         </Button>
       </div>
 
       {/* Points Leaderboard */}
       <Card className="mb-8">
-        <CardHeader title="Star Leaderboard" icon={<Trophy className="w-5 h-5 text-amber-500" />} />
+        <CardHeader title={t('rewards.starLeaderboard')} icon={<Trophy className="w-5 h-5 text-amber-500" />} />
         <div className="mt-4 space-y-3">
           {kidsLeaderboard.map((member, index) => (
             <div
@@ -337,7 +339,7 @@ export default function RewardsPage() {
           ))}
           {kidsLeaderboard.length === 0 && (
             <p className="text-center text-slate-500 dark:text-slate-400 py-4">
-              No children in the family yet
+              {t('rewards.noChildren')}
             </p>
           )}
         </div>
@@ -345,7 +347,7 @@ export default function RewardsPage() {
 
       {/* Prize Vault */}
       <Card className="mb-8">
-        <CardHeader title="Prize Vault" icon={<Gift className="w-5 h-5 text-sage-500" />} />
+        <CardHeader title={t('rewards.prizeVault')} icon={<Gift className="w-5 h-5 text-sage-500" />} />
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {rewards.map(reward => {
             // Find kid with most points
@@ -393,7 +395,7 @@ export default function RewardsPage() {
                     onClick={() => openRedeemModal(reward)}
                   >
                     <Sparkles className="w-4 h-4 mr-1" />
-                    Redeem
+                    {t('rewards.redeem')}
                   </Button>
                 </div>
               </div>
@@ -403,7 +405,7 @@ export default function RewardsPage() {
         {rewards.length === 0 && (
           <div className="text-center py-8">
             <Gift className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-500 dark:text-slate-400">No rewards yet. Add some prizes to motivate the kids!</p>
+            <p className="text-slate-500 dark:text-slate-400">{t('rewards.noRewards')}</p>
           </div>
         )}
       </Card>
@@ -411,7 +413,7 @@ export default function RewardsPage() {
       {/* Recent Redemptions */}
       {redemptions.length > 0 && (
         <Card>
-          <CardHeader title="Recent Redemptions" />
+          <CardHeader title={t('rewards.recentRedemptions')} />
           <div className="mt-4 space-y-3">
             {redemptions.slice(0, 5).map(redemption => (
               <div key={redemption.id} className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl">
@@ -419,7 +421,7 @@ export default function RewardsPage() {
                 <div className="flex-1">
                   <p className="font-medium text-slate-800 dark:text-slate-100">{redemption.reward?.title}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Redeemed by {redemption.member?.name} • {new Date(redemption.redeemed_at).toLocaleDateString()}
+                    {t('rewards.redeemedBy')} {redemption.member?.name} • {new Date(redemption.redeemed_at).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400">
@@ -436,13 +438,13 @@ export default function RewardsPage() {
       <Modal
         isOpen={showAddModal}
         onClose={() => { setShowAddModal(false); setEditingReward(null); resetForm() }}
-        title={editingReward ? 'Edit Reward' : 'New Reward'}
+        title={editingReward ? t('rewards.editReward') : t('rewards.newReward')}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-4 gap-4">
             <div className="col-span-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Reward Name
+                {t('rewards.rewardName')}
               </label>
               <input
                 type="text"
@@ -454,7 +456,7 @@ export default function RewardsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                Emoji
+                {t('common.emoji')}
               </label>
               <input
                 type="text"
@@ -467,20 +469,20 @@ export default function RewardsPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Description (optional)
+              {t('rewards.descriptionOptional')}
             </label>
             <input
               type="text"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="A short description..."
+              placeholder={t('rewards.descriptionPlaceholder')}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Point Cost
+              {t('rewards.pointCost')}
             </label>
             <div className="flex items-center gap-3">
               <Star className="w-6 h-6 text-amber-500 fill-amber-500" />
@@ -491,16 +493,16 @@ export default function RewardsPage() {
                 min="1"
                 className="w-24 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent text-center font-bold text-lg"
               />
-              <span className="text-slate-500 dark:text-slate-400">stars</span>
+              <span className="text-slate-500 dark:text-slate-400">{t('rewards.stars')}</span>
             </div>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <Button variant="secondary" onClick={() => { setShowAddModal(false); setEditingReward(null); resetForm() }}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={editingReward ? handleEditReward : handleAddReward}>
-              {editingReward ? 'Save Changes' : 'Add Reward'}
+              {editingReward ? t('common.saveChanges') : t('rewards.addReward')}
             </Button>
           </div>
         </div>
@@ -510,7 +512,7 @@ export default function RewardsPage() {
       <Modal
         isOpen={showRedeemModal}
         onClose={() => { setShowRedeemModal(false); setSelectedReward(null); setSelectedMember(null) }}
-        title="Redeem Reward"
+        title={t('rewards.redeemReward')}
       >
         {selectedReward && (
           <div className="space-y-6">
@@ -519,13 +521,13 @@ export default function RewardsPage() {
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedReward.title}</h3>
               <div className="flex items-center justify-center gap-2 mt-2">
                 <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
-                <span className="font-bold text-amber-600 dark:text-amber-400">{selectedReward.point_cost} stars</span>
+                <span className="font-bold text-amber-600 dark:text-amber-400">{selectedReward.point_cost} {t('rewards.stars')}</span>
               </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
-                Who is redeeming?
+                {t('rewards.whoIsRedeeming')}
               </label>
               <div className="space-y-2">
                 {kidsLeaderboard.map(member => {
@@ -552,7 +554,7 @@ export default function RewardsPage() {
                       <div className="flex-1 text-left">
                         <p className="font-medium text-slate-800 dark:text-slate-100">{member.name}</p>
                         {!canAfford && (
-                          <p className="text-sm text-coral-500">Needs {selectedReward.point_cost - member.points} more stars</p>
+                          <p className="text-sm text-coral-500">{t('rewards.needsMoreStars', { count: selectedReward.point_cost - member.points })}</p>
                         )}
                       </div>
                       <div className="flex items-center gap-1">
@@ -567,14 +569,14 @@ export default function RewardsPage() {
 
             <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
               <Button variant="secondary" onClick={() => { setShowRedeemModal(false); setSelectedReward(null); setSelectedMember(null) }}>
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={handleRedeem}
                 disabled={!selectedMember}
               >
                 <Sparkles className="w-4 h-4 mr-2" />
-                Confirm Redemption
+                {t('rewards.confirmRedemption')}
               </Button>
             </div>
           </div>

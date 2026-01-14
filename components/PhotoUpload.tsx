@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from 'react'
 import { Camera, Smile, Trash2, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useTranslation } from '@/lib/i18n-context'
 import EmojiPicker from './EmojiPicker'
 import ImageCropper from './ImageCropper'
 import Modal from './ui/Modal'
@@ -30,6 +31,7 @@ export default function PhotoUpload({
   size = 'lg',
 }: PhotoUploadProps) {
   const { user } = useAuth()
+  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [showOptions, setShowOptions] = useState(false)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
@@ -48,17 +50,17 @@ export default function PhotoUpload({
     const file = e.target.files?.[0]
     if (!file) return
     if (!user) {
-      setError('Please sign in to upload photos')
+      setError(t('photoUpload.signInToUpload'))
       return
     }
 
     // Validate file
     if (!file.type.startsWith('image/')) {
-      setError('Please select an image file')
+      setError(t('photoUpload.selectImage'))
       return
     }
     if (file.size > 10 * 1024 * 1024) {
-      setError('Image must be less than 10MB')
+      setError(t('photoUpload.imageTooLarge'))
       return
     }
 
@@ -143,7 +145,7 @@ export default function PhotoUpload({
       setShowOptions(false)
     } catch (err) {
       console.error('Upload error:', err)
-      setError('Failed to upload photo')
+      setError(t('photoUpload.uploadFailed'))
     } finally {
       setUploading(false)
     }
@@ -228,7 +230,7 @@ export default function PhotoUpload({
       <Modal
         isOpen={showOptions}
         onClose={() => setShowOptions(false)}
-        title="Change Avatar"
+        title={t('photoUpload.changeAvatar')}
         size="sm"
       >
         <div className="space-y-3">
@@ -261,8 +263,8 @@ export default function PhotoUpload({
               <Camera className="w-6 h-6 text-teal-600 dark:text-teal-400" />
             </div>
             <div className="text-left">
-              <p className="font-medium text-slate-800 dark:text-slate-100">Upload Photo</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Choose from your device</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('photoUpload.uploadPhoto')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('photoUpload.chooseFromDevice')}</p>
             </div>
           </button>
 
@@ -277,8 +279,8 @@ export default function PhotoUpload({
               <Smile className="w-6 h-6 text-amber-600 dark:text-amber-400" />
             </div>
             <div className="text-left">
-              <p className="font-medium text-slate-800 dark:text-slate-100">Choose Emoji</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Pick an emoji avatar</p>
+              <p className="font-medium text-slate-800 dark:text-slate-100">{t('photoUpload.chooseEmoji')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('photoUpload.pickEmoji')}</p>
             </div>
           </button>
 
@@ -291,8 +293,8 @@ export default function PhotoUpload({
                 <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
               </div>
               <div className="text-left">
-                <p className="font-medium text-red-700 dark:text-red-300">Remove Avatar</p>
-                <p className="text-sm text-red-500 dark:text-red-400">Use first letter instead</p>
+                <p className="font-medium text-red-700 dark:text-red-300">{t('photoUpload.removeAvatar')}</p>
+                <p className="text-sm text-red-500 dark:text-red-400">{t('photoUpload.useFirstLetter')}</p>
               </div>
             </button>
           )}
@@ -303,7 +305,7 @@ export default function PhotoUpload({
       <Modal
         isOpen={showEmojiPicker}
         onClose={() => setShowEmojiPicker(false)}
-        title="Choose Emoji"
+        title={t('photoUpload.chooseEmoji')}
         size="md"
       >
         <EmojiPicker

@@ -16,6 +16,8 @@ import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
 import { useContacts } from '@/lib/contacts-context'
 import { useSettings } from '@/lib/settings-context'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 import { CalendarEvent, MEMBER_COLORS, RecurrencePattern } from '@/lib/database.types'
 import RecurrenceSelector from '@/components/RecurrenceSelector'
 import { patternToRRule, getOccurrences, isRecurrenceActive } from '@/lib/rrule'
@@ -36,6 +38,8 @@ export default function CalendarPage() {
   const { categories, getCategory } = useCategories()
   const { contacts } = useContacts()
   const { googleCalendarAutoPush } = useSettings()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
 
   const getContact = (id: string) => contacts.find(c => c.id === id)
 
@@ -571,8 +575,8 @@ export default function CalendarPage() {
           <div className="flex-1 text-center">
             <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">
               {viewMode === 'week'
-                ? `Week of ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'MMM d')}`
-                : format(currentDate, 'MMMM yyyy')
+                ? t('calendar.weekOf', { date: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: dateLocale }) })
+                : format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               }
             </h1>
           </div>
@@ -583,7 +587,7 @@ export default function CalendarPage() {
               onClick={handleToday}
               className="px-4 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 active:scale-95 transition-all text-sm font-medium text-slate-700 dark:text-slate-300"
             >
-              Today
+              {t('common.today')}
             </button>
           </div>
         </div>
@@ -595,13 +599,13 @@ export default function CalendarPage() {
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all capitalize ${
+                className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all ${
                   viewMode === mode
                     ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
                 }`}
               >
-                {mode}
+                {t(`calendar.${mode}`)}
               </button>
             ))}
           </div>
@@ -612,14 +616,14 @@ export default function CalendarPage() {
               className="h-12 px-4 rounded-xl bg-purple-100 dark:bg-purple-900/30 hover:bg-purple-200 dark:hover:bg-purple-900/50 active:scale-95 transition-all flex items-center gap-2"
             >
               <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Smart</span>
+              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">{t('calendar.smart')}</span>
             </button>
             <button
               onClick={handleAddEvent}
               className="h-12 px-4 rounded-xl bg-teal-500 hover:bg-teal-600 active:scale-95 transition-all flex items-center gap-2"
             >
               <Plus className="w-5 h-5 text-white" />
-              <span className="text-sm font-medium text-white">Add</span>
+              <span className="text-sm font-medium text-white">{t('common.add')}</span>
             </button>
           </div>
         </div>
@@ -627,7 +631,7 @@ export default function CalendarPage() {
 
       {/* Day headers */}
       <div className="flex-shrink-0 grid grid-cols-7 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+        {[t('calendar.dayMon'), t('calendar.dayTue'), t('calendar.dayWed'), t('calendar.dayThu'), t('calendar.dayFri'), t('calendar.daySat'), t('calendar.daySun')].map(day => (
           <div key={day} className="text-center py-3 text-sm font-semibold text-slate-600 dark:text-slate-400">
             {day}
           </div>
@@ -736,7 +740,7 @@ export default function CalendarPage() {
                 })}
                 {hiddenCount > 0 && (
                   <div className="text-xs text-teal-600 dark:text-teal-400 font-medium pl-2 py-1">
-                    +{hiddenCount} more
+                    {t('calendar.moreEvents', { count: hiddenCount })}
                   </div>
                 )}
               </div>
@@ -756,18 +760,18 @@ export default function CalendarPage() {
         onUpdate={handleUpdateEvent}
       />
 
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Event" size="lg">
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={t('calendar.addEvent')} size="lg">
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Event Title *
+              {t('calendar.eventTitle')} *
             </label>
             <input
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-base"
-              placeholder="Event name..."
+              placeholder={t('calendar.eventTitlePlaceholder')}
             />
           </div>
 
@@ -780,14 +784,14 @@ export default function CalendarPage() {
               className="w-6 h-6 rounded border-slate-300 text-teal-500 focus:ring-teal-500"
             />
             <label htmlFor="all_day" className="text-base text-slate-700 dark:text-slate-300">
-              All day event
+              {t('calendar.allDayEvent')}
             </label>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Start Date
+                {t('calendar.startDate')}
               </label>
               <input
                 type="date"
@@ -799,7 +803,7 @@ export default function CalendarPage() {
             {!formData.all_day && (
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  Start Time
+                  {t('calendar.startTime')}
                 </label>
                 <input
                   type="time"
@@ -815,7 +819,7 @@ export default function CalendarPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  End Date
+                  {t('calendar.endDate')}
                 </label>
                 <input
                   type="date"
@@ -826,7 +830,7 @@ export default function CalendarPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                  End Time
+                  {t('calendar.endTime')}
                 </label>
                 <input
                   type="time"
@@ -840,7 +844,7 @@ export default function CalendarPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Category
+              {t('calendar.category')}
             </label>
             <CategorySelector
               value={formData.category_id}
@@ -852,13 +856,13 @@ export default function CalendarPage() {
                   color: (formData.member_ids.length === 0 && category) ? category.color : formData.color
                 })
               }}
-              placeholder="Select category"
+              placeholder={t('calendar.selectCategory')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Family Members
+              {t('calendar.familyMembers')}
             </label>
             <MemberMultiSelect
               value={formData.member_ids}
@@ -870,13 +874,13 @@ export default function CalendarPage() {
                   color: firstMember?.color || formData.color
                 })
               }}
-              placeholder="Select members (optional)"
+              placeholder={t('calendar.selectMembersOptional')}
             />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Color
+              {t('calendar.color')}
             </label>
             <div className="flex gap-2 flex-wrap">
               {MEMBER_COLORS.map(c => (
@@ -895,14 +899,14 @@ export default function CalendarPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Location
+              {t('calendar.location')}
             </label>
             <input
               type="text"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-              placeholder="Where is this event?"
+              placeholder={t('calendar.locationPlaceholder')}
             />
           </div>
 
@@ -925,7 +929,7 @@ export default function CalendarPage() {
               />
               <div className="flex items-center gap-2">
                 <Repeat className="w-5 h-5 text-slate-500" />
-                <span className="text-base text-slate-700 dark:text-slate-300">Repeat this event</span>
+                <span className="text-base text-slate-700 dark:text-slate-300">{t('calendar.repeatThisEvent')}</span>
               </div>
             </label>
 
@@ -942,23 +946,23 @@ export default function CalendarPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Description
+              {t('calendar.description')}
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
               rows={3}
-              placeholder="Additional details..."
+              placeholder={t('calendar.descriptionPlaceholder')}
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
             <Button variant="secondary" size="lg" onClick={() => setShowAddModal(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button size="lg" onClick={handleSaveEvent} disabled={!formData.title.trim()}>
-              Save Event
+              {t('calendar.saveEvent')}
             </Button>
           </div>
         </div>

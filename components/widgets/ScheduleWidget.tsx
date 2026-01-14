@@ -11,6 +11,8 @@ import { CalendarEvent } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import EventDetailModal from '@/components/EventDetailModal'
 import { getOccurrences, isRecurrenceActive } from '@/lib/rrule'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 
 // Helper function since date-fns doesn't export isNextWeek
 function isNextWeek(date: Date, options?: { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }): boolean {
@@ -84,6 +86,8 @@ export default function ScheduleWidget() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
   const [ref, { size, isWide, isTall }] = useWidgetSize()
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
 
   const fetchWeekEvents = useCallback(async () => {
     if (!user) {
@@ -317,20 +321,20 @@ export default function ScheduleWidget() {
         let shortLabel: string
 
         if (isToday(eventDate)) {
-          label = 'Today'
-          shortLabel = 'Today'
+          label = t('common.today')
+          shortLabel = t('common.today')
         } else if (isTomorrow(eventDate)) {
-          label = 'Tomorrow'
-          shortLabel = 'Tomorrow'
+          label = t('common.tomorrow')
+          shortLabel = t('common.tomorrow')
         } else if (isThisWeek(eventDate, { weekStartsOn: 1 })) {
-          label = format(eventDate, 'EEEE') // "Wednesday"
-          shortLabel = format(eventDate, 'EEE') // "Wed"
+          label = format(eventDate, 'EEEE', { locale: dateLocale })
+          shortLabel = format(eventDate, 'EEE', { locale: dateLocale })
         } else if (isNextWeek(eventDate, { weekStartsOn: 1 })) {
-          label = `Next ${format(eventDate, 'EEEE')}`
-          shortLabel = `Next ${format(eventDate, 'EEE')}`
+          label = `${t('schedule.next')} ${format(eventDate, 'EEEE', { locale: dateLocale })}`
+          shortLabel = `${t('schedule.next')} ${format(eventDate, 'EEE', { locale: dateLocale })}`
         } else {
-          label = format(eventDate, 'EEE, MMM d')
-          shortLabel = format(eventDate, 'MMM d')
+          label = format(eventDate, 'EEE, MMM d', { locale: dateLocale })
+          shortLabel = format(eventDate, 'MMM d', { locale: dateLocale })
         }
 
         // Events within 24 hours are urgent
@@ -350,7 +354,7 @@ export default function ScheduleWidget() {
     })
 
     return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime())
-  }, [events, now])
+  }, [events, now, t, dateLocale])
 
   // Calculate display limits based on size
   const displayConfig = useMemo(() => {
@@ -390,11 +394,11 @@ export default function ScheduleWidget() {
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-4 h-4 text-teal-500" />
           <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-            {size === 'small' ? 'Up Next' : 'Week Ahead'}
+            {size === 'small' ? t('schedule.upNext') : t('schedule.weekAhead')}
           </h3>
           {totalUpcoming > 0 && (
             <span className="text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full ml-auto">
-              {totalUpcoming} event{totalUpcoming !== 1 ? 's' : ''}
+              {totalUpcoming === 1 ? t('schedule.oneEvent') : t('schedule.events', { count: totalUpcoming })}
             </span>
           )}
         </div>
@@ -407,7 +411,7 @@ export default function ScheduleWidget() {
           >
             <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
             <p className="text-xs text-amber-700 dark:text-amber-300 truncate">
-              <span className="font-medium">Soon:</span> {nextUrgent.title} at {format(parseISO(nextUrgent.start_time), 'HH:mm')}
+              <span className="font-medium">{t('schedule.soon')}</span> {nextUrgent.title} {t('schedule.at')} {format(parseISO(nextUrgent.start_time), 'HH:mm')}
             </p>
           </div>
         )}
@@ -415,7 +419,7 @@ export default function ScheduleWidget() {
         {/* Events List */}
         {displayGroups.length === 0 ? (
           <div className="flex-1 flex items-center justify-center">
-            <p className="text-sm text-slate-400 dark:text-slate-500">No upcoming events</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">{t('schedule.noUpcoming')}</p>
           </div>
         ) : (
           <div className="flex-1 overflow-hidden space-y-3">
@@ -432,7 +436,7 @@ export default function ScheduleWidget() {
                   </span>
                   {!displayConfig.compact && (
                     <span className="text-[10px] text-slate-400 dark:text-slate-500">
-                      {format(group.date, 'MMM d')}
+                      {format(group.date, 'MMM d', { locale: dateLocale })}
                     </span>
                   )}
                   <div className="flex-1 h-px bg-slate-100 dark:bg-slate-700" />
@@ -493,7 +497,7 @@ export default function ScheduleWidget() {
                   })}
                   {group.events.length > displayConfig.maxEventsPerDay && (
                     <p className="text-[10px] text-teal-600 dark:text-teal-400 pl-3 font-medium">
-                      +{group.events.length - displayConfig.maxEventsPerDay} more
+                      {t('common.more', { count: group.events.length - displayConfig.maxEventsPerDay })}
                     </p>
                   )}
                 </div>
@@ -503,7 +507,7 @@ export default function ScheduleWidget() {
             {/* Show if there are more days */}
             {groupedEvents.length > displayConfig.maxDays && (
               <div className="flex items-center justify-center gap-1 text-xs text-teal-600 dark:text-teal-400 pt-1">
-                <span>+{groupedEvents.length - displayConfig.maxDays} more days</span>
+                <span>{t('schedule.moreDays', { count: groupedEvents.length - displayConfig.maxDays })}</span>
                 <ChevronRight className="w-3 h-3" />
               </div>
             )}

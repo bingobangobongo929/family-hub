@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useAuth } from '@/lib/auth-context'
 import { useSettings } from '@/lib/settings-context'
 import { useWidgetSize } from '@/lib/useWidgetSize'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface Photo {
   id: string
@@ -29,6 +30,7 @@ export default function GooglePhotosWidget() {
   const { user } = useAuth()
   const { googlePhotosAlbumId, googlePhotosAlbumTitle, googlePhotosRotationInterval } = useSettings()
   const [ref, { size }] = useWidgetSize()
+  const { t } = useTranslation()
 
   const [photos, setPhotos] = useState<Photo[]>([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -154,7 +156,7 @@ export default function GooglePhotosWidget() {
             onClick={fetchPhotos}
             className="mt-2 text-xs text-sage-600 hover:underline"
           >
-            Try again
+            {t('photos.tryAgain')}
           </button>
         </div>
       )}
@@ -173,11 +175,11 @@ export default function GooglePhotosWidget() {
           {/* Album title / caption */}
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
             <p className="text-white text-sm font-display font-medium truncate">
-              {googlePhotosAlbumTitle || 'Photos'}
+              {googlePhotosAlbumTitle || t('photos.title')}
             </p>
             {photos.length > 1 && (
               <p className="text-white/70 text-xs">
-                {currentIndex + 1} of {photos.length}
+                {t('photos.photoCount', { current: currentIndex + 1, total: photos.length })}
               </p>
             )}
           </div>
@@ -196,11 +198,11 @@ export default function GooglePhotosWidget() {
           {/* Prompt to connect */}
           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
             {!user ? (
-              <p className="text-white text-sm font-display font-medium">Sign in for photos</p>
+              <p className="text-white text-sm font-display font-medium">{t('photos.signInForPhotos')}</p>
             ) : !googlePhotosAlbumId ? (
               <Link href="/settings" className="text-white text-sm font-display font-medium hover:underline flex items-center gap-1">
                 <Settings className="w-3.5 h-3.5" />
-                Connect Google Photos
+                {t('photos.connectGooglePhotos')}
               </Link>
             ) : (
               <p className="text-white text-sm font-display font-medium">{currentDemo.caption}</p>

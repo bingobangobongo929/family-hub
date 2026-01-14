@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { Chore, CHORE_CATEGORIES, getChoreCategoryConfig } from '@/lib/database.types'
+import { useTranslation } from '@/lib/i18n-context'
 
 // Demo chores
 const DEMO_CHORES: Chore[] = [
@@ -22,6 +23,7 @@ const DEMO_CHORES: Chore[] = [
 export default function TasksPage() {
   const { user } = useAuth()
   const { members, getMember, updateMemberPoints } = useFamily()
+  const { t } = useTranslation()
   const [chores, setChores] = useState<Chore[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
@@ -203,12 +205,12 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">Chores</h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Earn stars by completing tasks!</p>
+          <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100">{t('chores.title')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('tasks.subtitle')}</p>
         </div>
         <Button onClick={handleAddChore} className="gap-2">
           <Plus className="w-5 h-5" />
-          Add Chore
+          {t('tasks.addChore')}
         </Button>
       </div>
 
@@ -218,7 +220,7 @@ export default function TasksPage() {
           <div className="flex items-center gap-3">
             <CheckSquare className="w-8 h-8 opacity-80" />
             <div>
-              <p className="text-sage-100 text-sm">Completed</p>
+              <p className="text-sage-100 text-sm">{t('tasks.completed')}</p>
               <p className="text-2xl font-bold">{completedCount}/{totalCount}</p>
             </div>
           </div>
@@ -227,14 +229,14 @@ export default function TasksPage() {
           <div className="flex items-center gap-3">
             <Star className="w-8 h-8 opacity-80" />
             <div>
-              <p className="text-amber-100 text-sm">Stars Today</p>
+              <p className="text-amber-100 text-sm">{t('tasks.starsToday')}</p>
               <p className="text-2xl font-bold">{totalStarsToday}</p>
             </div>
           </div>
         </Card>
         <Card className="hidden sm:block">
           <div className="text-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Progress</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{t('tasks.progress')}</p>
             <p className="text-2xl font-bold text-slate-800 dark:text-slate-100">{progressPercent}%</p>
           </div>
         </Card>
@@ -250,7 +252,7 @@ export default function TasksPage() {
               : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
           }`}
         >
-          All
+          {t('common.all')}
         </button>
         {members.map(member => (
           <button
@@ -276,15 +278,15 @@ export default function TasksPage() {
       {/* Chore List */}
       <Card hover={false}>
         <CardHeader
-          title="Today's Chores"
+          title={t('tasks.todaysChores')}
           icon={<CheckSquare className="w-5 h-5" />}
         />
         {loading ? (
-          <p className="text-slate-500 dark:text-slate-400">Loading...</p>
+          <p className="text-slate-500 dark:text-slate-400">{t('common.loading')}</p>
         ) : filteredChores.length === 0 ? (
           <div className="text-center py-8">
             <CheckSquare className="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3" />
-            <p className="text-slate-500 dark:text-slate-400">No chores yet. Add one to get started!</p>
+            <p className="text-slate-500 dark:text-slate-400">{t('tasks.noChores')}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -353,12 +355,12 @@ export default function TasksPage() {
       </Card>
 
       {/* Add Chore Modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Chore" size="md">
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={t('tasks.addChore')} size="md">
         <div className="space-y-4">
           <div className="flex gap-3">
             <div className="flex-shrink-0">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Icon
+                {t('tasks.icon')}
               </label>
               <select
                 value={formData.emoji}
@@ -372,14 +374,14 @@ export default function TasksPage() {
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Chore Title *
+                {t('tasks.choreTitle')} *
               </label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
-                placeholder="What needs to be done?"
+                placeholder={t('tasks.choreTitlePlaceholder')}
               />
             </div>
           </div>
@@ -387,14 +389,14 @@ export default function TasksPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Assign To
+                {t('tasks.assignTo')}
               </label>
               <select
                 value={formData.assigned_to}
                 onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
               >
-                <option value="">Unassigned</option>
+                <option value="">{t('tasks.unassigned')}</option>
                 {members.map(member => (
                   <option key={member.id} value={member.id}>{member.name}</option>
                 ))}
@@ -402,7 +404,7 @@ export default function TasksPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                Stars
+                {t('stars.title')}
               </label>
               <div className="flex items-center gap-2">
                 <input
@@ -420,7 +422,7 @@ export default function TasksPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Category
+              {t('tasks.category')}
             </label>
             <div className="flex flex-wrap gap-2">
               {CHORE_CATEGORIES.map(cat => (
@@ -442,26 +444,26 @@ export default function TasksPage() {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Repeat
+              {t('tasks.repeat')}
             </label>
             <select
               value={formData.repeat_frequency}
               onChange={(e) => setFormData({ ...formData, repeat_frequency: e.target.value as typeof formData.repeat_frequency })}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
             >
-              <option value="none">One time</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="none">{t('tasks.oneTime')}</option>
+              <option value="daily">{t('tasks.daily')}</option>
+              <option value="weekly">{t('tasks.weekly')}</option>
+              <option value="monthly">{t('tasks.monthly')}</option>
             </select>
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
             <Button variant="secondary" onClick={() => setShowAddModal(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleSaveChore} disabled={!formData.title.trim()}>
-              Save Chore
+              {t('tasks.saveChore')}
             </Button>
           </div>
         </div>

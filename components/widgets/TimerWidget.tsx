@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Moon, Bath, Utensils, BookOpen } from 'lucide-react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
+import { useTranslation } from '@/lib/i18n-context'
 
 interface TimerPreset {
   id: string
@@ -71,6 +72,7 @@ function playSound(type: 'tick' | 'alarm' | 'start') {
 
 export default function TimerWidget() {
   const [ref, { size }] = useWidgetSize()
+  const { t } = useTranslation()
   const [selectedPreset, setSelectedPreset] = useState<TimerPreset | null>(null)
   const [timeLeft, setTimeLeft] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
@@ -170,7 +172,7 @@ export default function TimerWidget() {
         <div className="flex items-center gap-2">
           <Timer className={`w-4 h-4 ${selectedPreset || isComplete ? 'text-white' : 'text-teal-500'}`} />
           <h3 className={`font-display font-semibold ${selectedPreset || isComplete ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-            {isComplete ? 'Time\'s Up!' : selectedPreset ? selectedPreset.label : 'Timer'}
+            {isComplete ? t('timer.timesUp') : selectedPreset ? selectedPreset.label : t('timer.title')}
           </h3>
         </div>
         <button

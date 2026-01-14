@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Trash2, Info, Calendar, List } from 'lucide-react'
 import Card from '@/components/Card'
+import { useTranslation } from '@/lib/i18n-context'
+import { getDateLocale } from '@/lib/date-locale'
 import {
   BIN_TYPES,
   BinType,
@@ -22,6 +24,8 @@ import {
 type ViewMode = 'upcoming' | 'calendar' | 'by-bin'
 
 export default function BindicatorPage() {
+  const { t, locale } = useTranslation()
+  const dateLocale = getDateLocale(locale)
   const [viewMode, setViewMode] = useState<ViewMode>('upcoming')
   const [currentDate, setCurrentDate] = useState(new Date(2026, 0, 1)) // Start in Jan 2026
   const [expandedBin, setExpandedBin] = useState<BinType | null>(null)
@@ -68,9 +72,9 @@ export default function BindicatorPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-3">
             <Trash2 className="w-8 h-8 text-amber-500" />
-            Bindicator
+            {t('bindicator.title')}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">Bin collection schedule for 2026</p>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">{t('bindicator.subtitle')}</p>
         </div>
 
         {/* View mode toggle */}
@@ -84,7 +88,7 @@ export default function BindicatorPage() {
             }`}
           >
             <List className="w-4 h-4 inline mr-1.5" />
-            Upcoming
+            {t('bindicator.upcoming')}
           </button>
           <button
             onClick={() => setViewMode('calendar')}
@@ -95,7 +99,7 @@ export default function BindicatorPage() {
             }`}
           >
             <Calendar className="w-4 h-4 inline mr-1.5" />
-            Calendar
+            {t('bindicator.calendar')}
           </button>
           <button
             onClick={() => setViewMode('by-bin')}
@@ -106,7 +110,7 @@ export default function BindicatorPage() {
             }`}
           >
             <Trash2 className="w-4 h-4 inline mr-1.5" />
-            By Bin
+            {t('bindicator.byBin')}
           </button>
         </div>
       </div>
@@ -123,14 +127,14 @@ export default function BindicatorPage() {
               <h2 className={`text-xl font-bold ${
                 todayBins.length > 0 ? 'text-red-700 dark:text-red-300' : 'text-orange-700 dark:text-orange-300'
               }`}>
-                {todayBins.length > 0 ? 'Put out tonight!' : 'Put out tomorrow!'}
+                {todayBins.length > 0 ? t('bindicator.putOutTonight') : t('bindicator.putOutTomorrow')}
               </h2>
               <p className={`text-sm ${
                 todayBins.length > 0 ? 'text-red-600 dark:text-red-400' : 'text-orange-600 dark:text-orange-400'
               }`}>
                 {todayBins.length > 0
-                  ? `Collection day is today (${format(new Date(), 'EEEE, d MMMM')})`
-                  : `Collection day is tomorrow (${format(new Date(Date.now() + 24 * 60 * 60 * 1000), 'EEEE, d MMMM')})`
+                  ? `${t('bindicator.collectionToday')} (${format(new Date(), 'EEEE, d MMMM', { locale: dateLocale })})`
+                  : `${t('bindicator.collectionTomorrow')} (${format(new Date(Date.now() + 24 * 60 * 60 * 1000), 'EEEE, d MMMM', { locale: dateLocale })})`
                 }
               </p>
             </div>
@@ -167,7 +171,7 @@ export default function BindicatorPage() {
                     <h3 className="font-semibold text-slate-800 dark:text-slate-100">{bin.shortName}</h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{bin.description}</p>
                     <p className={`text-2xl font-bold ${urgencyStyles.text}`}>
-                      {bin.daysUntil === 0 ? 'Today!' : bin.daysUntil === 1 ? 'Tomorrow' : `${bin.daysUntil} days`}
+                      {bin.daysUntil === 0 ? t('bindicator.today') : bin.daysUntil === 1 ? t('common.tomorrow') : t('bindicator.days', { count: bin.daysUntil })}
                     </p>
                     {bin.nextDate && (
                       <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">
@@ -183,7 +187,7 @@ export default function BindicatorPage() {
           {/* Upcoming collections list */}
           <Card>
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4">
-              Upcoming Collections
+              {t('bindicator.upcomingCollections')}
             </h2>
             <div className="space-y-2">
               {upcoming.slice(0, 10).map((collection, idx) => (
@@ -197,7 +201,7 @@ export default function BindicatorPage() {
                 >
                   <div>
                     <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {format(collection.date, 'EEEE, d MMMM')}
+                      {format(collection.date, 'EEEE, d MMMM', { locale: dateLocale })}
                     </p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">
                       {collection.bins.map(b => getBinInfo(b).name).join(', ')}
@@ -227,7 +231,7 @@ export default function BindicatorPage() {
               <ChevronLeft className="w-5 h-5" />
             </button>
             <h2 className="text-xl font-semibold text-slate-800 dark:text-slate-100">
-              {format(currentDate, 'MMMM yyyy')}
+              {format(currentDate, 'MMMM yyyy', { locale: dateLocale })}
             </h2>
             <button
               onClick={() => navigateMonth('next')}
@@ -315,8 +319,8 @@ export default function BindicatorPage() {
                   <h3 className="font-semibold text-slate-800 dark:text-slate-100">{bin.name}</h3>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{bin.description}</p>
                   <p className={`text-sm font-medium ${getUrgencyStyles(bin.urgency).text}`}>
-                    Next: {bin.nextDate ? format(bin.nextDate, 'EEE, d MMM') : 'None scheduled'}
-                    {bin.daysUntil >= 0 && ` (${bin.daysUntil === 0 ? 'Today' : bin.daysUntil === 1 ? 'Tomorrow' : `${bin.daysUntil} days`})`}
+                    {t('bindicator.next')}: {bin.nextDate ? format(bin.nextDate, 'EEE, d MMM', { locale: dateLocale }) : t('bindicator.noneScheduled')}
+                    {bin.daysUntil >= 0 && ` (${bin.daysUntil === 0 ? t('bindicator.today') : bin.daysUntil === 1 ? t('common.tomorrow') : t('bindicator.days', { count: bin.daysUntil })})`}
                   </p>
                 </div>
                 <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${expandedBin === bin.id ? 'rotate-90' : ''}`} />
@@ -326,7 +330,7 @@ export default function BindicatorPage() {
               {expandedBin === bin.id && (
                 <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-                    All collection dates for 2026 ({bin.allDates.length} total):
+                    {t('bindicator.allDatesFor2026', { count: bin.allDates.length })}
                   </p>
                   <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                     {bin.allDates.map((date, idx) => {
@@ -360,55 +364,55 @@ export default function BindicatorPage() {
         <div className="flex items-center gap-2 mb-4">
           <Info className="w-5 h-5 text-slate-500" />
           <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            What goes in each bin?
+            {t('bindicator.whatGoesIn')}
           </h2>
         </div>
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="p-4 rounded-xl bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🌿</span>
-              <h3 className="font-semibold text-green-800 dark:text-green-200">Bio Bin</h3>
+              <h3 className="font-semibold text-green-800 dark:text-green-200">{t('bins.bio.name')}</h3>
             </div>
             <ul className="text-sm text-green-700 dark:text-green-300 space-y-1">
-              <li>Garden waste (grass, leaves, branches)</li>
-              <li>Food waste (cooked & uncooked)</li>
-              <li>Compostable bags</li>
+              <li>{t('bins.bio.items.garden')}</li>
+              <li>{t('bins.bio.items.food')}</li>
+              <li>{t('bins.bio.items.compostable')}</li>
             </ul>
           </div>
 
           <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🗑️</span>
-              <h3 className="font-semibold text-slate-800 dark:text-slate-200">Main Bin</h3>
+              <h3 className="font-semibold text-slate-800 dark:text-slate-200">{t('bins.main.name')}</h3>
             </div>
             <ul className="text-sm text-slate-700 dark:text-slate-300 space-y-1">
-              <li>Non-recyclable waste</li>
-              <li>Nappies and sanitary items</li>
-              <li>Polystyrene</li>
+              <li>{t('bins.main.items.nonRecyclable')}</li>
+              <li>{t('bins.main.items.nappies')}</li>
+              <li>{t('bins.main.items.polystyrene')}</li>
             </ul>
           </div>
 
           <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">📦</span>
-              <h3 className="font-semibold text-blue-800 dark:text-blue-200">Paper Recycling</h3>
+              <h3 className="font-semibold text-blue-800 dark:text-blue-200">{t('bins.paper.name')}</h3>
             </div>
             <ul className="text-sm text-blue-700 dark:text-blue-300 space-y-1">
-              <li>Cardboard boxes (flattened)</li>
-              <li>Newspapers and magazines</li>
-              <li>Paper and envelopes</li>
+              <li>{t('bins.paper.items.cardboard')}</li>
+              <li>{t('bins.paper.items.newspapers')}</li>
+              <li>{t('bins.paper.items.paper')}</li>
             </ul>
           </div>
 
           <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">♻️</span>
-              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200">PMG Recycling</h3>
+              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200">{t('bins.pmg.name')}</h3>
             </div>
             <ul className="text-sm text-emerald-700 dark:text-emerald-300 space-y-1">
-              <li>Plastic bottles and containers</li>
-              <li>Metal cans and tins</li>
-              <li>Glass bottles and jars</li>
+              <li>{t('bins.pmg.items.plastic')}</li>
+              <li>{t('bins.pmg.items.metal')}</li>
+              <li>{t('bins.pmg.items.glass')}</li>
             </ul>
           </div>
         </div>
