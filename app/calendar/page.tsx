@@ -23,7 +23,7 @@ import RecurrenceSelector from '@/components/RecurrenceSelector'
 import { patternToRRule, getOccurrences, isRecurrenceActive } from '@/lib/rrule'
 import { getBinsForDate, getBinInfo } from '@/lib/bin-schedule'
 
-type ViewMode = 'month' | 'week'
+type ViewMode = 'month' | 'week' | 'day' | 'agenda'
 
 // Demo events
 const DEMO_EVENTS: CalendarEvent[] = [
@@ -49,11 +49,27 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
+  const [isMobile, setIsMobile] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
   const [cellHeight, setCellHeight] = useState(120)
+
+  // Detect mobile and set smart default view
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768
+      setIsMobile(mobile)
+      // Default to agenda view on mobile for better UX
+      if (mobile && viewMode === 'month') {
+        setViewMode('agenda')
+      }
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, []) // Only run once on mount
 
   // Calculate cell height based on viewport
   useEffect(() => {
@@ -62,7 +78,7 @@ export default function CalendarPage() {
       const headerHeight = 140 // Approx header + nav height
       const dayHeaderHeight = 48
       const availableHeight = vh - headerHeight - dayHeaderHeight
-      const rows = viewMode === 'week' ? 1 : 6 // Max 6 rows in month view
+      const rows = viewMode === 'week' ? 1 : viewMode === 'day' ? 1 : 6 // Max 6 rows in month view
       const calculatedHeight = Math.floor(availableHeight / rows)
       setCellHeight(Math.max(100, Math.min(200, calculatedHeight)))
     }
@@ -230,7 +246,9 @@ export default function CalendarPage() {
   }, [fetchEvents])
 
   const handlePrevious = () => {
-    if (viewMode === 'week') {
+    if (viewMode === 'day') {
+      setCurrentDate(prev => addDays(prev, -1))
+    } else if (viewMode === 'week') {
       setCurrentDate(prev => subWeeks(prev, 1))
     } else {
       setCurrentDate(prev => subMonths(prev, 1))
@@ -238,7 +256,9 @@ export default function CalendarPage() {
   }
 
   const handleNext = () => {
-    if (viewMode === 'week') {
+    if (viewMode === 'day') {
+      setCurrentDate(prev => addDays(prev, 1))
+    } else if (viewMode === 'week') {
       setCurrentDate(prev => addWeeks(prev, 1))
     } else {
       setCurrentDate(prev => addMonths(prev, 1))
@@ -522,7 +542,9 @@ export default function CalendarPage() {
 
   // Generate calendar days based on view mode
   const calendarDays = useMemo(() => {
-    if (viewMode === 'week') {
+    if (viewMode === 'day') {
+      return [currentDate]
+    } else if (viewMode === 'week') {
       const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
       return eachDayOfInterval({
         start: weekStart,
@@ -536,6 +558,40 @@ export default function CalendarPage() {
       return eachDayOfInterval({ start: calendarStart, end: calendarEnd })
     }
   }, [currentDate, viewMode])
+
+  // Generate upcoming events for agenda view (next 30 days)
+  const agendaEvents = useMemo(() => {
+    if (viewMode !== 'agenda') return []
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const endDate = addDays(today, 30)
+
+    // Get all events within the next 30 days
+    const upcoming = events
+      .filter(event => {
+        const eventDate = parseISO(event.start_time)
+        return !isBefore(eventDate, today) && !isAfter(eventDate, endDate)
+      })
+      .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime())
+
+    // Group by date
+    const grouped: { date: Date; events: CalendarEvent[] }[] = []
+    let currentGroup: { date: Date; events: CalendarEvent[] } | null = null
+
+    upcoming.forEach(event => {
+      const eventDate = parseISO(event.start_time)
+      eventDate.setHours(0, 0, 0, 0)
+
+      if (!currentGroup || !isSameDay(currentGroup.date, eventDate)) {
+        currentGroup = { date: eventDate, events: [] }
+        grouped.push(currentGroup)
+      }
+      currentGroup.events.push(event)
+    })
+
+    return grouped
+  }, [events, viewMode])
 
   const getEventsForDay = (date: Date) => {
     return events.filter(event => isSameDay(parseISO(event.start_time), date))
@@ -574,9 +630,13 @@ export default function CalendarPage() {
           {/* Title */}
           <div className="flex-1 text-center min-w-0">
             <h1 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100 truncate">
-              {viewMode === 'week'
-                ? t('calendar.weekOf', { date: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: dateLocale }) })
-                : format(currentDate, 'MMMM yyyy', { locale: dateLocale })
+              {viewMode === 'day'
+                ? format(currentDate, 'EEEE, d MMMM yyyy', { locale: dateLocale })
+                : viewMode === 'week'
+                  ? t('calendar.weekOf', { date: format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: dateLocale }) })
+                  : viewMode === 'agenda'
+                    ? t('calendar.upcoming')
+                    : format(currentDate, 'MMMM yyyy', { locale: dateLocale })
               }
             </h1>
           </div>
@@ -594,12 +654,16 @@ export default function CalendarPage() {
 
         {/* View toggle + Add buttons */}
         <div className="flex items-center justify-between mt-2 sm:mt-3 gap-2">
-          <div className="flex rounded-xl bg-slate-100 dark:bg-slate-700 p-1">
-            {(['month', 'week'] as ViewMode[]).map(mode => (
+          <div className="flex rounded-xl bg-slate-100 dark:bg-slate-700 p-1 overflow-x-auto">
+            {/* Mobile: Show agenda and day first as they're more useful */}
+            {(isMobile
+              ? ['agenda', 'day', 'week', 'month'] as ViewMode[]
+              : ['month', 'week', 'day', 'agenda'] as ViewMode[]
+            ).map(mode => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all touch-target ${
+                className={`px-2.5 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium rounded-lg transition-all touch-target whitespace-nowrap ${
                   viewMode === mode
                     ? 'bg-white dark:bg-slate-600 text-slate-800 dark:text-slate-100 shadow-sm'
                     : 'text-slate-600 dark:text-slate-400'
@@ -629,126 +693,337 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Day headers */}
-      <div className="flex-shrink-0 grid grid-cols-7 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-        {[t('calendar.dayMon'), t('calendar.dayTue'), t('calendar.dayWed'), t('calendar.dayThu'), t('calendar.dayFri'), t('calendar.daySat'), t('calendar.daySun')].map(day => (
-          <div key={day} className="text-center py-3 text-sm font-semibold text-slate-600 dark:text-slate-400">
-            {day}
-          </div>
-        ))}
-      </div>
+      {/* Agenda View */}
+      {viewMode === 'agenda' && (
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-4 py-4">
+          {agendaEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <ChevronRight className="w-8 h-8 text-slate-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">{t('calendar.noUpcomingEvents')}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{t('calendar.noUpcomingEventsDesc')}</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {agendaEvents.map(group => {
+                const isTodayDate = isToday(group.date)
+                const isTomorrow = isSameDay(group.date, addDays(new Date(), 1))
 
-      {/* Calendar grid - fills remaining space */}
-      <div className={`flex-1 grid grid-cols-7 ${viewMode === 'week' ? '' : 'auto-rows-fr'} bg-white dark:bg-slate-900`}>
-        {calendarDays.map(day => {
-          const dayEvents = getEventsForDay(day)
-          const isCurrentMonth = viewMode === 'week' || isSameMonth(day, currentDate)
-          const isTodayDate = isToday(day)
-          const dayBins = getBinsForDate(day)
-          const visibleEvents = dayEvents.slice(0, maxEventsPerCell)
-          const hiddenCount = dayEvents.length - visibleEvents.length
+                return (
+                  <div key={group.date.toISOString()}>
+                    {/* Date header */}
+                    <div className="sticky top-0 bg-white dark:bg-slate-900 pb-2 z-10">
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold ${
+                        isTodayDate
+                          ? 'bg-teal-100 dark:bg-teal-900/50 text-teal-700 dark:text-teal-300'
+                          : isTomorrow
+                            ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
+                            : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                      }`}>
+                        <span>{isTodayDate ? t('common.today') : isTomorrow ? t('common.tomorrow') : format(group.date, 'EEEE', { locale: dateLocale })}</span>
+                        <span className="text-xs opacity-75">{format(group.date, 'd MMM', { locale: dateLocale })}</span>
+                      </div>
+                    </div>
 
-          return (
-            <div
-              key={day.toISOString()}
-              onClick={() => handleDayClick(day)}
-              className={`border-b border-r border-slate-200 dark:border-slate-700 p-1.5 cursor-pointer transition-colors ${
-                isCurrentMonth
-                  ? 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  : 'bg-slate-50 dark:bg-slate-900/50 opacity-50'
-              }`}
-              style={{ minHeight: viewMode === 'week' ? '100%' : cellHeight }}
-            >
-              {/* Day header */}
-              <div className="flex items-center justify-between mb-1">
-                <div className={`text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full ${
-                  isTodayDate
-                    ? 'bg-teal-500 text-white'
-                    : 'text-slate-700 dark:text-slate-300'
-                }`}>
-                  {format(day, 'd')}
+                    {/* Events for this day */}
+                    <div className="space-y-2">
+                      {group.events.map(event => {
+                        const category = event.category_id ? getCategory(event.category_id) : null
+                        const memberIds = eventMembers[event.id] || []
+                        const contactIds = eventContacts[event.id] || []
+                        const isRecurring = !!event.recurrence_rule
+                        const time = format(parseISO(event.start_time), 'HH:mm')
+                        const endTime = event.end_time ? format(parseISO(event.end_time), 'HH:mm') : null
+
+                        return (
+                          <button
+                            key={event.id}
+                            onClick={(e) => handleEventClick(event, e)}
+                            className="w-full min-h-[60px] px-4 py-3 rounded-2xl text-left transition-all active:scale-[0.99] flex items-start gap-3 tap-highlight"
+                            style={{ backgroundColor: event.color + '15', borderLeft: `4px solid ${event.color}` }}
+                          >
+                            {/* Time column */}
+                            <div className="flex-shrink-0 w-14 text-center">
+                              <div className="text-sm font-bold" style={{ color: event.color }}>{time}</div>
+                              {endTime && <div className="text-xs text-slate-400 dark:text-slate-500">{endTime}</div>}
+                            </div>
+
+                            {/* Event details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                {isRecurring && <Repeat className="w-3.5 h-3.5 flex-shrink-0" style={{ color: event.color }} />}
+                                {category && <span className="text-sm flex-shrink-0">{category.emoji}</span>}
+                                <span className="font-semibold text-slate-800 dark:text-slate-100 truncate">
+                                  {event.title}
+                                </span>
+                              </div>
+                              {event.location && (
+                                <p className="text-sm text-slate-500 dark:text-slate-400 truncate">{event.location}</p>
+                              )}
+                              {(memberIds.length > 0 || contactIds.length > 0) && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  {memberIds.slice(0, 4).map(id => {
+                                    const m = getMember(id)
+                                    return m ? (
+                                      <span
+                                        key={id}
+                                        className="w-5 h-5 rounded-full flex-shrink-0 text-xs flex items-center justify-center text-white font-medium"
+                                        style={{ backgroundColor: m.color }}
+                                        title={m.name}
+                                      >
+                                        {m.name.charAt(0)}
+                                      </span>
+                                    ) : null
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Day View */}
+      {viewMode === 'day' && (
+        <div className="flex-1 overflow-y-auto bg-white dark:bg-slate-900 px-4 py-4">
+          {(() => {
+            const dayEvents = getEventsForDay(currentDate)
+            const dayBins = getBinsForDate(currentDate)
+
+            if (dayEvents.length === 0 && dayBins.length === 0) {
+              return (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <Plus className="w-8 h-8 text-slate-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-1">{t('calendar.noEventsToday')}</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('calendar.tapToAddEvent')}</p>
+                  <button
+                    onClick={() => handleDayClick(currentDate)}
+                    className="px-4 py-2 bg-teal-500 text-white rounded-xl font-medium hover:bg-teal-600 transition-colors"
+                  >
+                    {t('calendar.addEvent')}
+                  </button>
                 </div>
+              )
+            }
+
+            return (
+              <div className="space-y-3">
+                {/* Bin reminders for this day */}
                 {dayBins.length > 0 && (
-                  <div className="flex gap-0.5">
-                    {dayBins.map(binType => (
-                      <span key={binType} className="text-sm">{getBinInfo(binType).emoji}</span>
-                    ))}
+                  <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-center gap-3">
+                      <div className="flex gap-1">
+                        {dayBins.map(binType => (
+                          <span key={binType} className="text-2xl">{getBinInfo(binType).emoji}</span>
+                        ))}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-amber-800 dark:text-amber-200">{t('bindicator.binDay')}</p>
+                        <p className="text-sm text-amber-600 dark:text-amber-400">
+                          {dayBins.map(b => t(`bins.${b}.name`)).join(', ')}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
-              </div>
 
-              {/* Events - Touch friendly size */}
-              <div className="space-y-1">
-                {visibleEvents.map(event => {
+                {/* Events */}
+                {dayEvents.map(event => {
                   const category = event.category_id ? getCategory(event.category_id) : null
                   const memberIds = eventMembers[event.id] || []
                   const contactIds = eventContacts[event.id] || []
                   const isRecurring = !!event.recurrence_rule
                   const time = format(parseISO(event.start_time), 'HH:mm')
+                  const endTime = event.end_time ? format(parseISO(event.end_time), 'HH:mm') : null
 
                   return (
                     <button
                       key={event.id}
                       onClick={(e) => handleEventClick(event, e)}
-                      className="w-full min-h-[44px] px-2 py-2 rounded-lg text-left transition-all active:scale-[0.98] flex items-center gap-1.5 tap-highlight"
-                      style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                      className="w-full min-h-[72px] px-4 py-4 rounded-2xl text-left transition-all active:scale-[0.99] flex items-start gap-4 tap-highlight"
+                      style={{ backgroundColor: event.color + '15', borderLeft: `4px solid ${event.color}` }}
                     >
+                      {/* Time column */}
+                      <div className="flex-shrink-0 w-16 text-center">
+                        <div className="text-base font-bold" style={{ color: event.color }}>{time}</div>
+                        {endTime && <div className="text-sm text-slate-400 dark:text-slate-500">{endTime}</div>}
+                      </div>
+
+                      {/* Event details */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          {isRecurring && <Repeat className="w-3 h-3 flex-shrink-0" style={{ color: event.color }} />}
-                          {category && <span className="text-xs flex-shrink-0">{category.emoji}</span>}
-                          <span className="text-xs font-semibold truncate" style={{ color: event.color }}>
+                        <div className="flex items-center gap-2 mb-1">
+                          {isRecurring && <Repeat className="w-4 h-4 flex-shrink-0" style={{ color: event.color }} />}
+                          {category && <span className="text-base flex-shrink-0">{category.emoji}</span>}
+                          <span className="text-lg font-semibold text-slate-800 dark:text-slate-100 truncate">
                             {event.title}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
-                          <span>{time}</span>
-                          {(memberIds.length > 0 || contactIds.length > 0) && (
-                            <>
-                              <span>•</span>
-                              <div className="flex items-center gap-0.5">
-                                {memberIds.slice(0, 2).map(id => {
-                                  const m = getMember(id)
-                                  return m ? (
-                                    <span
-                                      key={id}
-                                      className="w-3 h-3 rounded-full flex-shrink-0"
-                                      style={{ backgroundColor: m.color }}
-                                      title={m.name}
-                                    />
-                                  ) : null
-                                })}
-                                {contactIds.slice(0, 2).map(id => {
-                                  const c = getContact(id)
-                                  const displayName = c?.display_name || c?.name || ''
-                                  return c ? (
-                                    <span
-                                      key={id}
-                                      className="w-3 h-3 rounded-full bg-slate-400 text-white text-[7px] flex items-center justify-center font-bold flex-shrink-0"
-                                      title={displayName}
-                                    >
-                                      {displayName.charAt(0)}
-                                    </span>
-                                  ) : null
-                                })}
-                              </div>
-                            </>
-                          )}
-                        </div>
+                        {event.location && (
+                          <p className="text-sm text-slate-500 dark:text-slate-400 truncate mb-1">{event.location}</p>
+                        )}
+                        {event.description && (
+                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">{event.description}</p>
+                        )}
+                        {(memberIds.length > 0 || contactIds.length > 0) && (
+                          <div className="flex items-center gap-1.5 mt-2">
+                            {memberIds.map(id => {
+                              const m = getMember(id)
+                              return m ? (
+                                <span
+                                  key={id}
+                                  className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                                  style={{ backgroundColor: m.color }}
+                                >
+                                  {m.name}
+                                </span>
+                              ) : null
+                            })}
+                          </div>
+                        )}
                       </div>
                     </button>
                   )
                 })}
-                {hiddenCount > 0 && (
-                  <div className="text-xs text-teal-600 dark:text-teal-400 font-medium pl-2 py-1">
-                    {t('calendar.moreEvents', { count: hiddenCount })}
-                  </div>
-                )}
               </div>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* Day headers - only for month/week views */}
+      {(viewMode === 'month' || viewMode === 'week') && (
+        <div className="flex-shrink-0 grid grid-cols-7 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+          {[t('calendar.dayMon'), t('calendar.dayTue'), t('calendar.dayWed'), t('calendar.dayThu'), t('calendar.dayFri'), t('calendar.daySat'), t('calendar.daySun')].map(day => (
+            <div key={day} className="text-center py-3 text-sm font-semibold text-slate-600 dark:text-slate-400">
+              {day}
             </div>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Calendar grid - only for month/week views */}
+      {(viewMode === 'month' || viewMode === 'week') && (
+        <div className={`flex-1 grid grid-cols-7 ${viewMode === 'week' ? '' : 'auto-rows-fr'} bg-white dark:bg-slate-900`}>
+          {calendarDays.map(day => {
+            const dayEvents = getEventsForDay(day)
+            const isCurrentMonth = viewMode === 'week' || isSameMonth(day, currentDate)
+            const isTodayDate = isToday(day)
+            const dayBins = getBinsForDate(day)
+            const visibleEvents = dayEvents.slice(0, maxEventsPerCell)
+            const hiddenCount = dayEvents.length - visibleEvents.length
+
+            return (
+              <div
+                key={day.toISOString()}
+                onClick={() => handleDayClick(day)}
+                className={`border-b border-r border-slate-200 dark:border-slate-700 p-1.5 cursor-pointer transition-colors ${
+                  isCurrentMonth
+                    ? 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    : 'bg-slate-50 dark:bg-slate-900/50 opacity-50'
+                }`}
+                style={{ minHeight: viewMode === 'week' ? '100%' : cellHeight }}
+              >
+                {/* Day header */}
+                <div className="flex items-center justify-between mb-1">
+                  <div className={`text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full ${
+                    isTodayDate
+                      ? 'bg-teal-500 text-white'
+                      : 'text-slate-700 dark:text-slate-300'
+                  }`}>
+                    {format(day, 'd')}
+                  </div>
+                  {dayBins.length > 0 && (
+                    <div className="flex gap-0.5">
+                      {dayBins.map(binType => (
+                        <span key={binType} className="text-sm">{getBinInfo(binType).emoji}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Events - Touch friendly size */}
+                <div className="space-y-1">
+                  {visibleEvents.map(event => {
+                    const category = event.category_id ? getCategory(event.category_id) : null
+                    const memberIds = eventMembers[event.id] || []
+                    const contactIds = eventContacts[event.id] || []
+                    const isRecurring = !!event.recurrence_rule
+                    const time = format(parseISO(event.start_time), 'HH:mm')
+
+                    return (
+                      <button
+                        key={event.id}
+                        onClick={(e) => handleEventClick(event, e)}
+                        className="w-full min-h-[44px] px-2 py-2 rounded-lg text-left transition-all active:scale-[0.98] flex items-center gap-1.5 tap-highlight"
+                        style={{ backgroundColor: event.color + '20', borderLeft: `3px solid ${event.color}` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1">
+                            {isRecurring && <Repeat className="w-3 h-3 flex-shrink-0" style={{ color: event.color }} />}
+                            {category && <span className="text-xs flex-shrink-0">{category.emoji}</span>}
+                            <span className="text-xs font-semibold truncate" style={{ color: event.color }}>
+                              {event.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                            <span>{time}</span>
+                            {(memberIds.length > 0 || contactIds.length > 0) && (
+                              <>
+                                <span>•</span>
+                                <div className="flex items-center gap-0.5">
+                                  {memberIds.slice(0, 2).map(id => {
+                                    const m = getMember(id)
+                                    return m ? (
+                                      <span
+                                        key={id}
+                                        className="w-3 h-3 rounded-full flex-shrink-0"
+                                        style={{ backgroundColor: m.color }}
+                                        title={m.name}
+                                      />
+                                    ) : null
+                                  })}
+                                  {contactIds.slice(0, 2).map(id => {
+                                    const c = getContact(id)
+                                    const displayName = c?.display_name || c?.name || ''
+                                    return c ? (
+                                      <span
+                                        key={id}
+                                        className="w-3 h-3 rounded-full bg-slate-400 text-white text-[7px] flex items-center justify-center font-bold flex-shrink-0"
+                                        title={displayName}
+                                      >
+                                        {displayName.charAt(0)}
+                                      </span>
+                                    ) : null
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                  {hiddenCount > 0 && (
+                    <div className="text-xs text-teal-600 dark:text-teal-400 font-medium pl-2 py-1">
+                      {t('calendar.moreEvents', { count: hiddenCount })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Modals */}
       <EventDetailModal

@@ -245,8 +245,23 @@ export default function Dashboard() {
     .filter(m => m.role === 'child')
     .reduce((acc, m) => acc + m.points, 0)
 
-  // Available widgets that aren't active
-  const availableToAdd = AVAILABLE_WIDGETS.filter(w => !activeWidgets.includes(w.id))
+  // Filter out stars widget when rewards are disabled
+  const visibleWidgets = useMemo(() => {
+    if (!rewardsEnabled) {
+      return activeWidgets.filter(w => w !== 'stars')
+    }
+    return activeWidgets
+  }, [activeWidgets, rewardsEnabled])
+
+  // Available widgets that aren't active (also hide stars when rewards disabled)
+  const availableToAdd = AVAILABLE_WIDGETS.filter(w => {
+    if (!activeWidgets.includes(w.id)) {
+      // Also hide stars from picker when rewards disabled
+      if (w.id === 'stars' && !rewardsEnabled) return false
+      return true
+    }
+    return false
+  })
 
   // Get gradient class
   const gradientConfig = DASHBOARD_GRADIENTS.find(g => g.id === backgroundGradient)
@@ -369,7 +384,7 @@ export default function Dashboard() {
           containerPadding={[0, 0]}
           useCSSTransforms={true}
         >
-          {activeWidgets.map(widgetId => {
+          {visibleWidgets.map(widgetId => {
             const WidgetComponent = WIDGET_COMPONENTS[widgetId]
             if (!WidgetComponent) return null
 
