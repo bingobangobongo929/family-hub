@@ -190,7 +190,7 @@ NOT SPOILERS:
 - Calendar/schedule changes
 - General F1 news
 
-Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race", "spoiler": true}, ...]}
+Return COMPACT JSON (no whitespace/newlines): {"results":[{"index":0,"interesting":true,"category":"race","spoiler":true},{"index":1,...}]}
 
 Articles:`
 
@@ -212,12 +212,12 @@ async function classifyWithGemini(
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
+            text: `${FILTER_PROMPT}\n${JSON.stringify(items)}`,
           }],
         }],
         generationConfig: {
           temperature: 0,
-          maxOutputTokens: 8192,
+          maxOutputTokens: 16384,
           responseMimeType: 'application/json',
         },
       }),

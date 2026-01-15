@@ -4,7 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat, UserPlus } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { useSettings } from '@/lib/settings-context'
+import { useSettings, GeminiModel } from '@/lib/settings-context'
 import { useFamily } from '@/lib/family-context'
 import { useCategories } from '@/lib/categories-context'
 import { useContacts } from '@/lib/contacts-context'
@@ -104,7 +104,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const [inputText, setInputText] = useState('')
 
   // Get the latest aiModel - check localStorage directly to ensure we have the most recent value
-  const [aiModel, setAiModel] = useState<'claude' | 'gemini'>(contextAiModel)
+  const [aiModel, setAiModel] = useState<GeminiModel>(contextAiModel)
 
   // Update aiModel when modal opens or context changes
   useEffect(() => {
@@ -114,7 +114,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
       if (saved) {
         try {
           const parsed = JSON.parse(saved)
-          if (parsed.ai_model === 'gemini' || parsed.ai_model === 'claude') {
+          if (parsed.ai_model && parsed.ai_model.startsWith('gemini-')) {
             setAiModel(parsed.ai_model)
           }
         } catch (e) {
