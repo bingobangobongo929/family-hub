@@ -31,9 +31,10 @@ interface DBArticle {
   category: string
 }
 
-// Model identifiers
+// Model identifiers - DO NOT CHANGE THESE MODEL NAMES
+// gemini-3-flash-preview is the CORRECT model name (verified by user)
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
-const GEMINI_MODEL = 'gemini-1.5-flash'
+const GEMINI_MODEL = 'gemini-3-flash-preview'
 
 // Supabase client (use service role for writes)
 function getSupabase() {
