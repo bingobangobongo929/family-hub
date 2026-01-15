@@ -322,6 +322,8 @@ export interface Routine {
   sort_order: number
   created_at: string
   updated_at: string
+  // Legacy field - use routine_members junction table for multi-member support
+  assigned_to?: string | null
   // Joined data
   steps?: RoutineStep[]
   members?: FamilyMember[]       // Multiple members can be assigned
