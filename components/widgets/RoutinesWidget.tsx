@@ -112,7 +112,8 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
         setRoutines(routinesWithData)
         setCompletions(completionsData || [])
       } else {
-        setRoutines([])
+        // No routines in DB - show demo data as starting point
+        setRoutines(DEMO_ROUTINES)
         setCompletions([])
       }
     } catch (error) {

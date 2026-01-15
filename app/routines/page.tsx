@@ -98,7 +98,9 @@ export default function RoutinesPage() {
       setRoutines(DEMO_ROUTINES)
       // Auto-select based on time of day
       const hour = new Date().getHours()
-      setSelectedRoutine(hour < 14 ? DEMO_ROUTINES[0] : DEMO_ROUTINES[1])
+      const morning = DEMO_ROUTINES.find(r => r.type === 'morning')
+      const evening = DEMO_ROUTINES.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || DEMO_ROUTINES[0]) : (evening || DEMO_ROUTINES[0]))
       setLoading(false)
       return
     }
@@ -135,22 +137,26 @@ export default function RoutinesPage() {
         })
       )
 
-      setRoutines(routinesWithDetails as RoutineWithDetails[])
+      // If no routines in DB, use demo data as starting point
+      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : DEMO_ROUTINES
+      setRoutines(finalRoutines as RoutineWithDetails[])
 
       // Auto-select based on time of day
       const hour = new Date().getHours()
-      const morning = routinesWithDetails.find(r => r.type === 'morning')
-      const evening = routinesWithDetails.find(r => r.type === 'evening')
+      const morning = finalRoutines.find(r => r.type === 'morning')
+      const evening = finalRoutines.find(r => r.type === 'evening')
       setSelectedRoutine(
         hour < 14
-          ? (morning || routinesWithDetails[0] || null)
-          : (evening || routinesWithDetails[0] || null)
+          ? (morning || finalRoutines[0] || null)
+          : (evening || finalRoutines[0] || null)
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
       setRoutines(DEMO_ROUTINES)
       const hour = new Date().getHours()
-      setSelectedRoutine(hour < 14 ? DEMO_ROUTINES[0] : DEMO_ROUTINES[1])
+      const morning = DEMO_ROUTINES.find(r => r.type === 'morning')
+      const evening = DEMO_ROUTINES.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || DEMO_ROUTINES[0]) : (evening || DEMO_ROUTINES[0]))
     }
     setLoading(false)
   }, [user])
