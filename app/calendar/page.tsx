@@ -1017,19 +1017,19 @@ export default function CalendarPage() {
                           key={event.id}
                           onClick={(e) => handleEventClick(event, e)}
                           className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${
-                            isMobile ? 'px-1 py-0.5' : 'px-1.5 py-0.5'
+                            isMobile ? 'px-1.5 py-0.5' : 'px-2 py-0.5'
                           }`}
                           title={event.title}
                         >
-                          {category && <span className={isMobile ? 'text-[8px]' : 'text-[10px]'}>{category.emoji}</span>}
-                          <span className={`text-slate-500 dark:text-slate-400 truncate max-w-[60px] ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>
-                            {event.title.split(' ').slice(0, 2).join(' ')}
+                          {category && <span className={isMobile ? 'text-[9px]' : 'text-[11px]'}>{category.emoji}</span>}
+                          <span className={`text-slate-500 dark:text-slate-400 truncate ${isMobile ? 'text-[9px] max-w-[80px]' : 'text-[11px] max-w-[120px]'}`}>
+                            {event.title}
                           </span>
                         </button>
                       )
                     })}
                     {backgroundEvents.length > 2 && (
-                      <span className={`text-slate-400 dark:text-slate-500 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>
+                      <span className={`text-slate-400 dark:text-slate-500 ${isMobile ? 'text-[9px]' : 'text-[11px]'}`}>
                         +{backgroundEvents.length - 2}
                       </span>
                     )}
