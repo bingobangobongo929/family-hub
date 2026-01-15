@@ -215,12 +215,16 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
     }),
   })
 
-  if (!response.ok) throw new Error('Claude API failed')
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Claude API error:', error)
+    throw new Error('Claude API failed')
+  }
 
-  const aiResponse = await response.json()
-  const content = aiResponse.content?.[0]?.text || '{}'
+  const data = await response.json()
+  const content = data.content?.find((c: any) => c.type === 'text')?.text || '{}'
 
-  console.log('Claude raw response:', content.substring(0, 500))
+  console.log('Claude raw response:', content.substring(0, 800))
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
@@ -228,26 +232,41 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   let jsonStr = content
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlockMatch) {
-    jsonStr = codeBlockMatch[1]
+    jsonStr = codeBlockMatch[1].trim()
   }
 
-  const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[0])
-      console.log('Parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
-      for (const r of (parsed.results || [])) {
-        resultMap.set(r.index, {
-          interesting: r.interesting ?? false,
-          category: r.category || 'other',
-          spoiler: r.spoiler ?? false
-        })
-      }
-    } catch (e) {
-      console.error('JSON parse error:', e)
+  try {
+    // Try direct parse first
+    const parsed = JSON.parse(jsonStr)
+    const results = parsed.results || []
+    console.log('Parsed', results.length, 'results, first 3:', JSON.stringify(results.slice(0, 3)))
+    for (const r of results) {
+      resultMap.set(r.index, {
+        interesting: r.interesting ?? false,
+        category: r.category || 'other',
+        spoiler: r.spoiler ?? false
+      })
     }
-  } else {
-    console.error('No JSON match found in:', jsonStr.substring(0, 300))
+  } catch {
+    // Try regex extraction as fallback
+    const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0])
+        console.log('Regex parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
+        for (const r of (parsed.results || [])) {
+          resultMap.set(r.index, {
+            interesting: r.interesting ?? false,
+            category: r.category || 'other',
+            spoiler: r.spoiler ?? false
+          })
+        }
+      } catch (e) {
+        console.error('JSON parse error:', e)
+      }
+    } else {
+      console.error('No JSON match found in:', jsonStr.substring(0, 300))
+    }
   }
   return resultMap
 }
@@ -276,12 +295,16 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
     }
   )
 
-  if (!response.ok) throw new Error('Gemini API failed')
+  if (!response.ok) {
+    const error = await response.text()
+    console.error('Gemini API error:', error)
+    throw new Error('Gemini API failed')
+  }
 
-  const aiResponse = await response.json()
-  const content = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+  const data = await response.json()
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
 
-  console.log('Gemini raw response:', content.substring(0, 500))
+  console.log('Gemini raw response:', content.substring(0, 800))
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
@@ -289,26 +312,41 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   let jsonStr = content
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlockMatch) {
-    jsonStr = codeBlockMatch[1]
+    jsonStr = codeBlockMatch[1].trim()
   }
 
-  const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
-  if (jsonMatch) {
-    try {
-      const parsed = JSON.parse(jsonMatch[0])
-      console.log('Parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
-      for (const r of (parsed.results || [])) {
-        resultMap.set(r.index, {
-          interesting: r.interesting ?? false,
-          category: r.category || 'other',
-          spoiler: r.spoiler ?? false
-        })
-      }
-    } catch (e) {
-      console.error('JSON parse error:', e)
+  try {
+    // Try direct parse first
+    const parsed = JSON.parse(jsonStr)
+    const results = parsed.results || []
+    console.log('Parsed', results.length, 'results, first 3:', JSON.stringify(results.slice(0, 3)))
+    for (const r of results) {
+      resultMap.set(r.index, {
+        interesting: r.interesting ?? false,
+        category: r.category || 'other',
+        spoiler: r.spoiler ?? false
+      })
     }
-  } else {
-    console.error('No JSON match found in:', jsonStr.substring(0, 300))
+  } catch {
+    // Try regex extraction as fallback
+    const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
+    if (jsonMatch) {
+      try {
+        const parsed = JSON.parse(jsonMatch[0])
+        console.log('Regex parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
+        for (const r of (parsed.results || [])) {
+          resultMap.set(r.index, {
+            interesting: r.interesting ?? false,
+            category: r.category || 'other',
+            spoiler: r.spoiler ?? false
+          })
+        }
+      } catch (e) {
+        console.error('JSON parse error:', e)
+      }
+    } else {
+      console.error('No JSON match found in:', jsonStr.substring(0, 300))
+    }
   }
   return resultMap
 }
