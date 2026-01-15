@@ -158,14 +158,47 @@ export default function MemberMultiSelect({
 }
 
 // Helper to get member IDs by name (for AI suggestions)
+// Checks name, aliases, and description for matches
 export function getMemberIdsByNames(memberNames: string[], members: FamilyMember[]): string[] {
   return memberNames
     .map(name => {
       const nameLower = name.toLowerCase().trim()
-      // Try exact match first, then partial match
-      const match = members.find(m => m.name.toLowerCase().trim() === nameLower) ||
-                   members.find(m => m.name.toLowerCase().trim().includes(nameLower) ||
-                                    nameLower.includes(m.name.toLowerCase().trim()))
+
+      // Try exact match on name first
+      let match = members.find(m => m.name.toLowerCase().trim() === nameLower)
+
+      // Try exact match on aliases
+      if (!match) {
+        match = members.find(m =>
+          m.aliases?.some(alias => alias.toLowerCase().trim() === nameLower)
+        )
+      }
+
+      // Try partial match on name
+      if (!match) {
+        match = members.find(m =>
+          m.name.toLowerCase().trim().includes(nameLower) ||
+          nameLower.includes(m.name.toLowerCase().trim())
+        )
+      }
+
+      // Try partial match on aliases
+      if (!match) {
+        match = members.find(m =>
+          m.aliases?.some(alias =>
+            alias.toLowerCase().trim().includes(nameLower) ||
+            nameLower.includes(alias.toLowerCase().trim())
+          )
+        )
+      }
+
+      // Try match in description (e.g., "Chelina is the Mum")
+      if (!match) {
+        match = members.find(m =>
+          m.description?.toLowerCase().includes(nameLower)
+        )
+      }
+
       return match?.id
     })
     .filter((id): id is string => id !== undefined)

@@ -174,12 +174,22 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
     setError(null)
 
     try {
+      // Load user's custom family context from settings
+      const savedFamilyContext = localStorage.getItem('family-hub-family-context') || ''
+
       // Build context about family members and contacts
-      // Include both real name and display_name so AI can match either
+      // Include name, role, and aliases so AI can match any variation
       const familyContext = [
+        // User's custom family context (rich descriptions)
+        savedFamilyContext ? `Family context:\n${savedFamilyContext}` : '',
+        // Board members with aliases
         members.length > 0
-          ? `${t('aiCalendar.boardMembers')} ${members.map(m => `${m.name} (${m.role})`).join(', ')}`
+          ? `Board family members: ${members.map(m => {
+              const aliases = m.aliases?.length ? ` (also known as: ${m.aliases.join(', ')})` : ''
+              return `${m.name} (${m.role})${aliases}`
+            }).join(', ')}`
           : '',
+        // Extended contacts
         contacts.length > 0
           ? `${t('aiCalendar.extendedContacts')} ${contacts.map(c => {
               // Include display_name as alias if different from name
@@ -188,8 +198,10 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
               }
               return c.name
             }).join(', ')}`
-          : ''
-      ].filter(Boolean).join('\n')
+          : '',
+        // Instruction for member matching
+        'IMPORTANT: When returning suggested_members, use the exact names from "Board family members" list above (e.g., "Mum" not "Chelina" if member is named "Mum").'
+      ].filter(Boolean).join('\n\n')
 
       const response = await fetch('/api/calendar-ai', {
         method: 'POST',
