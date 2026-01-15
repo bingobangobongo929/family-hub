@@ -363,7 +363,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
           <Sparkles className="w-5 h-5" />
-          <span>{aiModel === 'claude' ? t('aiCalendar.usingClaude') : t('aiCalendar.usingGemini')}</span>
+          <span>{t('aiCalendar.usingGemini')} ({aiModel.replace('gemini-', '').replace('-preview', '')})</span>
         </div>
 
         {step === 'input' ? (
