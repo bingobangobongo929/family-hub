@@ -220,13 +220,34 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   const aiResponse = await response.json()
   const content = aiResponse.content?.[0]?.text || '{}'
 
+  console.log('Claude raw response:', content.substring(0, 500))
+
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
-  const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
+
+  // Try to extract JSON - handle markdown code blocks
+  let jsonStr = content
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1]
+  }
+
+  const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
-    const parsed = JSON.parse(jsonMatch[0])
-    for (const r of (parsed.results || [])) {
-      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other', spoiler: r.spoiler ?? false })
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      console.log('Parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
+      for (const r of (parsed.results || [])) {
+        resultMap.set(r.index, {
+          interesting: r.interesting ?? false,
+          category: r.category || 'other',
+          spoiler: r.spoiler ?? false
+        })
+      }
+    } catch (e) {
+      console.error('JSON parse error:', e)
     }
+  } else {
+    console.error('No JSON match found in:', jsonStr.substring(0, 300))
   }
   return resultMap
 }
@@ -260,13 +281,34 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   const aiResponse = await response.json()
   const content = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
 
+  console.log('Gemini raw response:', content.substring(0, 500))
+
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
-  const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
+
+  // Try to extract JSON - handle markdown code blocks
+  let jsonStr = content
+  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1]
+  }
+
+  const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
-    const parsed = JSON.parse(jsonMatch[0])
-    for (const r of (parsed.results || [])) {
-      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other', spoiler: r.spoiler ?? false })
+    try {
+      const parsed = JSON.parse(jsonMatch[0])
+      console.log('Parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
+      for (const r of (parsed.results || [])) {
+        resultMap.set(r.index, {
+          interesting: r.interesting ?? false,
+          category: r.category || 'other',
+          spoiler: r.spoiler ?? false
+        })
+      }
+    } catch (e) {
+      console.error('JSON parse error:', e)
     }
+  } else {
+    console.error('No JSON match found in:', jsonStr.substring(0, 300))
   }
   return resultMap
 }
