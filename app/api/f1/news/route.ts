@@ -35,8 +35,8 @@ const GEMINI_MODEL = 'gemini-3-flash-preview'
 // Key = article link URL, Value = classification result
 const classificationCache: Map<string, ClassificationResult> = new Map()
 
-// Cache for OG images (by URL) - survives across requests
-const ogImageCache: Map<string, string | null> = new Map()
+// Cache for article metadata (OG image + date) - survives across requests
+const articleMetaCache: Map<string, { imageUrl: string | null, publishDate: string | null }> = new Map()
 
 // Cache for final news response (short-lived, just to avoid re-fetching RSS too often)
 let responseCache: { items: F1NewsItem[], timestamp: number } | null = null
@@ -128,8 +128,8 @@ function parseRSS(xml: string): RSSItem[] {
   return items
 }
 
-// Try to fetch Open Graph image from article URL
-async function fetchOGImage(url: string): Promise<string | undefined> {
+// Fetch article metadata (OG image + publish date) from article URL
+async function fetchArticleMeta(url: string): Promise<{ imageUrl: string | null, publishDate: string | null }> {
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 5000)
@@ -144,35 +144,48 @@ async function fetchOGImage(url: string): Promise<string | undefined> {
     clearTimeout(timeout)
 
     if (!response.ok) {
-      console.log(`OG fetch failed for ${url}: ${response.status}`)
-      return undefined
+      return { imageUrl: null, publishDate: null }
     }
 
     const html = await response.text()
+    let imageUrl: string | null = null
+    let publishDate: string | null = null
 
-    // Try multiple patterns for og:image (handles whitespace, newlines, different attribute orders)
-    const patterns = [
+    // Try multiple patterns for og:image
+    const imagePatterns = [
       /<meta\s+property="og:image"\s+content="([^"]+)"/i,
       /<meta\s+content="([^"]+)"\s+property="og:image"/i,
       /<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i,
       /<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i,
-      /property="og:image"[^>]+content="([^"]+)"/i,
-      /content="([^"]+)"[^>]+property="og:image"/i,
     ]
 
-    for (const pattern of patterns) {
+    for (const pattern of imagePatterns) {
       const match = html.match(pattern)
       if (match) {
-        console.log(`Found OG image for ${url.substring(0, 50)}...`)
-        return match[1]
+        imageUrl = match[1]
+        break
       }
     }
 
-    console.log(`No OG image found for ${url.substring(0, 50)}...`)
-    return undefined
-  } catch (e) {
-    console.log(`OG fetch error for ${url}: ${e}`)
-    return undefined
+    // Try to extract publish date from article:published_time or datePublished
+    const datePatterns = [
+      /<meta\s+property="article:published_time"\s+content="([^"]+)"/i,
+      /<meta\s+content="([^"]+)"\s+property="article:published_time"/i,
+      /<meta[^>]+property="article:published_time"[^>]+content="([^"]+)"/i,
+      /"datePublished"\s*:\s*"([^"]+)"/i,
+    ]
+
+    for (const pattern of datePatterns) {
+      const match = html.match(pattern)
+      if (match) {
+        publishDate = match[1]
+        break
+      }
+    }
+
+    return { imageUrl, publishDate }
+  } catch {
+    return { imageUrl: null, publishDate: null }
   }
 }
 
@@ -446,35 +459,35 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
     console.log(`All ${items.length} articles found in cache, no AI needed`)
   }
 
-  // Fetch OG images for items without images (use cache)
-  const needsImage = items
-    .map((item, i) => ({ item, index: i }))
-    .filter(({ item }) => !item.imageUrl)
-
-  const ogImages = await Promise.all(
-    needsImage.map(async ({ item, index }) => {
-      // Check OG image cache first
-      if (ogImageCache.has(item.link)) {
-        return { index, imageUrl: ogImageCache.get(item.link) || undefined }
+  // Fetch article metadata (OG images + dates) for all items (use cache)
+  const articleMeta = await Promise.all(
+    items.map(async (item, index) => {
+      // Check cache first
+      if (articleMetaCache.has(item.link)) {
+        return { index, ...articleMetaCache.get(item.link)! }
       }
-      // Fetch and cache
-      const imageUrl = await fetchOGImage(item.link)
-      ogImageCache.set(item.link, imageUrl || null)
-      return { index, imageUrl }
+      // Only fetch if we need image or date
+      if (!item.imageUrl || !item.pubDate) {
+        const meta = await fetchArticleMeta(item.link)
+        articleMetaCache.set(item.link, meta)
+        return { index, ...meta }
+      }
+      return { index, imageUrl: null, publishDate: null }
     })
   )
-  const ogImageMap = new Map(ogImages.map(o => [o.index, o.imageUrl]))
+  const metaMap = new Map(articleMeta.map(m => [m.index, m]))
 
   // Build final response using cache
   return items.map((item, i) => {
     const classification = classificationCache.get(item.link)
+    const meta = metaMap.get(i)
     return {
       id: `f1-news-${i}-${Date.now()}`,
       title: item.title,
       description: item.description,
       link: item.link,
-      pubDate: item.pubDate,
-      imageUrl: item.imageUrl || ogImageMap.get(i),
+      pubDate: item.pubDate || meta?.publishDate || '',
+      imageUrl: item.imageUrl || meta?.imageUrl || undefined,
       isInteresting: classification?.isInteresting ?? true,
       isSpoiler: classification?.isSpoiler ?? false,
       category: classification?.category ?? 'other',
@@ -488,11 +501,12 @@ export async function GET(request: NextRequest) {
   const forceRefresh = searchParams.get('refresh') === 'true'
   const forceReclassify = searchParams.get('reclassify') === 'true'
 
-  // Clear classification cache if reclassify requested
+  // Clear caches if reclassify requested
   if (forceReclassify) {
     classificationCache.clear()
+    articleMetaCache.clear()
     responseCache = null
-    console.log('Classification cache cleared - will re-classify all articles')
+    console.log('All caches cleared - will re-classify and re-fetch all articles')
   }
 
   // Check response cache (just to avoid hammering RSS feed)
