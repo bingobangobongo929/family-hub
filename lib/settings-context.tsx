@@ -5,11 +5,14 @@ import { supabase } from './supabase'
 import { useAuth } from './auth-context'
 import { DEFAULT_SETTINGS } from './database.types'
 
+// Gemini model options - DO NOT CHANGE MODEL IDs
+export type GeminiModel = 'gemini-2.0-flash' | 'gemini-2.5-flash-lite' | 'gemini-2.5-flash' | 'gemini-3-flash-preview'
+
 interface SettingsContextType {
   settings: Record<string, any>
   updateSetting: (key: string, value: any) => Promise<void>
   rewardsEnabled: boolean
-  aiModel: 'claude' | 'gemini'
+  aiModel: GeminiModel
   googleCalendarAutoPush: boolean
   showBirthdaysOnCalendar: boolean
   countdownRelationshipGroups: string[]
@@ -117,7 +120,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         settings,
         updateSetting,
         rewardsEnabled: settings.rewards_enabled as boolean,
-        aiModel: (settings.ai_model as 'claude' | 'gemini') || 'claude',
+        aiModel: (settings.ai_model as GeminiModel) || 'gemini-3-flash-preview',
         googleCalendarAutoPush: settings.google_calendar_auto_push as boolean ?? false,
         showBirthdaysOnCalendar: settings.show_birthdays_on_calendar as boolean ?? true,
         countdownRelationshipGroups: (settings.countdown_relationship_groups as string[]) || ['family_us', 'grandparents', 'friends'],

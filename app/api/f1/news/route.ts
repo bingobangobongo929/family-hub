@@ -31,10 +31,15 @@ interface DBArticle {
   category: string
 }
 
-// Model identifiers - DO NOT CHANGE THESE MODEL NAMES
-// gemini-3-flash-preview is the CORRECT model name (verified by user)
-const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
-const GEMINI_MODEL = 'gemini-3-flash-preview'
+// Valid Gemini model IDs - DO NOT CHANGE THESE
+const VALID_GEMINI_MODELS = [
+  'gemini-2.0-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-3-flash-preview'
+] as const
+type GeminiModelId = typeof VALID_GEMINI_MODELS[number]
+const DEFAULT_MODEL: GeminiModelId = 'gemini-3-flash-preview'
 
 // Supabase client (use service role for writes)
 function getSupabase() {
@@ -189,99 +194,18 @@ Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race", 
 
 Articles:`
 
-// Classify articles with Claude
-async function classifyWithClaude(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) throw new Error('No Anthropic API key')
-
-  console.log(`Classifying ${items.length} articles with Claude...`)
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: CLAUDE_MODEL,
-      max_tokens: 4096,
-      messages: [{
-        role: 'user',
-        content: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}\n\nIMPORTANT: Respond with ONLY the JSON object, no markdown, no explanation. Start your response with { and end with }`,
-      }],
-    }),
-  })
-
-  if (!response.ok) {
-    const error = await response.text()
-    console.error('Claude API error:', error)
-    throw new Error('Claude API failed')
-  }
-
-  const data = await response.json()
-  const content = data.content?.find((c: any) => c.type === 'text')?.text || '{}'
-  console.log('Claude raw response:', content.substring(0, 500))
-
-  const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
-
-  // Try to extract JSON - handle markdown code blocks
-  let jsonStr = content.trim()
-  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (codeBlockMatch) {
-    jsonStr = codeBlockMatch[1].trim()
-  }
-
-  try {
-    const parsed = JSON.parse(jsonStr)
-    const results = parsed.results || []
-    console.log(`Parsed ${results.length} classification results`)
-    for (const r of results) {
-      console.log(`Article ${r.index}: category=${r.category}, interesting=${r.interesting}, spoiler=${r.spoiler}`)
-      resultMap.set(r.index, {
-        interesting: r.interesting ?? false,
-        category: r.category || 'other',
-        spoiler: r.spoiler ?? false
-      })
-    }
-  } catch (parseError) {
-    console.error('Initial JSON parse failed:', parseError)
-    // Try to find JSON object in response
-    const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0])
-        const results = parsed.results || []
-        console.log(`Fallback parsed ${results.length} classification results`)
-        for (const r of results) {
-          resultMap.set(r.index, {
-            interesting: r.interesting ?? false,
-            category: r.category || 'other',
-            spoiler: r.spoiler ?? false
-          })
-        }
-      } catch (e) {
-        console.error('Fallback JSON parse error:', e)
-        console.error('Attempted to parse:', jsonMatch[0].substring(0, 300))
-      }
-    } else {
-      console.error('No JSON object found in response')
-    }
-  }
-
-  console.log(`Returning ${resultMap.size} classifications`)
-  return resultMap
-}
-
 // Classify articles with Gemini
-async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
+async function classifyWithGemini(
+  items: { index: number, title: string, description: string }[],
+  modelId: GeminiModelId = DEFAULT_MODEL
+): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('No Google AI API key')
 
-  console.log(`Classifying ${items.length} articles with Gemini...`)
+  console.log(`Classifying ${items.length} articles with ${modelId}...`)
 
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -339,7 +263,11 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
-  const model = (searchParams.get('model') || 'claude') as 'claude' | 'gemini'
+  const modelParam = searchParams.get('model') || DEFAULT_MODEL
+  // Validate model ID, fallback to default if invalid
+  const model: GeminiModelId = VALID_GEMINI_MODELS.includes(modelParam as GeminiModelId)
+    ? (modelParam as GeminiModelId)
+    : DEFAULT_MODEL
   const forceReclassify = searchParams.get('reclassify') === 'true'
 
   const supabase = getSupabase()
@@ -398,9 +326,7 @@ export async function GET(request: NextRequest) {
       let classifications = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
       try {
-        classifications = model === 'gemini'
-          ? await classifyWithGemini(itemsForAI)
-          : await classifyWithClaude(itemsForAI)
+        classifications = await classifyWithGemini(itemsForAI, model)
         console.log(`Classified ${classifications.size} articles with ${model}`)
       } catch (error) {
         console.error('AI classification error:', error)

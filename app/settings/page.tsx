@@ -718,26 +718,93 @@ export default function SettingsPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-slate-800 dark:text-slate-100">{t('settings.calendarAiModel')}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{t('settings.calendarAiModelDescription')}</p>
-            </div>
-            <div className="flex gap-2">
+          <div>
+            <p className="font-medium text-slate-800 dark:text-slate-100 mb-1">{t('settings.calendarAiModel')}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">{t('settings.calendarAiModelDescription')}</p>
+
+            {/* Gemini Model Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { id: 'claude', label: 'Claude Sonnet 4.5' },
-                { id: 'gemini', label: 'Gemini 3.0 Flash' }
-              ].map(opt => (
+                {
+                  id: 'gemini-2.0-flash',
+                  name: '2.0 Flash',
+                  tagline: 'Budget friendly',
+                  speed: 5, intelligence: 3, cost: 1,
+                  price: '$0.10 / $0.40'
+                },
+                {
+                  id: 'gemini-2.5-flash-lite',
+                  name: '2.5 Flash Lite',
+                  tagline: 'Best value',
+                  speed: 5, intelligence: 3, cost: 1,
+                  price: '$0.075 / $0.30'
+                },
+                {
+                  id: 'gemini-2.5-flash',
+                  name: '2.5 Flash',
+                  tagline: 'Balanced',
+                  speed: 4, intelligence: 4, cost: 2,
+                  price: '$0.15 / $0.60'
+                },
+                {
+                  id: 'gemini-3-flash-preview',
+                  name: '3.0 Flash',
+                  tagline: 'Most capable',
+                  speed: 3, intelligence: 5, cost: 3,
+                  price: '$0.50 / $3.00',
+                  recommended: true
+                },
+              ].map(model => (
                 <button
-                  key={opt.id}
-                  onClick={() => updateSetting('ai_model', opt.id)}
-                  className={`px-4 py-2 rounded-xl transition-all text-sm ${
-                    settings.ai_model === opt.id
-                      ? 'bg-sage-100 text-sage-700 dark:bg-sage-900/50 dark:text-sage-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  key={model.id}
+                  onClick={() => updateSetting('ai_model', model.id)}
+                  className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                    settings.ai_model === model.id
+                      ? 'border-sage-500 bg-sage-50 dark:bg-sage-900/30'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                   }`}
                 >
-                  {opt.label}
+                  {model.recommended && (
+                    <span className="absolute -top-2 -right-2 px-2 py-0.5 bg-amber-400 text-amber-900 text-xs font-bold rounded-full">
+                      ★
+                    </span>
+                  )}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">{model.name}</span>
+                    <span className="text-xs text-slate-400">{model.price}</span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{model.tagline}</p>
+
+                  {/* Capability bars */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 w-12">Speed</span>
+                      <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-400 rounded-full"
+                          style={{ width: `${model.speed * 20}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 w-12">Smarts</span>
+                      <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-purple-400 rounded-full"
+                          style={{ width: `${model.intelligence * 20}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400 w-12">Cost</span>
+                      <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-600 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-400 rounded-full"
+                          style={{ width: `${model.cost * 20}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </button>
               ))}
             </div>
