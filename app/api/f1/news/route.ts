@@ -124,22 +124,46 @@ function parseRSS(xml: string): RSSItem[] {
 async function fetchOGImage(url: string): Promise<string | undefined> {
   try {
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 3000)
+    const timeout = setTimeout(() => controller.abort(), 5000)
 
     const response = await fetch(url, {
-      headers: { 'User-Agent': 'Family-Hub/1.0' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Family-Hub/1.0)',
+        'Accept': 'text/html',
+      },
       signal: controller.signal,
     })
     clearTimeout(timeout)
 
-    if (!response.ok) return undefined
+    if (!response.ok) {
+      console.log(`OG fetch failed for ${url}: ${response.status}`)
+      return undefined
+    }
 
     const html = await response.text()
-    const ogMatch = html.match(/<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i)
-      || html.match(/<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i)
 
-    return ogMatch ? ogMatch[1] : undefined
-  } catch {
+    // Try multiple patterns for og:image (handles whitespace, newlines, different attribute orders)
+    const patterns = [
+      /<meta\s+property="og:image"\s+content="([^"]+)"/i,
+      /<meta\s+content="([^"]+)"\s+property="og:image"/i,
+      /<meta[^>]+property="og:image"[^>]+content="([^"]+)"/i,
+      /<meta[^>]+content="([^"]+)"[^>]+property="og:image"/i,
+      /property="og:image"[^>]+content="([^"]+)"/i,
+      /content="([^"]+)"[^>]+property="og:image"/i,
+    ]
+
+    for (const pattern of patterns) {
+      const match = html.match(pattern)
+      if (match) {
+        console.log(`Found OG image for ${url.substring(0, 50)}...`)
+        return match[1]
+      }
+    }
+
+    console.log(`No OG image found for ${url.substring(0, 50)}...`)
+    return undefined
+  } catch (e) {
+    console.log(`OG fetch error for ${url}: ${e}`)
     return undefined
   }
 }
@@ -414,11 +438,10 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
     console.log(`All ${items.length} articles found in cache, no AI needed`)
   }
 
-  // Fetch OG images for items without images (limit to 5)
+  // Fetch OG images for items without images
   const needsImage = items
     .map((item, i) => ({ item, index: i }))
     .filter(({ item }) => !item.imageUrl)
-    .slice(0, 5)
 
   const ogImages = await Promise.all(
     needsImage.map(async ({ item, index }) => ({
