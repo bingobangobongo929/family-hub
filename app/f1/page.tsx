@@ -17,6 +17,7 @@ import {
 } from '@/lib/f1-api'
 import { useTranslation } from '@/lib/i18n-context'
 import { getDateLocale } from '@/lib/date-locale'
+import { useSettings } from '@/lib/settings-context'
 
 // Session icon component
 function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: string; className?: string }) {
@@ -81,6 +82,7 @@ type TabType = 'calendar' | 'drivers' | 'constructors' | 'news'
 export default function F1Page() {
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
+  const { aiModel } = useSettings()
   const [activeTab, setActiveTab] = useState<TabType>('calendar')
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
@@ -122,7 +124,7 @@ export default function F1Page() {
       if (activeTab !== 'news' || news) return
       setNewsLoading(true)
       try {
-        const response = await fetch('/api/f1/news')
+        const response = await fetch(`/api/f1/news?model=${aiModel}`)
         if (response.ok) {
           setNews(await response.json())
         }
@@ -133,7 +135,7 @@ export default function F1Page() {
       }
     }
     fetchNews()
-  }, [activeTab, news])
+  }, [activeTab, news, aiModel])
 
   // Find next race
   const nextRace = useMemo(() => {

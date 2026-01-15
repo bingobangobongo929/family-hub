@@ -5,6 +5,7 @@ import { useWidgetSize } from '@/lib/useWidgetSize'
 import Link from 'next/link'
 import { Newspaper, Star, ExternalLink, Loader2 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n-context'
+import { useSettings } from '@/lib/settings-context'
 
 interface F1NewsItem {
   id: string
@@ -25,6 +26,7 @@ interface NewsData {
 export default function F1NewsWidget() {
   const [ref, { size, height }] = useWidgetSize()
   const { t, locale } = useTranslation()
+  const { aiModel } = useSettings()
   const [news, setNews] = useState<NewsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
@@ -32,7 +34,7 @@ export default function F1NewsWidget() {
   useEffect(() => {
     async function fetchNews() {
       try {
-        const response = await fetch('/api/f1/news')
+        const response = await fetch(`/api/f1/news?model=${aiModel}`)
         if (response.ok) {
           setNews(await response.json())
         } else {
@@ -45,7 +47,7 @@ export default function F1NewsWidget() {
       }
     }
     fetchNews()
-  }, [])
+  }, [aiModel])
 
   const formatDate = (dateStr: string) => {
     try {
