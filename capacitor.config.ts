@@ -8,7 +8,7 @@ const config: CapacitorConfig = {
   // Load from your Vercel deployment URL
   // Update this to your actual Vercel URL
   server: {
-    url: 'https://family-hub.vercel.app', // TODO: Update to your actual URL
+    url: 'https://family-hub-sage.vercel.app',
     cleartext: false,
   },
 
