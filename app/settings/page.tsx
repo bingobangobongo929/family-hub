@@ -203,7 +203,8 @@ export default function SettingsPage() {
     photo_url: null as string | null,
     date_of_birth: '',
     aliases: '',  // Comma-separated alternative names
-    description: ''
+    description: '',
+    stars_enabled: true  // Whether stars/points tracking is enabled for this member
   })
 
   // Family context state
@@ -516,6 +517,7 @@ export default function SettingsPage() {
           date_of_birth: memberForm.date_of_birth || null,
           aliases: aliasesArray,
           description: memberForm.description || null,
+          stars_enabled: memberForm.stars_enabled,
           sort_order: members.length
         })
 
@@ -552,7 +554,8 @@ export default function SettingsPage() {
           photo_url: memberForm.photo_url,
           date_of_birth: memberForm.date_of_birth || null,
           aliases: aliasesArray,
-          description: memberForm.description || null
+          description: memberForm.description || null,
+          stars_enabled: memberForm.stars_enabled
         })
         .eq('id', editingMember.id)
 
@@ -592,7 +595,8 @@ export default function SettingsPage() {
       photo_url: member.photo_url || null,
       date_of_birth: member.date_of_birth || '',
       aliases: (member.aliases || []).join(', '),
-      description: member.description || ''
+      description: member.description || '',
+      stars_enabled: member.stars_enabled ?? true
     })
     setShowMemberModal(true)
   }
@@ -606,7 +610,8 @@ export default function SettingsPage() {
       photo_url: null,
       date_of_birth: '',
       aliases: '',
-      description: ''
+      description: '',
+      stars_enabled: true
     })
   }
 
@@ -1651,6 +1656,38 @@ export default function SettingsPage() {
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 resize-none"
             />
           </div>
+
+          {/* Stars toggle - only for children */}
+          {memberForm.role === 'child' && (
+            <div className="flex items-center justify-between p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30">
+              <div className="flex items-center gap-3">
+                <Star className="w-5 h-5 text-amber-500" />
+                <div>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {t('settings.starsEnabled')}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {t('settings.starsEnabledDesc')}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMemberForm({ ...memberForm, stars_enabled: !memberForm.stars_enabled })}
+                className={`relative w-12 h-7 rounded-full transition-colors ${
+                  memberForm.stars_enabled
+                    ? 'bg-amber-500'
+                    : 'bg-slate-300 dark:bg-slate-600'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                    memberForm.stars_enabled ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </button>
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
             <Button variant="secondary" onClick={() => { setShowMemberModal(false); setEditingMember(null); resetMemberForm() }}>

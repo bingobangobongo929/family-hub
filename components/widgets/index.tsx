@@ -15,6 +15,7 @@ export { default as BindicatorWidget } from './BindicatorWidget'
 export { default as GooglePhotosWidget } from './GooglePhotosWidget'
 export { default as F1Widget } from './F1Widget'
 export { default as F1NewsWidget } from './F1NewsWidget'
+export { default as RoutinesWidget } from './RoutinesWidget'
 
 // Widget type definitions for the dashboard
 export const AVAILABLE_WIDGETS = [
@@ -29,7 +30,7 @@ export const AVAILABLE_WIDGETS = [
   { id: 'announcements', name: 'Announcements', icon: '📢', component: 'AnnouncementsWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'quickactions', name: 'Quick Add', icon: '➕', component: 'QuickActionsWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'photo', name: 'Photos', icon: '📷', component: 'PhotoWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
-  { id: 'routine', name: 'Routine', icon: '☀️', component: 'QuickRoutineWidget', defaultSize: { w: 4, h: 2 }, minSize: { w: 2, h: 1 } },
+  { id: 'routines', name: 'Routines', icon: '📋', component: 'RoutinesWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 2, h: 2 } },
   { id: 'shopping', name: 'Shopping', icon: '🛒', component: 'ShoppingWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'timer', name: 'Timer', icon: '⏱️', component: 'TimerWidget', defaultSize: { w: 2, h: 3 }, minSize: { w: 1, h: 2 } },
   { id: 'bindicator', name: 'Bindicator', icon: '🗑️', component: 'BindicatorWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },

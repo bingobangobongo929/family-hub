@@ -23,6 +23,7 @@ export interface FamilyMember {
   aliases: string[]        // Alternative names (e.g., "Mum", "Mama", "Chelina")
   description: string | null // Free-form context about this person
   points: number
+  stars_enabled: boolean   // Whether stars/points are tracked for this member (can disable for young kids)
   sort_order: number
   created_at: string
   updated_at: string
@@ -315,40 +316,61 @@ export interface Routine {
   title: string
   emoji: string
   type: 'morning' | 'evening' | 'custom'
-  assigned_to: string | null
-  scheduled_time: string | null
+  scheduled_time: string | null  // e.g., "19:30" for bedtime
+  points_reward: number          // Stars awarded when all steps completed
   is_active: boolean
   sort_order: number
   created_at: string
   updated_at: string
   // Joined data
   steps?: RoutineStep[]
-  assignee?: FamilyMember
+  members?: FamilyMember[]       // Multiple members can be assigned
 }
 
-export type InsertRoutine = Omit<Routine, 'id' | 'created_at' | 'updated_at' | 'steps' | 'assignee'>
+export type InsertRoutine = Omit<Routine, 'id' | 'created_at' | 'updated_at' | 'steps' | 'members'>
 export type UpdateRoutine = Partial<InsertRoutine>
+
+// Junction table for routine members (who participates in this routine)
+export interface RoutineMember {
+  id: string
+  routine_id: string
+  member_id: string
+  created_at: string
+  // Joined data
+  member?: FamilyMember
+}
+
+export type InsertRoutineMember = Omit<RoutineMember, 'id' | 'created_at' | 'member'>
 
 export interface RoutineStep {
   id: string
   routine_id: string
   title: string
   emoji: string
-  duration_minutes: number
+  duration_minutes: number       // Optional timer per step (0 = no timer)
   sort_order: number
   created_at: string
 }
 
 export type InsertRoutineStep = Omit<RoutineStep, 'id' | 'created_at'>
 
+// Track per-member, per-step, per-day completions
 export interface RoutineCompletion {
   id: string
   routine_id: string
   step_id: string
-  completed_date: string
-  completed_by: string | null
-  completed_at: string
+  member_id: string              // Which member completed this step
+  completed_date: string         // Date string YYYY-MM-DD
+  completed_at: string           // Timestamp
 }
+
+export type InsertRoutineCompletion = Omit<RoutineCompletion, 'id'>
+
+export const ROUTINE_TYPES = [
+  { id: 'morning' as const, label: 'Morning', emoji: '🌅' },
+  { id: 'evening' as const, label: 'Bedtime', emoji: '🌙' },
+  { id: 'custom' as const, label: 'Custom', emoji: '📋' },
+]
 
 // ============================================
 // REWARDS

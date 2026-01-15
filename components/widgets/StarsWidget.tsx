@@ -21,9 +21,9 @@ export default function StarsWidget() {
     )
   }
 
-  // Get kids sorted by points
+  // Get kids with stars enabled, sorted by points
   const kids = members
-    .filter(m => m.role === 'child')
+    .filter(m => m.role === 'child' && m.stars_enabled)
     .sort((a, b) => b.points - a.points)
 
   return (

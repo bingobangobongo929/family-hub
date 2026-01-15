@@ -114,10 +114,15 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
   // Get fun fact based on role
   const getFunFact = () => {
     if (member.role === 'child') {
-      if (member.points >= 100) return { emoji: '🌟', text: t('memberProfile.badges.superStar') }
-      if (member.points >= 50) return { emoji: '⭐', text: t('memberProfile.badges.risingStar') }
-      if (member.points >= 25) return { emoji: '✨', text: t('memberProfile.badges.starInTraining') }
-      return { emoji: '🚀', text: t('memberProfile.badges.justStarted') }
+      // Only show star-based badges if stars are enabled for this member
+      if (member.stars_enabled) {
+        if (member.points >= 100) return { emoji: '🌟', text: t('memberProfile.badges.superStar') }
+        if (member.points >= 50) return { emoji: '⭐', text: t('memberProfile.badges.risingStar') }
+        if (member.points >= 25) return { emoji: '✨', text: t('memberProfile.badges.starInTraining') }
+        return { emoji: '🚀', text: t('memberProfile.badges.justStarted') }
+      }
+      // Generic badge for kids without stars tracking
+      return { emoji: '🧒', text: t('memberProfile.badges.littleOne') }
     }
     if (member.role === 'pet') {
       return { emoji: '🐾', text: t('memberProfile.badges.bestFriend') }
@@ -215,8 +220,8 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
               </div>
             )}
 
-            {/* Points Card - Only for children with rewards enabled */}
-            {member.role === 'child' && rewardsEnabled && (
+            {/* Points Card - Only for children with rewards enabled and stars_enabled */}
+            {member.role === 'child' && rewardsEnabled && member.stars_enabled && (
               <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border border-amber-100 dark:border-amber-900/30">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">

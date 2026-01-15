@@ -20,10 +20,10 @@ const FamilyContext = createContext<FamilyContextType | undefined>(undefined)
 
 // Demo family members when not logged in
 const DEMO_MEMBERS: FamilyMember[] = [
-  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1985-06-15', aliases: [], description: null, points: 0, sort_order: 0, created_at: '', updated_at: '' },
-  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1987-03-22', aliases: [], description: null, points: 0, sort_order: 1, created_at: '', updated_at: '' },
-  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, sort_order: 2, created_at: '', updated_at: '' },
-  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, sort_order: 3, created_at: '', updated_at: '' },
+  { id: 'demo-dad', user_id: 'demo', name: 'Dad', color: '#3b82f6', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1985-06-15', aliases: [], description: null, points: 0, stars_enabled: true, sort_order: 0, created_at: '', updated_at: '' },
+  { id: 'demo-mum', user_id: 'demo', name: 'Mum', color: '#ec4899', role: 'parent', avatar: null, photo_url: null, date_of_birth: '1987-03-22', aliases: [], description: null, points: 0, stars_enabled: true, sort_order: 1, created_at: '', updated_at: '' },
+  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, stars_enabled: true, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, stars_enabled: false, sort_order: 3, created_at: '', updated_at: '' },
 ]
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
@@ -67,6 +67,12 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   }, [fetchMembers])
 
   const updateMemberPoints = useCallback(async (memberId: string, points: number) => {
+    const member = members.find(m => m.id === memberId)
+    if (!member) return
+
+    // Don't update points if stars are disabled for this member
+    if (!member.stars_enabled) return
+
     if (!user) {
       // Demo mode - update locally
       setMembers(prev => prev.map(m =>
@@ -74,9 +80,6 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
       ))
       return
     }
-
-    const member = members.find(m => m.id === memberId)
-    if (!member) return
 
     try {
       const { error } = await supabase
