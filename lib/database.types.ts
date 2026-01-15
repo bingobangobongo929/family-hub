@@ -50,6 +50,7 @@ export interface EventCategory {
   emoji: string
   color: string
   is_archived: boolean
+  is_background: boolean  // Background events show in "This week" section, not "Soon"
   sort_order: number
   created_at: string
   updated_at: string
@@ -59,20 +60,20 @@ export type InsertEventCategory = Omit<EventCategory, 'id' | 'created_at' | 'upd
 export type UpdateEventCategory = Partial<InsertEventCategory>
 
 export const DEFAULT_EVENT_CATEGORIES = [
-  { name: 'Doctors/Hospital', emoji: '🏥', color: '#ef4444' },
-  { name: 'Guest Daycare', emoji: '👶', color: '#f97316' },
-  { name: 'Car Service', emoji: '🚗', color: '#6b7280' },
-  { name: 'Birthday', emoji: '🎂', color: '#ec4899' },
-  { name: 'School', emoji: '🎒', color: '#3b82f6' },
-  { name: 'Activities/Lessons', emoji: '🎭', color: '#8b5cf6' },
-  { name: 'Playdates', emoji: '🎈', color: '#22c55e' },
-  { name: 'Family Gathering', emoji: '👨‍👩‍👧‍👦', color: '#f59e0b' },
-  { name: 'Holiday/Vacation', emoji: '✈️', color: '#06b6d4' },
-  { name: 'Work', emoji: '💼', color: '#64748b' },
-  { name: 'Pet', emoji: '🐾', color: '#a855f7' },
-  { name: 'Home Maintenance', emoji: '🔧', color: '#78716c' },
-  { name: 'Reminder', emoji: '⏰', color: '#eab308' },
-  { name: 'Misc', emoji: '📌', color: '#94a3b8' },
+  { name: 'Doctors/Hospital', emoji: '🏥', color: '#ef4444', is_background: false },
+  { name: 'Guest Daycare', emoji: '👶', color: '#f97316', is_background: true },
+  { name: 'Car Service', emoji: '🚗', color: '#6b7280', is_background: false },
+  { name: 'Birthday', emoji: '🎂', color: '#ec4899', is_background: false },
+  { name: 'School', emoji: '🎒', color: '#3b82f6', is_background: true },
+  { name: 'Activities/Lessons', emoji: '🎭', color: '#8b5cf6', is_background: false },
+  { name: 'Playdates', emoji: '🎈', color: '#22c55e', is_background: false },
+  { name: 'Family Gathering', emoji: '👨‍👩‍👧‍👦', color: '#f59e0b', is_background: false },
+  { name: 'Holiday/Vacation', emoji: '✈️', color: '#06b6d4', is_background: true },
+  { name: 'Work', emoji: '💼', color: '#64748b', is_background: false },
+  { name: 'Pet', emoji: '🐾', color: '#a855f7', is_background: false },
+  { name: 'Home Maintenance', emoji: '🔧', color: '#78716c', is_background: false },
+  { name: 'Reminder', emoji: '⏰', color: '#eab308', is_background: false },
+  { name: 'Misc', emoji: '📌', color: '#94a3b8', is_background: false },
 ]
 
 // ============================================

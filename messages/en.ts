@@ -235,6 +235,7 @@ export const en = {
     nextDay: 'Next {day}',
     moreDays: '+{count} more days',
     noUpcoming: 'No upcoming events',
+    thisWeek: 'This week',
   },
 
   // Chores / Tasks

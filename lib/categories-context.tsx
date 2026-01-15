@@ -27,6 +27,7 @@ const DEMO_CATEGORIES: EventCategory[] = DEFAULT_EVENT_CATEGORIES.map((cat, inde
   emoji: cat.emoji,
   color: cat.color,
   is_archived: false,
+  is_background: cat.is_background,
   sort_order: index,
   created_at: '',
   updated_at: '',
@@ -77,6 +78,7 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
         emoji: cat.emoji,
         color: cat.color,
         is_archived: false,
+        is_background: cat.is_background,
         sort_order: index,
       }))
 

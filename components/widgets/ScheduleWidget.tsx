@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useContacts } from '@/lib/contacts-context'
+import { useCategories } from '@/lib/categories-context'
 import { CalendarEvent } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import EventDetailModal from '@/components/EventDetailModal'
@@ -80,11 +81,13 @@ export default function ScheduleWidget() {
   const { user } = useAuth()
   const { getMember } = useFamily()
   const { contacts } = useContacts()
+  const { getCategory } = useCategories()
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [eventMembers, setEventMembers] = useState<Record<string, string[]>>({})
   const [eventContacts, setEventContacts] = useState<Record<string, string[]>>({})
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null)
   const [showEventModal, setShowEventModal] = useState(false)
+  const [showBackgroundSection, setShowBackgroundSection] = useState(true)
   const [ref, { size, isWide, isTall }] = useWidgetSize()
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
@@ -301,18 +304,40 @@ export default function ScheduleWidget() {
 
   const now = new Date()
 
-  // Group events by day with smart labels
-  const groupedEvents = useMemo((): GroupedEvents[] => {
-    const groups: Map<string, GroupedEvents> = new Map()
+  // Helper to check if an event is from a background category
+  const isBackgroundEvent = useCallback((event: CalendarEvent): boolean => {
+    if (!event.category_id) return false
+    const category = getCategory(event.category_id)
+    return category?.is_background ?? false
+  }, [getCategory])
 
-    // Filter to upcoming events only (not past)
-    const upcomingEvents = events.filter(event => {
+  // Separate events into active and background
+  const { activeEvents, backgroundEvents } = useMemo(() => {
+    const upcoming = events.filter(event => {
       const eventTime = parseISO(event.start_time)
       return isAfter(eventTime, now) ||
              (isToday(eventTime) && eventTime.getHours() >= now.getHours())
     })
 
-    upcomingEvents.forEach(event => {
+    const active: CalendarEvent[] = []
+    const background: CalendarEvent[] = []
+
+    upcoming.forEach(event => {
+      if (isBackgroundEvent(event)) {
+        background.push(event)
+      } else {
+        active.push(event)
+      }
+    })
+
+    return { activeEvents: active, backgroundEvents: background }
+  }, [events, now, isBackgroundEvent])
+
+  // Group active events by day with smart labels
+  const groupedEvents = useMemo((): GroupedEvents[] => {
+    const groups: Map<string, GroupedEvents> = new Map()
+
+    activeEvents.forEach(event => {
       const eventDate = parseISO(event.start_time)
       const dateKey = format(eventDate, 'yyyy-MM-dd')
 
@@ -354,7 +379,30 @@ export default function ScheduleWidget() {
     })
 
     return Array.from(groups.values()).sort((a, b) => a.date.getTime() - b.date.getTime())
-  }, [events, now, t, dateLocale])
+  }, [activeEvents, now, t, dateLocale])
+
+  // Group background events by unique title (dedupe recurring instances)
+  const uniqueBackgroundEvents = useMemo(() => {
+    const seen = new Map<string, { event: CalendarEvent; endDate: Date }>()
+
+    backgroundEvents.forEach(event => {
+      // Use base event ID for recurring events
+      const baseId = event.id.includes('_') ? event.id.split('_')[0] : event.id
+      const key = `${baseId}-${event.title}`
+
+      const eventDate = parseISO(event.start_time)
+      const existing = seen.get(key)
+
+      if (!existing) {
+        seen.set(key, { event, endDate: eventDate })
+      } else if (isAfter(eventDate, existing.endDate)) {
+        // Update end date to the latest occurrence
+        seen.set(key, { event: existing.event, endDate: eventDate })
+      }
+    })
+
+    return Array.from(seen.values())
+  }, [backgroundEvents])
 
   // Calculate display limits based on size
   const displayConfig = useMemo(() => {
@@ -375,14 +423,21 @@ export default function ScheduleWidget() {
   // Helper to get contact by id
   const getContact = (id: string) => contacts.find(c => c.id === id)
 
-  // Total upcoming events count
+  // Total upcoming active events count
   const totalUpcoming = groupedEvents.reduce((sum, g) => sum + g.events.length, 0)
 
-  // Get next urgent event (within 24 hours)
+  // Get next urgent event (within 24 hours) - only from active events
   const nextUrgent = groupedEvents.find(g => g.isUrgent)?.events[0]
 
   // Slice groups for display
   const displayGroups = groupedEvents.slice(0, displayConfig.maxDays)
+
+  // Format end date for background events
+  const formatEndDate = (endDate: Date): string => {
+    if (isToday(endDate)) return t('common.today')
+    if (isTomorrow(endDate)) return t('common.tomorrow')
+    return format(endDate, 'EEE', { locale: dateLocale })
+  }
 
   return (
     <>
@@ -509,6 +564,52 @@ export default function ScheduleWidget() {
               <div className="flex items-center justify-center gap-1 text-xs text-teal-600 dark:text-teal-400 pt-1">
                 <span>{t('schedule.moreDays', { count: groupedEvents.length - displayConfig.maxDays })}</span>
                 <ChevronRight className="w-3 h-3" />
+              </div>
+            )}
+
+            {/* Background/Contextual Events Section */}
+            {uniqueBackgroundEvents.length > 0 && size !== 'small' && (
+              <div className="pt-2 mt-2 border-t border-dashed border-slate-200 dark:border-slate-700">
+                <button
+                  onClick={() => setShowBackgroundSection(!showBackgroundSection)}
+                  className="flex items-center gap-1 text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-400 transition-colors w-full"
+                >
+                  <span>{t('schedule.thisWeek')}</span>
+                  <ChevronRight className={`w-3 h-3 transition-transform ${showBackgroundSection ? 'rotate-90' : ''}`} />
+                </button>
+
+                {showBackgroundSection && (
+                  <div className="mt-1.5 space-y-1">
+                    {uniqueBackgroundEvents.slice(0, 3).map(({ event, endDate }) => {
+                      const category = event.category_id ? getCategory(event.category_id) : null
+                      const memberIds = eventMembers[event.id] || []
+                      const firstMember = memberIds.length > 0 ? getMember(memberIds[0]) : null
+
+                      return (
+                        <div
+                          key={event.id}
+                          onClick={() => handleEventClick(event)}
+                          className="flex items-center gap-2 py-1 px-2 rounded-lg bg-slate-50/50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        >
+                          {category && (
+                            <span className="text-xs flex-shrink-0">{category.emoji}</span>
+                          )}
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex-1">
+                            {event.title}
+                          </span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0">
+                            →{formatEndDate(endDate)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                    {uniqueBackgroundEvents.length > 3 && (
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pl-2">
+                        +{uniqueBackgroundEvents.length - 3} {t('common.more', { count: uniqueBackgroundEvents.length - 3 })}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

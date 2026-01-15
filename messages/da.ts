@@ -237,6 +237,7 @@ export const da: Translations = {
     nextDay: 'Næste {day}',
     moreDays: '+{count} flere dage',
     noUpcoming: 'Ingen kommende begivenheder',
+    thisWeek: 'Denne uge',
   },
 
   // Chores / Tasks
