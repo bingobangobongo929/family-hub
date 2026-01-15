@@ -263,6 +263,7 @@ export default function RoutinesPage() {
         title: formData.title,
         emoji: formData.emoji,
         type: formData.type,
+        points_reward: 1,
         assigned_to: formData.assigned_to,
         scheduled_time: formData.scheduled_time || null,
         is_active: true,
