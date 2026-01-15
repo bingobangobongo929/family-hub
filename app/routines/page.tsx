@@ -429,7 +429,7 @@ export default function RoutinesPage() {
       title: routine.title,
       emoji: routine.emoji,
       type: routine.type,
-      assigned_to: routine.assigned_to,
+      assigned_to: routine.assigned_to ?? null,
       scheduled_time: routine.scheduled_time || '',
       steps: routine.steps.map(s => ({
         title: s.title,
