@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -14,6 +14,7 @@ import {
   formatDanishTime,
   formatDanishDate,
   getTeamColor,
+  getCurrentRaceWeekend,
 } from '@/lib/f1-api'
 import { useTranslation } from '@/lib/i18n-context'
 import { getDateLocale } from '@/lib/date-locale'
@@ -69,6 +70,7 @@ interface F1NewsItem {
   pubDate: string
   imageUrl?: string
   isInteresting: boolean
+  isSpoiler: boolean
   category?: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
 }
 
@@ -83,7 +85,7 @@ type TabType = 'calendar' | 'drivers' | 'constructors' | 'news'
 export default function F1Page() {
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
-  const { aiModel } = useSettings()
+  const { aiModel, f1SpoilerFreeAutoWeekend, f1SpoilerFreeManualOverride, updateSetting } = useSettings()
   const [activeTab, setActiveTab] = useState<TabType>('calendar')
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
@@ -93,6 +95,23 @@ export default function F1Page() {
   const [showAllNews, setShowAllNews] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['race', 'driver', 'technical', 'calendar', 'other'])
   const [selectedYear] = useState(2026)
+  const [isRaceWeekend, setIsRaceWeekend] = useState(false)
+  const [currentRace, setCurrentRace] = useState<string | null>(null)
+
+  // Spoiler-free mode: manual override takes priority, otherwise auto-detect on race weekends
+  const spoilerFreeActive = f1SpoilerFreeManualOverride !== null
+    ? f1SpoilerFreeManualOverride
+    : (f1SpoilerFreeAutoWeekend && isRaceWeekend)
+
+  // Toggle spoiler-free mode (sets manual override)
+  const toggleSpoilerFree = () => {
+    updateSetting('f1_spoiler_free_manual_override', spoilerFreeActive ? false : true)
+  }
+
+  // Clear manual override (return to auto mode)
+  const clearSpoilerFreeOverride = () => {
+    updateSetting('f1_spoiler_free_manual_override', null)
+  }
 
   // Fetch data
   useEffect(() => {
@@ -118,6 +137,26 @@ export default function F1Page() {
     }
 
     fetchData()
+  }, [selectedYear])
+
+  // Check if it's a race weekend for auto spoiler-free mode
+  useEffect(() => {
+    async function checkRaceWeekend() {
+      try {
+        const weekend = await getCurrentRaceWeekend(selectedYear)
+        if (weekend?.isRaceWeekend) {
+          setIsRaceWeekend(true)
+          setCurrentRace(weekend.meeting.meeting_name)
+        } else {
+          setIsRaceWeekend(false)
+          setCurrentRace(null)
+        }
+      } catch (error) {
+        console.error('Error checking race weekend:', error)
+        setIsRaceWeekend(false)
+      }
+    }
+    checkRaceWeekend()
   }, [selectedYear])
 
   // Fetch news function
@@ -177,16 +216,61 @@ export default function F1Page() {
         <div className="max-w-6xl mx-auto p-4 md:p-6">
           {/* Header */}
           <div className="mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="text-4xl">🏎️</span>
-              <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
-                Formula 1 {selectedYear}
-              </h1>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">🏎️</span>
+                <h1 className="text-2xl md:text-3xl font-bold text-slate-800 dark:text-slate-100">
+                  Formula 1 {selectedYear}
+                </h1>
+              </div>
+
+              {/* Spoiler-Free Toggle */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleSpoilerFree}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                    spoilerFreeActive
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 border-2 border-amber-300 dark:border-amber-700'
+                      : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border-2 border-transparent'
+                  }`}
+                  title={spoilerFreeActive ? t('f1.spoilerFreeOn') : t('f1.spoilerFreeOff')}
+                >
+                  {spoilerFreeActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  <span className="hidden sm:inline">
+                    {spoilerFreeActive ? t('f1.spoilerFree') : t('f1.showSpoilers')}
+                  </span>
+                </button>
+
+                {/* Show override status */}
+                {f1SpoilerFreeManualOverride !== null && (
+                  <button
+                    onClick={clearSpoilerFreeOverride}
+                    className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 underline"
+                    title={t('f1.returnToAuto')}
+                  >
+                    {isRaceWeekend ? t('f1.autoMode') : t('f1.reset')}
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Race weekend alert */}
+            {isRaceWeekend && currentRace && (
+              <div className={`mb-3 px-4 py-2 rounded-lg text-sm ${
+                spoilerFreeActive
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+              }`}>
+                <span className="font-medium">{t('f1.raceWeekend')}:</span> {currentRace}
+                {spoilerFreeActive && f1SpoilerFreeManualOverride === null && (
+                  <span className="ml-2 text-xs opacity-75">({t('f1.spoilerFreeAutoEnabled')})</span>
+                )}
+              </div>
+            )}
 
             {/* Next race countdown */}
             {nextRace && (
-              <NextRaceCountdown meeting={nextRace} />
+              <NextRaceCountdown meeting={nextRace} spoilerFree={spoilerFreeActive} />
             )}
           </div>
 
@@ -238,6 +322,7 @@ export default function F1Page() {
                   selectedCategories={selectedCategories}
                   onCategoryChange={setSelectedCategories}
                   onRefresh={() => fetchNews(true)}
+                  spoilerFree={spoilerFreeActive}
                   t={t}
                   locale={locale}
                 />
@@ -257,7 +342,7 @@ export default function F1Page() {
 }
 
 // Next race countdown component
-function NextRaceCountdown({ meeting }: { meeting: OpenF1Meeting & { sessions?: OpenF1Session[] } }) {
+function NextRaceCountdown({ meeting, spoilerFree = false }: { meeting: OpenF1Meeting & { sessions?: OpenF1Session[] }, spoilerFree?: boolean }) {
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, text: '' })
@@ -658,6 +743,7 @@ function NewsView({
   selectedCategories,
   onCategoryChange,
   onRefresh,
+  spoilerFree,
   t,
   locale,
 }: {
@@ -668,6 +754,7 @@ function NewsView({
   selectedCategories: string[]
   onCategoryChange: (categories: string[]) => void
   onRefresh: () => void
+  spoilerFree: boolean
   t: (key: string, params?: Record<string, any>) => string
   locale: string
 }) {
@@ -701,12 +788,16 @@ function NewsView({
     )
   }
 
-  // Filter by interesting and categories
+  // Filter by interesting, categories, and spoiler-free mode
   const interestingNews = news.items.filter(item => item.isInteresting)
-  const baseNews = showAll ? news.items : interestingNews
+  const spoilerFilteredNews = spoilerFree
+    ? news.items.filter(item => !item.isSpoiler)
+    : news.items
+  const baseNews = showAll ? spoilerFilteredNews : spoilerFilteredNews.filter(item => item.isInteresting)
   const displayNews = baseNews.filter(item =>
     selectedCategories.includes(item.category || 'other')
   )
+  const hiddenSpoilerCount = spoilerFree ? news.items.filter(item => item.isSpoiler).length : 0
 
   const formatDate = (dateStr: string) => {
     try {
@@ -734,7 +825,7 @@ function NewsView({
   const getCategoryConfig = (category: string) =>
     CATEGORIES.find(c => c.id === category) || CATEGORIES[4]
 
-  // Count articles per category
+  // Count articles per category (from filtered news)
   const categoryCounts = CATEGORIES.reduce((acc, cat) => {
     acc[cat.id] = baseNews.filter(item => (item.category || 'other') === cat.id).length
     return acc
@@ -742,6 +833,21 @@ function NewsView({
 
   return (
     <div className="space-y-4">
+      {/* Spoiler-free banner */}
+      {spoilerFree && (
+        <div className="flex items-center gap-2 p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl text-amber-800 dark:text-amber-300">
+          <EyeOff className="w-5 h-5 flex-shrink-0" />
+          <div>
+            <span className="font-medium">{t('f1.spoilerFreeActive')}</span>
+            {hiddenSpoilerCount > 0 && (
+              <span className="ml-2 text-sm opacity-80">
+                ({t('f1.spoilersHidden', { count: hiddenSpoilerCount })})
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Category filters */}
       <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-xl">
         <Filter className="w-4 h-4 text-slate-400" />

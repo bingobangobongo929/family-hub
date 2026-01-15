@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import Link from 'next/link'
-import { Newspaper, Star, ExternalLink, Loader2 } from 'lucide-react'
+import { Newspaper, Star, ExternalLink, Loader2, EyeOff } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n-context'
 import { useSettings } from '@/lib/settings-context'
+import { getCurrentRaceWeekend } from '@/lib/f1-api'
 
 interface F1NewsItem {
   id: string
@@ -15,6 +16,7 @@ interface F1NewsItem {
   pubDate: string
   imageUrl?: string
   isInteresting: boolean
+  isSpoiler: boolean
 }
 
 interface NewsData {
@@ -26,10 +28,29 @@ interface NewsData {
 export default function F1NewsWidget() {
   const [ref, { size, height }] = useWidgetSize()
   const { t, locale } = useTranslation()
-  const { aiModel } = useSettings()
+  const { aiModel, f1SpoilerFreeAutoWeekend, f1SpoilerFreeManualOverride } = useSettings()
   const [news, setNews] = useState<NewsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [isRaceWeekend, setIsRaceWeekend] = useState(false)
+
+  // Spoiler-free mode: manual override takes priority, otherwise auto-detect on race weekends
+  const spoilerFreeActive = f1SpoilerFreeManualOverride !== null
+    ? f1SpoilerFreeManualOverride
+    : (f1SpoilerFreeAutoWeekend && isRaceWeekend)
+
+  // Check if it's a race weekend for auto spoiler-free mode
+  useEffect(() => {
+    async function checkRaceWeekend() {
+      try {
+        const weekend = await getCurrentRaceWeekend(2026)
+        setIsRaceWeekend(weekend?.isRaceWeekend ?? false)
+      } catch {
+        setIsRaceWeekend(false)
+      }
+    }
+    checkRaceWeekend()
+  }, [])
 
   useEffect(() => {
     async function fetchNews() {
@@ -68,8 +89,10 @@ export default function F1NewsWidget() {
     }
   }
 
-  // Filter to only show interesting news
-  const interestingNews = news?.items.filter(item => item.isInteresting) || []
+  // Filter to only show interesting news (and exclude spoilers if spoiler-free mode is active)
+  const interestingNews = news?.items.filter(item =>
+    item.isInteresting && (!spoilerFreeActive || !item.isSpoiler)
+  ) || []
 
   // Calculate how many items to show based on height
   const headerHeight = 44
@@ -92,6 +115,11 @@ export default function F1NewsWidget() {
           <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100 text-sm">
             {t('f1.news')}
           </h3>
+          {spoilerFreeActive && (
+            <span title={t('f1.spoilerFreeActive')}>
+              <EyeOff className="w-3.5 h-3.5 text-amber-500" />
+            </span>
+          )}
         </div>
         <Link
           href="/f1"

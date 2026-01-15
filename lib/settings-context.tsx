@@ -19,6 +19,10 @@ interface SettingsContextType {
   googlePhotosRotationInterval: number
   // Sidebar settings
   sidebarNavOrder: string[] | null
+  // F1 Spoiler-Free settings
+  f1SpoilerFreeEnabled: boolean
+  f1SpoilerFreeAutoWeekend: boolean
+  f1SpoilerFreeManualOverride: boolean | null // null = use auto, true/false = manual override
 }
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined)
@@ -123,6 +127,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         googlePhotosRotationInterval: (settings.google_photos_rotation_interval as number) ?? 10,
         // Sidebar settings
         sidebarNavOrder: (settings.sidebar_nav_order as string[] | null) ?? null,
+        // F1 Spoiler-Free settings
+        f1SpoilerFreeEnabled: (settings.f1_spoiler_free_enabled as boolean) ?? false,
+        f1SpoilerFreeAutoWeekend: (settings.f1_spoiler_free_auto_weekend as boolean) ?? true,
+        f1SpoilerFreeManualOverride: (settings.f1_spoiler_free_manual_override as boolean | null) ?? null,
       }}
     >
       {children}

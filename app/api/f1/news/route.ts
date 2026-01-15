@@ -8,6 +8,7 @@ interface F1NewsItem {
   pubDate: string
   imageUrl?: string
   isInteresting: boolean
+  isSpoiler: boolean
   category?: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
 }
 
@@ -22,6 +23,7 @@ interface RSSItem {
 interface ClassificationResult {
   isInteresting: boolean
   category: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
+  isSpoiler: boolean
   classifiedAt: number
 }
 
@@ -147,6 +149,7 @@ const FILTER_PROMPT = `You are filtering Formula 1 news articles for a family da
 For each article, determine:
 1. Is it INTERESTING? (true/false)
 2. What CATEGORY does it belong to?
+3. Is it a SPOILER? (true/false)
 
 INTERESTING articles contain:
 - Race results, qualifying, sprint results
@@ -169,12 +172,29 @@ CATEGORIES:
 - "calendar" = Schedule changes, track news
 - "other" = Everything else
 
-Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race"}, ...]}
+SPOILERS (true if article reveals):
+- Race results, winners, podium finishers
+- Qualifying positions/results
+- Sprint race results
+- Practice session times/results
+- Championship standings updates after a race
+- Penalty decisions affecting race results
+- Major incidents with outcomes (crashes, DNFs with driver names)
+- Any headline that reveals who won, finished where, or standings changes
+
+NOT SPOILERS:
+- Pre-race previews, predictions
+- Driver/team news not about results
+- Technical analysis without result info
+- Calendar/schedule changes
+- General F1 news
+
+Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race", "spoiler": true}, ...]}
 
 Articles:`
 
 // Classify articles with Claude (only new ones)
-async function classifyWithClaude(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string }>> {
+async function classifyWithClaude(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('No Anthropic API key')
 
@@ -200,19 +220,19 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   const aiResponse = await response.json()
   const content = aiResponse.content?.[0]?.text || '{}'
 
-  const resultMap = new Map<number, { interesting: boolean, category: string }>()
+  const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
   const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
     const parsed = JSON.parse(jsonMatch[0])
     for (const r of (parsed.results || [])) {
-      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other' })
+      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other', spoiler: r.spoiler ?? false })
     }
   }
   return resultMap
 }
 
 // Classify articles with Gemini (only new ones)
-async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string }>> {
+async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('No Google AI API key')
 
@@ -240,12 +260,12 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   const aiResponse = await response.json()
   const content = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
 
-  const resultMap = new Map<number, { interesting: boolean, category: string }>()
+  const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
   const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
     const parsed = JSON.parse(jsonMatch[0])
     for (const r of (parsed.results || [])) {
-      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other' })
+      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other', spoiler: r.spoiler ?? false })
     }
   }
   return resultMap
@@ -285,6 +305,7 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
           classificationCache.set(item.link, {
             isInteresting: result.interesting,
             category: result.category as ClassificationResult['category'],
+            isSpoiler: result.spoiler,
             classifiedAt: Date.now(),
           })
         } else {
@@ -292,17 +313,19 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
           classificationCache.set(item.link, {
             isInteresting: true,
             category: 'other',
+            isSpoiler: false,
             classifiedAt: Date.now(),
           })
         }
       }
     } catch (error) {
       console.error('AI classification error:', error)
-      // On error, mark new items as interesting
+      // On error, mark new items as interesting and not spoilers
       for (const { item } of needsClassification) {
         classificationCache.set(item.link, {
           isInteresting: true,
           category: 'other',
+          isSpoiler: false,
           classifiedAt: Date.now(),
         })
       }
@@ -336,6 +359,7 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
       pubDate: item.pubDate,
       imageUrl: item.imageUrl || ogImageMap.get(i),
       isInteresting: classification?.isInteresting ?? true,
+      isSpoiler: classification?.isSpoiler ?? false,
       category: classification?.category ?? 'other',
     }
   })

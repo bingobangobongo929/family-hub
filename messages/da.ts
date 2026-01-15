@@ -729,6 +729,18 @@ export const da: Translations = {
     showAll: 'Vis alle',
     recommended: 'Anbefalet',
     hiddenNews: '{count} mindre relevante artikler skjult',
+    // Spoiler-free mode
+    spoilerFree: 'Spoilerfri',
+    showSpoilers: 'Vis alle',
+    spoilerFreeOn: 'Spoilerfri tilstand er på - resultater skjult',
+    spoilerFreeOff: 'Spoilerfri tilstand er slukket - viser alt',
+    spoilerFreeActive: 'Spoilerfri tilstand aktiv',
+    spoilersHidden: '{count} spoilere skjult',
+    raceWeekend: 'Løbsweekend',
+    spoilerFreeAutoEnabled: 'auto-aktiveret',
+    returnToAuto: 'Tilbage til automatisk tilstand',
+    autoMode: 'Auto',
+    reset: 'Nulstil',
   },
 
   // F1 Sessions

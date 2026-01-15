@@ -727,6 +727,18 @@ export const en = {
     showAll: 'Show all',
     recommended: 'Recommended',
     hiddenNews: '{count} less relevant articles hidden',
+    // Spoiler-free mode
+    spoilerFree: 'Spoiler-Free',
+    showSpoilers: 'Show All',
+    spoilerFreeOn: 'Spoiler-free mode is on - results hidden',
+    spoilerFreeOff: 'Spoiler-free mode is off - showing all',
+    spoilerFreeActive: 'Spoiler-free mode active',
+    spoilersHidden: '{count} spoilers hidden',
+    raceWeekend: 'Race Weekend',
+    spoilerFreeAutoEnabled: 'auto-enabled',
+    returnToAuto: 'Return to auto mode',
+    autoMode: 'Auto',
+    reset: 'Reset',
   },
 
   // F1 Sessions
