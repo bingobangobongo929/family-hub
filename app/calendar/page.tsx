@@ -626,6 +626,30 @@ export default function CalendarPage() {
     return events.filter(event => isSameDay(parseISO(event.start_time), date))
   }
 
+  // Check if an event is from a background category
+  const isBackgroundEvent = useCallback((event: CalendarEvent): boolean => {
+    if (!event.category_id) return false
+    const category = getCategory(event.category_id)
+    return category?.is_background ?? false
+  }, [getCategory])
+
+  // Split events for a day into background and active
+  const getEventsSplit = useCallback((date: Date) => {
+    const dayEvents = getEventsForDay(date)
+    const background: CalendarEvent[] = []
+    const active: CalendarEvent[] = []
+
+    dayEvents.forEach(event => {
+      if (isBackgroundEvent(event)) {
+        background.push(event)
+      } else {
+        active.push(event)
+      }
+    })
+
+    return { background, active }
+  }, [events, isBackgroundEvent])
+
   // Calculate how many events can fit in a cell
   const maxEventsPerCell = useMemo(() => {
     // Compact events on mobile (24px), larger on desktop (36px)
@@ -945,12 +969,12 @@ export default function CalendarPage() {
       {(viewMode === 'month' || viewMode === 'week') && (
         <div className={`flex-1 grid grid-cols-7 ${viewMode === 'week' ? '' : 'auto-rows-fr'} bg-white dark:bg-slate-900 overflow-hidden`}>
           {calendarDays.map(day => {
-            const dayEvents = getEventsForDay(day)
+            const { background: backgroundEvents, active: activeEvents } = getEventsSplit(day)
             const isCurrentMonth = viewMode === 'week' || isSameMonth(day, currentDate)
             const isTodayDate = isToday(day)
             const dayBins = getBinsForDate(day)
-            const visibleEvents = dayEvents.slice(0, maxEventsPerCell)
-            const hiddenCount = dayEvents.length - visibleEvents.length
+            const visibleEvents = activeEvents.slice(0, maxEventsPerCell)
+            const hiddenCount = activeEvents.length - visibleEvents.length
 
             return (
               <div
@@ -983,7 +1007,36 @@ export default function CalendarPage() {
                   )}
                 </div>
 
-                {/* Events */}
+                {/* Background events as subtle banner */}
+                {backgroundEvents.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 mb-1">
+                    {backgroundEvents.slice(0, 2).map(event => {
+                      const category = event.category_id ? getCategory(event.category_id) : null
+                      return (
+                        <button
+                          key={event.id}
+                          onClick={(e) => handleEventClick(event, e)}
+                          className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${
+                            isMobile ? 'px-1 py-0.5' : 'px-1.5 py-0.5'
+                          }`}
+                          title={event.title}
+                        >
+                          {category && <span className={isMobile ? 'text-[8px]' : 'text-[10px]'}>{category.emoji}</span>}
+                          <span className={`text-slate-500 dark:text-slate-400 truncate max-w-[60px] ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>
+                            {event.title.split(' ').slice(0, 2).join(' ')}
+                          </span>
+                        </button>
+                      )
+                    })}
+                    {backgroundEvents.length > 2 && (
+                      <span className={`text-slate-400 dark:text-slate-500 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>
+                        +{backgroundEvents.length - 2}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Active Events */}
                 <div className={isMobile ? 'space-y-0.5' : 'space-y-1'}>
                   {visibleEvents.map(event => {
                     const category = event.category_id ? getCategory(event.category_id) : null

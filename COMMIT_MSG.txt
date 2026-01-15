@@ -1,0 +1,15 @@
+feat: Banner display for background events + better AI event naming
+
+Calendar:
+- Background events (daycare, school, vacation) now show as subtle
+  pill-shaped banners at top of day cells instead of full event slots
+- Banners show category emoji + truncated title, clickable
+- Regular events display below banners as before
+
+AI Calendar Input:
+- Added extensive guidelines for natural event title generation
+- Examples of good titles: "Mum's Doctor Appointment" not "Doctor Mum"
+- Patterns: "[Member]'s [Event]", "[Event] for [Member]", "[Member] at [Location]"
+- Should generate more readable, calendar-friendly event names
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>

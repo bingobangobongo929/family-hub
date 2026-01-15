@@ -74,6 +74,30 @@ When extracting events:
    - Extended contacts (grandparents, friends, relatives) - put in suggested_contacts
 8. Suggest an appropriate category from this list: ${CATEGORY_NAMES.join(', ')}
 
+CRITICAL - Event Title Guidelines:
+Create NATURAL, DESCRIPTIVE titles that read well on a calendar. The title should clearly describe what the event is.
+
+GOOD titles (natural, descriptive):
+- "Mum's Doctor Appointment" (not "Doctor Mum")
+- "Olivia's Swimming Lesson" (not "Swimming Olivia")
+- "Dentist Checkup - Dad" (not "Dentist Dad")
+- "School Pickup" (not "Pickup School")
+- "Ellie at Guest Daycare" (not "Daycare Ellie")
+- "Family Dinner at Grandma's" (not "Dinner Grandma")
+- "Car Service - MOT" (not "MOT Car")
+- "Vet Appointment for Max" (not "Vet Max")
+
+BAD titles (avoid these patterns):
+- "Doctor Mum" → use "Mum's Doctor Appointment"
+- "Swimming Olivia" → use "Olivia's Swimming Lesson"
+- "Dentist" → add context like "Dentist Checkup" or "Dental Cleaning"
+- Single words → always add context
+
+When a family member is involved, format as:
+- "[Member]'s [Event Type]" - e.g., "Mum's Doctor Appointment"
+- "[Event] for [Member]" - e.g., "Vet Appointment for Max"
+- "[Member] at [Location]" - e.g., "Ellie at Guest Daycare"
+
 RECURRENCE PATTERNS to detect:
 - "every Tuesday" → weekly on tuesday
 - "weekly swimming" → weekly
