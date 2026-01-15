@@ -33,7 +33,7 @@ interface DBArticle {
 
 // Model identifiers
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
-const GEMINI_MODEL = 'gemini-3-flash-preview'
+const GEMINI_MODEL = 'gemini-1.5-flash'
 
 // Supabase client (use service role for writes)
 function getSupabase() {
@@ -306,7 +306,9 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
 
   const data = await response.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
-  console.log('Gemini raw response:', content.substring(0, 500))
+  console.log('Gemini response length:', content.length)
+  console.log('Gemini raw response (first 500):', content.substring(0, 500))
+  console.log('Gemini raw response (last 200):', content.substring(content.length - 200))
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
@@ -420,10 +422,31 @@ export async function GET(request: NextRequest) {
         classifications = model === 'gemini'
           ? await classifyWithGemini(itemsForAI)
           : await classifyWithClaude(itemsForAI)
-        console.log(`Classified ${classifications.size} articles`)
+        console.log(`Classified ${classifications.size} articles with ${model}`)
+
+        // If classification failed (0 results), try fallback to Claude
+        if (classifications.size === 0 && model === 'gemini') {
+          console.log('Gemini returned 0 classifications, falling back to Claude...')
+          classifications = await classifyWithClaude(itemsForAI)
+          console.log(`Fallback Claude classified ${classifications.size} articles`)
+        }
       } catch (error) {
         console.error('AI classification error:', error)
-        // Default classifications on error
+        // Try fallback if primary failed
+        if (model === 'gemini') {
+          try {
+            console.log('Gemini failed, trying Claude as fallback...')
+            classifications = await classifyWithClaude(itemsForAI)
+            console.log(`Fallback Claude classified ${classifications.size} articles`)
+          } catch (fallbackError) {
+            console.error('Claude fallback also failed:', fallbackError)
+          }
+        }
+      }
+
+      // If still no classifications, use defaults
+      if (classifications.size === 0) {
+        console.log('All classification attempts failed, using defaults')
         newItems.forEach((_, i) => {
           classifications.set(i, { interesting: true, category: 'other', spoiler: false })
         })
