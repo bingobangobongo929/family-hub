@@ -476,6 +476,10 @@ export default function CalendarPage() {
 
   const handleAIEvents = async (aiEvents: any[]) => {
     for (const event of aiEvents) {
+      console.log('Creating AI event:', event.title)
+      console.log('  member_ids:', event.member_ids)
+      console.log('  contact_ids:', event.contact_ids)
+
       const startDateTime = event.all_day
         ? `${event.start_date}T00:00:00`
         : `${event.start_date}T${event.start_time || '09:00'}:00`
@@ -486,6 +490,8 @@ export default function CalendarPage() {
 
       const memberIds: string[] = event.member_ids || []
       const contactIds: string[] = event.contact_ids || []
+      console.log('  resolved memberIds:', memberIds)
+      console.log('  resolved contactIds:', contactIds)
 
       const eventData = {
         title: event.title,
@@ -524,9 +530,15 @@ export default function CalendarPage() {
             .single()
 
           if (memberIds.length > 0 && insertedEvent) {
-            await supabase.from('event_members').insert(
+            console.log('  Inserting event_members:', memberIds)
+            const { error: memberError } = await supabase.from('event_members').insert(
               memberIds.map(memberId => ({ event_id: insertedEvent.id, member_id: memberId }))
             )
+            if (memberError) {
+              console.error('  Failed to insert event_members:', memberError)
+            } else {
+              console.log('  Successfully inserted', memberIds.length, 'members')
+            }
           }
 
           if (contactIds.length > 0 && insertedEvent) {
