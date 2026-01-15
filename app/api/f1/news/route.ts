@@ -35,15 +35,23 @@ const GEMINI_MODEL = 'gemini-3-flash-preview'
 // Key = article link URL, Value = classification result
 const classificationCache: Map<string, ClassificationResult> = new Map()
 
+// Cache for OG images (by URL) - survives across requests
+const ogImageCache: Map<string, string | null> = new Map()
+
 // Cache for final news response (short-lived, just to avoid re-fetching RSS too often)
 let responseCache: { items: F1NewsItem[], timestamp: number } | null = null
-const RESPONSE_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes for RSS refresh
+const RESPONSE_CACHE_DURATION = 10 * 60 * 1000 // 10 minutes for RSS refresh
 
-// Parse RSS pubDate format
+// Parse RSS pubDate format - returns empty string if no valid date
 function parseRSSDate(dateStr: string): string {
+  if (!dateStr) {
+    return '' // F1 RSS doesn't include pubDate
+  }
+
   try {
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) {
+      // Try manual parsing for formats like "15 Jan 2026 14:30"
       const match = dateStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{2}):(\d{2})/)
       if (match) {
         const months: Record<string, number> = {
@@ -59,11 +67,11 @@ function parseRSSDate(dateStr: string): string {
         )
         return d.toISOString()
       }
-      return new Date().toISOString()
+      return '' // No valid date
     }
     return date.toISOString()
   } catch {
-    return new Date().toISOString()
+    return '' // No valid date
   }
 }
 
@@ -438,16 +446,22 @@ async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'):
     console.log(`All ${items.length} articles found in cache, no AI needed`)
   }
 
-  // Fetch OG images for items without images
+  // Fetch OG images for items without images (use cache)
   const needsImage = items
     .map((item, i) => ({ item, index: i }))
     .filter(({ item }) => !item.imageUrl)
 
   const ogImages = await Promise.all(
-    needsImage.map(async ({ item, index }) => ({
-      index,
-      imageUrl: await fetchOGImage(item.link)
-    }))
+    needsImage.map(async ({ item, index }) => {
+      // Check OG image cache first
+      if (ogImageCache.has(item.link)) {
+        return { index, imageUrl: ogImageCache.get(item.link) || undefined }
+      }
+      // Fetch and cache
+      const imageUrl = await fetchOGImage(item.link)
+      ogImageCache.set(item.link, imageUrl || null)
+      return { index, imageUrl }
+    })
   )
   const ogImageMap = new Map(ogImages.map(o => [o.index, o.imageUrl]))
 

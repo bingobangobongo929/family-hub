@@ -971,9 +971,11 @@ function NewsView({
                     <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-2">
                       {item.description}
                     </p>
-                    <span className="text-xs text-slate-400">
-                      {formatDate(item.pubDate)}
-                    </span>
+                    {item.pubDate && (
+                      <span className="text-xs text-slate-400">
+                        {formatDate(item.pubDate)}
+                      </span>
+                    )}
                   </div>
                 </div>
               </a>
