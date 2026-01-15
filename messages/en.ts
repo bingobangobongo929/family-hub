@@ -727,6 +727,7 @@ export const en = {
     showAll: 'Show all',
     recommended: 'Recommended',
     hiddenNews: '{count} less relevant articles hidden',
+    hideUninteresting: 'Hide less relevant articles',
     // Spoiler-free mode
     spoilerFree: 'Spoiler-Free',
     showSpoilers: 'Show All',

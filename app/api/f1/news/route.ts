@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 interface F1NewsItem {
   id: string
@@ -16,63 +17,30 @@ interface RSSItem {
   title: string
   description: string
   link: string
-  pubDate: string
-  imageUrl?: string
 }
 
-interface ClassificationResult {
-  isInteresting: boolean
-  category: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
-  isSpoiler: boolean
-  classifiedAt: number
+interface DBArticle {
+  id: string
+  link: string
+  title: string
+  description: string | null
+  image_url: string | null
+  pub_date: string | null
+  is_interesting: boolean
+  is_spoiler: boolean
+  category: string
 }
 
-// Model identifiers (same as calendar-ai)
+// Model identifiers
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
 const GEMINI_MODEL = 'gemini-3-flash-preview'
 
-// Persistent cache of article classifications (by URL) - survives across requests
-// Key = article link URL, Value = classification result
-const classificationCache: Map<string, ClassificationResult> = new Map()
-
-// Cache for article metadata (OG image + date) - survives across requests
-const articleMetaCache: Map<string, { imageUrl: string | null, publishDate: string | null }> = new Map()
-
-// Cache for final news response (short-lived, just to avoid re-fetching RSS too often)
-let responseCache: { items: F1NewsItem[], timestamp: number } | null = null
-const RESPONSE_CACHE_DURATION = 10 * 60 * 1000 // 10 minutes for RSS refresh
-
-// Parse RSS pubDate format - returns empty string if no valid date
-function parseRSSDate(dateStr: string): string {
-  if (!dateStr) {
-    return '' // F1 RSS doesn't include pubDate
-  }
-
-  try {
-    const date = new Date(dateStr)
-    if (isNaN(date.getTime())) {
-      // Try manual parsing for formats like "15 Jan 2026 14:30"
-      const match = dateStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{2}):(\d{2})/)
-      if (match) {
-        const months: Record<string, number> = {
-          Jan: 0, Feb: 1, Mar: 2, Apr: 3, May: 4, Jun: 5,
-          Jul: 6, Aug: 7, Sep: 8, Oct: 9, Nov: 10, Dec: 11
-        }
-        const d = new Date(
-          parseInt(match[3]),
-          months[match[2]] || 0,
-          parseInt(match[1]),
-          parseInt(match[4]),
-          parseInt(match[5])
-        )
-        return d.toISOString()
-      }
-      return '' // No valid date
-    }
-    return date.toISOString()
-  } catch {
-    return '' // No valid date
-  }
+// Supabase client (use service role for writes)
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
 }
 
 // Simple XML parser for RSS
@@ -84,24 +52,9 @@ function parseRSSItem(itemXml: string): RSSItem | null {
     return match ? match[1].trim() : ''
   }
 
-  const getAttr = (xml: string, tag: string, attr: string): string => {
-    const tagMatch = xml.match(new RegExp(`<${tag}[^>]*${attr}="([^"]*)"[^>]*`, 'i'))
-    return tagMatch ? tagMatch[1] : ''
-  }
-
   const title = getTag(itemXml, 'title')
   const description = getTag(itemXml, 'description')
   const link = getTag(itemXml, 'link')
-  const pubDate = getTag(itemXml, 'pubDate')
-
-  let imageUrl = getAttr(itemXml, 'media:content', 'url')
-    || getAttr(itemXml, 'media:thumbnail', 'url')
-    || getAttr(itemXml, 'enclosure', 'url')
-
-  if (!imageUrl) {
-    const imgMatch = description.match(/<img[^>]+src="([^"]+)"/)
-    if (imgMatch) imageUrl = imgMatch[1]
-  }
 
   if (!title || !link) return null
 
@@ -109,8 +62,6 @@ function parseRSSItem(itemXml: string): RSSItem | null {
     title,
     description: description.replace(/<[^>]*>/g, '').substring(0, 500),
     link,
-    pubDate: parseRSSDate(pubDate),
-    imageUrl,
   }
 }
 
@@ -167,7 +118,7 @@ async function fetchArticleMeta(url: string): Promise<{ imageUrl: string | null,
       }
     }
 
-    // Try to extract publish date from article:published_time or datePublished
+    // Try to extract publish date
     const datePatterns = [
       /<meta\s+property="article:published_time"\s+content="([^"]+)"/i,
       /<meta\s+content="([^"]+)"\s+property="article:published_time"/i,
@@ -225,7 +176,6 @@ SPOILERS (true if article reveals):
 - Championship standings updates after a race
 - Penalty decisions affecting race results
 - Major incidents with outcomes (crashes, DNFs with driver names)
-- Any headline that reveals who won, finished where, or standings changes
 
 NOT SPOILERS:
 - Pre-race previews, predictions
@@ -238,7 +188,7 @@ Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race", 
 
 Articles:`
 
-// Classify articles with Claude (only new ones)
+// Classify articles with Claude
 async function classifyWithClaude(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('No Anthropic API key')
@@ -269,8 +219,6 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   const data = await response.json()
   const content = data.content?.find((c: any) => c.type === 'text')?.text || '{}'
 
-  console.log('Claude raw response:', content.substring(0, 800))
-
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
   // Try to extract JSON - handle markdown code blocks
@@ -281,10 +229,8 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   }
 
   try {
-    // Try direct parse first
     const parsed = JSON.parse(jsonStr)
     const results = parsed.results || []
-    console.log('Parsed', results.length, 'results, first 3:', JSON.stringify(results.slice(0, 3)))
     for (const r of results) {
       resultMap.set(r.index, {
         interesting: r.interesting ?? false,
@@ -293,12 +239,10 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
       })
     }
   } catch {
-    // Try regex extraction as fallback
     const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
-        console.log('Regex parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
         for (const r of (parsed.results || [])) {
           resultMap.set(r.index, {
             interesting: r.interesting ?? false,
@@ -309,14 +253,12 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
       } catch (e) {
         console.error('JSON parse error:', e)
       }
-    } else {
-      console.error('No JSON match found in:', jsonStr.substring(0, 300))
     }
   }
   return resultMap
 }
 
-// Classify articles with Gemini (only new ones)
+// Classify articles with Gemini
 async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('No Google AI API key')
@@ -349,11 +291,8 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   const data = await response.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
 
-  console.log('Gemini raw response:', content.substring(0, 800))
-
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
-  // Try to extract JSON - handle markdown code blocks
   let jsonStr = content
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlockMatch) {
@@ -361,10 +300,8 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   }
 
   try {
-    // Try direct parse first
     const parsed = JSON.parse(jsonStr)
     const results = parsed.results || []
-    console.log('Parsed', results.length, 'results, first 3:', JSON.stringify(results.slice(0, 3)))
     for (const r of results) {
       resultMap.set(r.index, {
         interesting: r.interesting ?? false,
@@ -373,12 +310,10 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
       })
     }
   } catch {
-    // Try regex extraction as fallback
     const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
-        console.log('Regex parsed results:', JSON.stringify(parsed.results?.slice(0, 3)))
         for (const r of (parsed.results || [])) {
           resultMap.set(r.index, {
             interesting: r.interesting ?? false,
@@ -389,141 +324,34 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
       } catch (e) {
         console.error('JSON parse error:', e)
       }
-    } else {
-      console.error('No JSON match found in:', jsonStr.substring(0, 300))
     }
   }
   return resultMap
 }
 
-// Main function to get classifications (uses cache, only classifies new articles)
-async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'): Promise<F1NewsItem[]> {
-  // Find which articles need classification
-  const needsClassification: { index: number, item: RSSItem }[] = []
-
-  for (let i = 0; i < items.length; i++) {
-    const cached = classificationCache.get(items[i].link)
-    if (!cached) {
-      needsClassification.push({ index: i, item: items[i] })
-    }
-  }
-
-  // Classify new articles with AI (if any)
-  if (needsClassification.length > 0) {
-    console.log(`Classifying ${needsClassification.length} new articles (${items.length - needsClassification.length} from cache)`)
-
-    const itemsForAI = needsClassification.map(({ index, item }) => ({
-      index,
-      title: item.title,
-      description: item.description.substring(0, 150),
-    }))
-
-    try {
-      const results = model === 'gemini'
-        ? await classifyWithGemini(itemsForAI)
-        : await classifyWithClaude(itemsForAI)
-
-      // Store new classifications in cache
-      for (const { index, item } of needsClassification) {
-        const result = results.get(index)
-        if (result) {
-          classificationCache.set(item.link, {
-            isInteresting: result.interesting,
-            category: result.category as ClassificationResult['category'],
-            isSpoiler: result.spoiler,
-            classifiedAt: Date.now(),
-          })
-        } else {
-          // Default if AI didn't return result for this item
-          classificationCache.set(item.link, {
-            isInteresting: true,
-            category: 'other',
-            isSpoiler: false,
-            classifiedAt: Date.now(),
-          })
-        }
-      }
-    } catch (error) {
-      console.error('AI classification error:', error)
-      // On error, mark new items as interesting and not spoilers
-      for (const { item } of needsClassification) {
-        classificationCache.set(item.link, {
-          isInteresting: true,
-          category: 'other',
-          isSpoiler: false,
-          classifiedAt: Date.now(),
-        })
-      }
-    }
-  } else {
-    console.log(`All ${items.length} articles found in cache, no AI needed`)
-  }
-
-  // Fetch article metadata (OG images + dates) for all items (use cache)
-  const articleMeta = await Promise.all(
-    items.map(async (item, index) => {
-      // Check cache first
-      if (articleMetaCache.has(item.link)) {
-        return { index, ...articleMetaCache.get(item.link)! }
-      }
-      // Only fetch if we need image or date
-      if (!item.imageUrl || !item.pubDate) {
-        const meta = await fetchArticleMeta(item.link)
-        articleMetaCache.set(item.link, meta)
-        return { index, ...meta }
-      }
-      return { index, imageUrl: null, publishDate: null }
-    })
-  )
-  const metaMap = new Map(articleMeta.map(m => [m.index, m]))
-
-  // Build final response using cache
-  return items.map((item, i) => {
-    const classification = classificationCache.get(item.link)
-    const meta = metaMap.get(i)
-    return {
-      id: `f1-news-${i}-${Date.now()}`,
-      title: item.title,
-      description: item.description,
-      link: item.link,
-      pubDate: item.pubDate || meta?.publishDate || '',
-      imageUrl: item.imageUrl || meta?.imageUrl || undefined,
-      isInteresting: classification?.isInteresting ?? true,
-      isSpoiler: classification?.isSpoiler ?? false,
-      category: classification?.category ?? 'other',
-    }
-  })
-}
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const model = (searchParams.get('model') || 'claude') as 'claude' | 'gemini'
-  const forceRefresh = searchParams.get('refresh') === 'true'
   const forceReclassify = searchParams.get('reclassify') === 'true'
 
-  // Clear caches if reclassify requested
-  if (forceReclassify) {
-    classificationCache.clear()
-    articleMetaCache.clear()
-    responseCache = null
-    console.log('All caches cleared - will re-classify and re-fetch all articles')
-  }
-
-  // Check response cache (just to avoid hammering RSS feed)
-  if (!forceRefresh && !forceReclassify && responseCache && Date.now() - responseCache.timestamp < RESPONSE_CACHE_DURATION) {
-    return NextResponse.json({
-      items: responseCache.items,
-      cached: true,
-      timestamp: responseCache.timestamp,
-      cacheStats: {
-        totalClassified: classificationCache.size,
-        responseAge: Math.round((Date.now() - responseCache.timestamp) / 1000),
-      },
-    })
-  }
+  const supabase = getSupabase()
 
   try {
-    // Fetch F1 RSS feed
+    // If reclassify, clear database
+    if (forceReclassify) {
+      await supabase.from('f1_news_articles').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      console.log('Database cleared - will re-classify all articles')
+    }
+
+    // Get existing articles from database
+    const { data: existingArticles } = await supabase
+      .from('f1_news_articles')
+      .select('*')
+      .order('pub_date', { ascending: false, nullsFirst: false })
+
+    const existingLinks = new Set((existingArticles || []).map((a: DBArticle) => a.link))
+
+    // Fetch RSS feed
     const rssUrl = 'https://www.formula1.com/en/latest/all.xml'
     const response = await fetch(rssUrl, {
       headers: { 'User-Agent': 'Family-Hub/1.0' },
@@ -537,35 +365,101 @@ export async function GET(request: NextRequest) {
     const xml = await response.text()
     const rssItems = parseRSS(xml)
 
-    // Get classifications (uses persistent cache, only classifies new articles)
-    const newsItems = await getClassifications(rssItems, model)
+    // Find new articles not in database
+    const newItems = rssItems.filter(item => !existingLinks.has(item.link))
 
-    // Update response cache
-    responseCache = {
-      items: newsItems,
-      timestamp: Date.now(),
+    console.log(`Found ${rssItems.length} articles in RSS, ${newItems.length} are new`)
+
+    // Process new articles
+    if (newItems.length > 0) {
+      // Fetch metadata (images + dates) for new articles
+      const metaResults = await Promise.all(
+        newItems.map(async (item) => {
+          const meta = await fetchArticleMeta(item.link)
+          return { ...item, ...meta }
+        })
+      )
+
+      // Classify new articles with AI
+      const itemsForAI = newItems.map((item, index) => ({
+        index,
+        title: item.title,
+        description: item.description.substring(0, 150),
+      }))
+
+      let classifications = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
+
+      try {
+        classifications = model === 'gemini'
+          ? await classifyWithGemini(itemsForAI)
+          : await classifyWithClaude(itemsForAI)
+        console.log(`Classified ${classifications.size} articles`)
+      } catch (error) {
+        console.error('AI classification error:', error)
+        // Default classifications on error
+        newItems.forEach((_, i) => {
+          classifications.set(i, { interesting: true, category: 'other', spoiler: false })
+        })
+      }
+
+      // Insert new articles into database
+      const articlesToInsert = metaResults.map((item, i) => {
+        const classification = classifications.get(i)
+        return {
+          link: item.link,
+          title: item.title,
+          description: item.description,
+          image_url: item.imageUrl,
+          pub_date: item.publishDate || null,
+          is_interesting: classification?.interesting ?? true,
+          is_spoiler: classification?.spoiler ?? false,
+          category: classification?.category || 'other',
+        }
+      })
+
+      const { error: insertError } = await supabase
+        .from('f1_news_articles')
+        .insert(articlesToInsert)
+
+      if (insertError) {
+        console.error('Error inserting articles:', insertError)
+      } else {
+        console.log(`Inserted ${articlesToInsert.length} new articles`)
+      }
     }
 
+    // Fetch all articles from database (now includes new ones)
+    const { data: allArticles, error: fetchError } = await supabase
+      .from('f1_news_articles')
+      .select('*')
+      .order('pub_date', { ascending: false, nullsFirst: false })
+      .limit(20)
+
+    if (fetchError) {
+      throw fetchError
+    }
+
+    // Convert to response format
+    const items: F1NewsItem[] = (allArticles || []).map((article: DBArticle) => ({
+      id: article.id,
+      title: article.title,
+      description: article.description || '',
+      link: article.link,
+      pubDate: article.pub_date || '',
+      imageUrl: article.image_url || undefined,
+      isInteresting: article.is_interesting,
+      isSpoiler: article.is_spoiler,
+      category: article.category as F1NewsItem['category'],
+    }))
+
     return NextResponse.json({
-      items: newsItems,
-      cached: false,
+      items,
+      newArticles: newItems.length,
+      totalInDb: existingArticles?.length || 0,
       timestamp: Date.now(),
-      cacheStats: {
-        totalClassified: classificationCache.size,
-      },
     })
   } catch (error) {
     console.error('F1 news fetch error:', error)
-
-    if (responseCache) {
-      return NextResponse.json({
-        items: responseCache.items,
-        cached: true,
-        stale: true,
-        timestamp: responseCache.timestamp,
-      })
-    }
-
     return NextResponse.json(
       { error: 'Failed to fetch F1 news', items: [] },
       { status: 500 }

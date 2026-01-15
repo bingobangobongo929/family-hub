@@ -729,6 +729,7 @@ export const da: Translations = {
     showAll: 'Vis alle',
     recommended: 'Anbefalet',
     hiddenNews: '{count} mindre relevante artikler skjult',
+    hideUninteresting: 'Skjul mindre relevante artikler',
     // Spoiler-free mode
     spoilerFree: 'Spoilerfri',
     showSpoilers: 'Vis alle',

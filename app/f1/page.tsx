@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -984,11 +984,26 @@ function NewsView({
         )}
       </div>
 
-      {/* Hidden count */}
-      {!showAll && news.items.filter(i => !i.isInteresting).length > 0 && (
-        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-          {t('f1.hiddenNews', { count: news.items.filter(i => !i.isInteresting).length })}
-        </p>
+      {/* Hidden articles toggle */}
+      {news.items.filter(i => !i.isInteresting).length > 0 && (
+        <button
+          onClick={onToggleShowAll}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+        >
+          {showAll ? (
+            <>
+              <ChevronUp className="w-4 h-4" />
+              <span>{t('f1.hideUninteresting')}</span>
+              <ChevronUp className="w-4 h-4" />
+            </>
+          ) : (
+            <>
+              <ChevronDown className="w-4 h-4" />
+              <span>{t('f1.hiddenNews', { count: news.items.filter(i => !i.isInteresting).length })}</span>
+              <ChevronDown className="w-4 h-4" />
+            </>
+          )}
+        </button>
       )}
     </div>
   )
