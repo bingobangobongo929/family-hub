@@ -5,7 +5,8 @@ import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AlbumSelector from '@/components/AlbumSelector'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper, ImageIcon, FileText, Save } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper, ImageIcon, FileText, Save, Bell, BellOff, Smartphone } from 'lucide-react'
+import { usePush } from '@/lib/push-context'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -13,6 +14,154 @@ import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS, CountdownEvent, CountdownEventType, COUNTDOWN_EVENT_TYPES, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
 import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
+
+// Push Notification Settings Component
+function PushNotificationSettings() {
+  const { isNative, isEnabled, permissionStatus, token, requestPermission } = usePush()
+  const [isRequesting, setIsRequesting] = useState(false)
+  const [testSending, setTestSending] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  const handleRequestPermission = async () => {
+    setIsRequesting(true)
+    await requestPermission()
+    setIsRequesting(false)
+  }
+
+  const handleSendTest = async () => {
+    setTestSending(true)
+    setTestResult(null)
+    try {
+      const response = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: '🎉 Test Notification',
+          body: 'Push notifications are working!',
+          data: { type: 'test' }
+        })
+      })
+      const result = await response.json()
+      setTestResult({
+        success: result.sent > 0,
+        message: result.sent > 0 ? 'Notification sent!' : result.error || 'No devices registered'
+      })
+    } catch (error) {
+      setTestResult({ success: false, message: 'Failed to send' })
+    }
+    setTestSending(false)
+  }
+
+  // Don't show on web - only relevant for native app
+  if (!isNative) {
+    return (
+      <Card className="mb-6">
+        <CardHeader title="Push Notifications" icon={<Bell className="w-5 h-5" />} />
+        <div className="mt-4">
+          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+            <Smartphone className="w-8 h-8 text-slate-400" />
+            <div>
+              <p className="font-medium text-slate-700 dark:text-slate-200">iOS App Required</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Push notifications are available in the Family Hub iOS app.
+              </p>
+            </div>
+          </div>
+        </div>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className="mb-6">
+      <CardHeader title="Push Notifications" icon={<Bell className="w-5 h-5" />} />
+      <div className="mt-4 space-y-4">
+        {/* Status */}
+        <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+          <div className="flex items-center gap-3">
+            {isEnabled ? (
+              <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                <BellOff className="w-5 h-5 text-slate-400" />
+              </div>
+            )}
+            <div>
+              <p className="font-medium text-slate-700 dark:text-slate-200">
+                {isEnabled ? 'Notifications Enabled' : 'Notifications Disabled'}
+              </p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {permissionStatus === 'granted' && 'You will receive reminders for events, chores, and bins.'}
+                {permissionStatus === 'denied' && 'Enable in iOS Settings → Family Hub → Notifications'}
+                {permissionStatus === 'prompt' && 'Tap below to enable push notifications.'}
+                {permissionStatus === 'loading' && 'Checking status...'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Enable Button */}
+        {permissionStatus === 'prompt' && (
+          <Button
+            onClick={handleRequestPermission}
+            disabled={isRequesting}
+            className="w-full"
+          >
+            {isRequesting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Requesting...
+              </>
+            ) : (
+              <>
+                <Bell className="w-4 h-4 mr-2" />
+                Enable Notifications
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Test Notification */}
+        {isEnabled && (
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Test Notifications</p>
+            <Button
+              onClick={handleSendTest}
+              disabled={testSending}
+              variant="secondary"
+              size="sm"
+            >
+              {testSending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Sending...
+                </>
+              ) : (
+                'Send Test Notification'
+              )}
+            </Button>
+            {testResult && (
+              <p className={`mt-2 text-sm ${testResult.success ? 'text-green-600' : 'text-red-500'}`}>
+                {testResult.message}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Debug info in development */}
+        {process.env.NODE_ENV === 'development' && token && (
+          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-xs text-slate-400 font-mono break-all">
+              Token: {token.substring(0, 20)}...
+            </p>
+          </div>
+        )}
+      </div>
+    </Card>
+  )
+}
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
@@ -811,6 +960,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </Card>
+
+      {/* Push Notifications */}
+      <PushNotificationSettings />
 
       {/* Family Context */}
       <Card className="mb-6">

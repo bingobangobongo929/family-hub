@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { SignJWT, importPKCS8 } from 'jose';
 
 // Initialize Supabase with service role for server-side operations
 const supabase = createClient(
@@ -13,6 +14,10 @@ interface NotificationPayload {
   body: string;
   data?: Record<string, any>; // e.g., { type: 'event_reminder', event_id: '123' }
 }
+
+// Cache the JWT to avoid regenerating it for every notification
+// APNs tokens are valid for 1 hour, we'll regenerate after 50 minutes
+let cachedJwt: { token: string; expiry: number } | null = null;
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,8 +55,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notifications via APNs
-    // Note: This requires Apple Developer credentials
-    // For now, we'll log what would be sent
     const results = await Promise.all(
       tokens.map(async ({ token, platform }) => {
         if (platform === 'ios') {
@@ -62,11 +65,13 @@ export async function POST(request: NextRequest) {
     );
 
     const successCount = results.filter(r => r.success).length;
+    const failures = results.filter(r => !r.success);
 
     return NextResponse.json({
       message: `Sent ${successCount}/${tokens.length} notifications`,
       sent: successCount,
       total: tokens.length,
+      failures: failures.length > 0 ? failures : undefined,
     });
 
   } catch (error) {
@@ -83,10 +88,9 @@ async function sendAPNsNotification(
   deviceToken: string,
   payload: NotificationPayload
 ): Promise<{ success: boolean; reason?: string }> {
-  // APNs configuration - requires Apple Developer credentials
   const apnsKeyId = process.env.APNS_KEY_ID;
   const apnsTeamId = process.env.APNS_TEAM_ID;
-  const apnsKey = process.env.APNS_AUTH_KEY; // .p8 file contents
+  const apnsKey = process.env.APNS_AUTH_KEY; // .p8 file contents (PEM format)
   const bundleId = 'com.familyhub.app';
 
   if (!apnsKeyId || !apnsTeamId || !apnsKey) {
@@ -99,14 +103,19 @@ async function sendAPNsNotification(
   }
 
   try {
-    // Create JWT for APNs authentication
-    const jwt = await createAPNsJWT(apnsKeyId, apnsTeamId, apnsKey);
+    // Get or create JWT for APNs authentication
+    const jwt = await getAPNsJWT(apnsKeyId, apnsTeamId, apnsKey);
 
-    // APNs endpoint (use api.push.apple.com for production)
-    const isProduction = process.env.NODE_ENV === 'production';
+    // APNs endpoint - use sandbox for development builds
+    const isProduction = process.env.APNS_PRODUCTION === 'true';
     const apnsHost = isProduction
       ? 'api.push.apple.com'
       : 'api.sandbox.push.apple.com';
+
+    console.log(`Sending APNs notification to ${apnsHost}:`, {
+      token: deviceToken.substring(0, 10) + '...',
+      title: payload.title,
+    });
 
     const response = await fetch(
       `https://${apnsHost}/3/device/${deviceToken}`,
@@ -117,6 +126,7 @@ async function sendAPNsNotification(
           'apns-topic': bundleId,
           'apns-push-type': 'alert',
           'apns-priority': '10',
+          'apns-expiration': '0',
         },
         body: JSON.stringify({
           aps: {
@@ -133,11 +143,19 @@ async function sendAPNsNotification(
     );
 
     if (response.ok) {
+      console.log('APNs notification sent successfully');
       return { success: true };
     } else {
-      const error = await response.json();
-      console.error('APNs error:', error);
-      return { success: false, reason: error.reason };
+      const errorText = await response.text();
+      let errorReason = 'unknown';
+      try {
+        const errorJson = JSON.parse(errorText);
+        errorReason = errorJson.reason || 'unknown';
+      } catch {
+        errorReason = errorText || response.statusText;
+      }
+      console.error('APNs error:', response.status, errorReason);
+      return { success: false, reason: errorReason };
     }
   } catch (error) {
     console.error('APNs request failed:', error);
@@ -145,33 +163,36 @@ async function sendAPNsNotification(
   }
 }
 
-// Create JWT for APNs authentication
-async function createAPNsJWT(
+// Get or create JWT for APNs authentication
+// JWTs are cached for 50 minutes (APNs tokens valid for 60 minutes)
+async function getAPNsJWT(
   keyId: string,
   teamId: string,
-  privateKey: string
+  privateKeyPem: string
 ): Promise<string> {
-  // JWT header
-  const header = {
-    alg: 'ES256',
-    kid: keyId,
+  const now = Date.now();
+
+  // Return cached token if still valid (with 10 minute buffer)
+  if (cachedJwt && cachedJwt.expiry > now) {
+    return cachedJwt.token;
+  }
+
+  // Create new JWT using jose library
+  // The private key from Apple is in PKCS#8 PEM format
+  const privateKey = await importPKCS8(privateKeyPem, 'ES256');
+
+  const jwt = await new SignJWT({})
+    .setProtectedHeader({ alg: 'ES256', kid: keyId })
+    .setIssuer(teamId)
+    .setIssuedAt()
+    .sign(privateKey);
+
+  // Cache the token (valid for 50 minutes)
+  cachedJwt = {
+    token: jwt,
+    expiry: now + 50 * 60 * 1000, // 50 minutes from now
   };
 
-  // JWT payload
-  const now = Math.floor(Date.now() / 1000);
-  const payload = {
-    iss: teamId,
-    iat: now,
-  };
-
-  // Note: In production, use a proper JWT library like jose
-  // This is a simplified version for illustration
-  const encodedHeader = btoa(JSON.stringify(header));
-  const encodedPayload = btoa(JSON.stringify(payload));
-
-  // For actual implementation, you'd sign with the private key
-  // Using ES256 algorithm with the .p8 key from Apple
-  // Consider using the 'jose' npm package for this
-
-  return `${encodedHeader}.${encodedPayload}.signature`;
+  console.log('Generated new APNs JWT token');
+  return jwt;
 }
