@@ -288,12 +288,13 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}\n\nIMPORTANT: Respond with ONLY the JSON object, no markdown, no explanation. Start your response with { and end with }`,
+            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
           }],
         }],
         generationConfig: {
-          temperature: 0.1,
-          maxOutputTokens: 4096,
+          temperature: 0,
+          maxOutputTokens: 8192,
+          responseMimeType: 'application/json',
         },
       }),
     }
@@ -306,25 +307,21 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   }
 
   const data = await response.json()
+  const finishReason = data.candidates?.[0]?.finishReason
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+  console.log('Gemini finish reason:', finishReason)
   console.log('Gemini response length:', content.length)
-  console.log('Gemini raw response (first 500):', content.substring(0, 500))
-  console.log('Gemini raw response (last 200):', content.substring(content.length - 200))
+  if (finishReason !== 'STOP') {
+    console.error('Gemini response may be incomplete! Finish reason:', finishReason)
+  }
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
-  let jsonStr = content.trim()
-  const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (codeBlockMatch) {
-    jsonStr = codeBlockMatch[1].trim()
-  }
-
   try {
-    const parsed = JSON.parse(jsonStr)
+    const parsed = JSON.parse(content)
     const results = parsed.results || []
-    console.log(`Parsed ${results.length} classification results`)
+    console.log(`Parsed ${results.length} classification results from Gemini`)
     for (const r of results) {
-      console.log(`Article ${r.index}: category=${r.category}, interesting=${r.interesting}, spoiler=${r.spoiler}`)
       resultMap.set(r.index, {
         interesting: r.interesting ?? false,
         category: r.category || 'other',
@@ -332,30 +329,11 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
       })
     }
   } catch (parseError) {
-    console.error('Initial JSON parse failed:', parseError)
-    const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
-    if (jsonMatch) {
-      try {
-        const parsed = JSON.parse(jsonMatch[0])
-        const results = parsed.results || []
-        console.log(`Fallback parsed ${results.length} classification results`)
-        for (const r of results) {
-          resultMap.set(r.index, {
-            interesting: r.interesting ?? false,
-            category: r.category || 'other',
-            spoiler: r.spoiler ?? false
-          })
-        }
-      } catch (e) {
-        console.error('Fallback JSON parse error:', e)
-        console.error('Attempted to parse:', jsonMatch[0].substring(0, 300))
-      }
-    } else {
-      console.error('No JSON object found in response')
-    }
+    console.error('Gemini JSON parse failed:', parseError)
+    console.error('Raw content:', content.substring(0, 500))
   }
 
-  console.log(`Returning ${resultMap.size} classifications`)
+  console.log(`Returning ${resultMap.size} Gemini classifications`)
   return resultMap
 }
 
@@ -424,30 +402,13 @@ export async function GET(request: NextRequest) {
           ? await classifyWithGemini(itemsForAI)
           : await classifyWithClaude(itemsForAI)
         console.log(`Classified ${classifications.size} articles with ${model}`)
-
-        // If classification failed (0 results), try fallback to Claude
-        if (classifications.size === 0 && model === 'gemini') {
-          console.log('Gemini returned 0 classifications, falling back to Claude...')
-          classifications = await classifyWithClaude(itemsForAI)
-          console.log(`Fallback Claude classified ${classifications.size} articles`)
-        }
       } catch (error) {
         console.error('AI classification error:', error)
-        // Try fallback if primary failed
-        if (model === 'gemini') {
-          try {
-            console.log('Gemini failed, trying Claude as fallback...')
-            classifications = await classifyWithClaude(itemsForAI)
-            console.log(`Fallback Claude classified ${classifications.size} articles`)
-          } catch (fallbackError) {
-            console.error('Claude fallback also failed:', fallbackError)
-          }
-        }
       }
 
-      // If still no classifications, use defaults
+      // If classification failed, use defaults
       if (classifications.size === 0) {
-        console.log('All classification attempts failed, using defaults')
+        console.log('Classification failed, using defaults')
         newItems.forEach((_, i) => {
           classifications.set(i, { interesting: true, category: 'other', spoiler: false })
         })
