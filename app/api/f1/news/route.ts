@@ -19,20 +19,29 @@ interface RSSItem {
   imageUrl?: string
 }
 
+interface ClassificationResult {
+  isInteresting: boolean
+  category: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
+  classifiedAt: number
+}
+
 // Model identifiers (same as calendar-ai)
 const CLAUDE_MODEL = 'claude-sonnet-4-5-20250514'
 const GEMINI_MODEL = 'gemini-3-flash-preview'
 
-// Cache for news items - keyed by model, cached for 30 minutes
-const newsCache: Map<string, { items: F1NewsItem[], timestamp: number }> = new Map()
-const CACHE_DURATION = 30 * 60 * 1000 // 30 minutes
+// Persistent cache of article classifications (by URL) - survives across requests
+// Key = article link URL, Value = classification result
+const classificationCache: Map<string, ClassificationResult> = new Map()
 
-// Parse RSS pubDate format (e.g., "Thu, 09 Jan 2025 14:30:00 GMT")
+// Cache for final news response (short-lived, just to avoid re-fetching RSS too often)
+let responseCache: { items: F1NewsItem[], timestamp: number } | null = null
+const RESPONSE_CACHE_DURATION = 5 * 60 * 1000 // 5 minutes for RSS refresh
+
+// Parse RSS pubDate format
 function parseRSSDate(dateStr: string): string {
   try {
     const date = new Date(dateStr)
     if (isNaN(date.getTime())) {
-      // Try alternative parsing
       const match = dateStr.match(/(\d{1,2})\s+(\w+)\s+(\d{4})\s+(\d{2}):(\d{2})/)
       if (match) {
         const months: Record<string, number> = {
@@ -75,12 +84,10 @@ function parseRSSItem(itemXml: string): RSSItem | null {
   const link = getTag(itemXml, 'link')
   const pubDate = getTag(itemXml, 'pubDate')
 
-  // Try multiple ways to get image
   let imageUrl = getAttr(itemXml, 'media:content', 'url')
     || getAttr(itemXml, 'media:thumbnail', 'url')
     || getAttr(itemXml, 'enclosure', 'url')
 
-  // Extract image from description if present
   if (!imageUrl) {
     const imgMatch = description.match(/<img[^>]+src="([^"]+)"/)
     if (imgMatch) imageUrl = imgMatch[1]
@@ -166,16 +173,10 @@ Return JSON: {"results": [{"index": 0, "interesting": true, "category": "race"},
 
 Articles:`
 
-// Filter with Claude
-async function filterWithClaude(items: RSSItem[]): Promise<{interesting: boolean, category: string}[]> {
+// Classify articles with Claude (only new ones)
+async function classifyWithClaude(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string }>> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('No Anthropic API key')
-
-  const itemsForAnalysis = items.slice(0, 25).map((item, i) => ({
-    index: i,
-    title: item.title,
-    description: item.description.substring(0, 150),
-  }))
 
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -189,7 +190,7 @@ async function filterWithClaude(items: RSSItem[]): Promise<{interesting: boolean
       max_tokens: 1024,
       messages: [{
         role: 'user',
-        content: `${FILTER_PROMPT}\n${JSON.stringify(itemsForAnalysis, null, 2)}`,
+        content: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
       }],
     }),
   })
@@ -199,31 +200,21 @@ async function filterWithClaude(items: RSSItem[]): Promise<{interesting: boolean
   const aiResponse = await response.json()
   const content = aiResponse.content?.[0]?.text || '{}'
 
+  const resultMap = new Map<number, { interesting: boolean, category: string }>()
   const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
     const parsed = JSON.parse(jsonMatch[0])
-    const resultsMap = new Map(parsed.results?.map((r: any) => [r.index, r]) || [])
-    return items.map((_, i) => {
-      const result = resultsMap.get(i) as any
-      return {
-        interesting: result?.interesting ?? false,
-        category: result?.category || 'other'
-      }
-    })
+    for (const r of (parsed.results || [])) {
+      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other' })
+    }
   }
-  return items.map(() => ({ interesting: true, category: 'other' }))
+  return resultMap
 }
 
-// Filter with Gemini
-async function filterWithGemini(items: RSSItem[]): Promise<{interesting: boolean, category: string}[]> {
+// Classify articles with Gemini (only new ones)
+async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string }>> {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('No Google AI API key')
-
-  const itemsForAnalysis = items.slice(0, 25).map((item, i) => ({
-    index: i,
-    title: item.title,
-    description: item.description.substring(0, 150),
-  }))
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -233,7 +224,7 @@ async function filterWithGemini(items: RSSItem[]): Promise<{interesting: boolean
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${FILTER_PROMPT}\n${JSON.stringify(itemsForAnalysis, null, 2)}`,
+            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
           }],
         }],
         generationConfig: {
@@ -249,41 +240,78 @@ async function filterWithGemini(items: RSSItem[]): Promise<{interesting: boolean
   const aiResponse = await response.json()
   const content = aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
 
+  const resultMap = new Map<number, { interesting: boolean, category: string }>()
   const jsonMatch = content.match(/\{[\s\S]*"results"[\s\S]*\}/)
   if (jsonMatch) {
     const parsed = JSON.parse(jsonMatch[0])
-    const resultsMap = new Map(parsed.results?.map((r: any) => [r.index, r]) || [])
-    return items.map((_, i) => {
-      const result = resultsMap.get(i) as any
-      return {
-        interesting: result?.interesting ?? false,
-        category: result?.category || 'other'
-      }
-    })
+    for (const r of (parsed.results || [])) {
+      resultMap.set(r.index, { interesting: r.interesting ?? false, category: r.category || 'other' })
+    }
   }
-  return items.map(() => ({ interesting: true, category: 'other' }))
+  return resultMap
 }
 
-// Main filter function
-async function filterWithAI(items: RSSItem[], model: 'claude' | 'gemini'): Promise<F1NewsItem[]> {
-  let classifications: {interesting: boolean, category: string}[] = []
+// Main function to get classifications (uses cache, only classifies new articles)
+async function getClassifications(items: RSSItem[], model: 'claude' | 'gemini'): Promise<F1NewsItem[]> {
+  // Find which articles need classification
+  const needsClassification: { index: number, item: RSSItem }[] = []
 
-  try {
-    if (model === 'gemini') {
-      classifications = await filterWithGemini(items)
-    } else {
-      classifications = await filterWithClaude(items)
+  for (let i = 0; i < items.length; i++) {
+    const cached = classificationCache.get(items[i].link)
+    if (!cached) {
+      needsClassification.push({ index: i, item: items[i] })
     }
-  } catch (error) {
-    console.error('AI filtering error:', error)
-    // On error, mark first 10 as interesting
-    classifications = items.map((_, i) => ({
-      interesting: i < 10,
-      category: 'other' as const
-    }))
   }
 
-  // Fetch OG images for items without images (limit to 5 to avoid slowdown)
+  // Classify new articles with AI (if any)
+  if (needsClassification.length > 0) {
+    console.log(`Classifying ${needsClassification.length} new articles (${items.length - needsClassification.length} from cache)`)
+
+    const itemsForAI = needsClassification.map(({ index, item }) => ({
+      index,
+      title: item.title,
+      description: item.description.substring(0, 150),
+    }))
+
+    try {
+      const results = model === 'gemini'
+        ? await classifyWithGemini(itemsForAI)
+        : await classifyWithClaude(itemsForAI)
+
+      // Store new classifications in cache
+      for (const { index, item } of needsClassification) {
+        const result = results.get(index)
+        if (result) {
+          classificationCache.set(item.link, {
+            isInteresting: result.interesting,
+            category: result.category as ClassificationResult['category'],
+            classifiedAt: Date.now(),
+          })
+        } else {
+          // Default if AI didn't return result for this item
+          classificationCache.set(item.link, {
+            isInteresting: true,
+            category: 'other',
+            classifiedAt: Date.now(),
+          })
+        }
+      }
+    } catch (error) {
+      console.error('AI classification error:', error)
+      // On error, mark new items as interesting
+      for (const { item } of needsClassification) {
+        classificationCache.set(item.link, {
+          isInteresting: true,
+          category: 'other',
+          classifiedAt: Date.now(),
+        })
+      }
+    }
+  } else {
+    console.log(`All ${items.length} articles found in cache, no AI needed`)
+  }
+
+  // Fetch OG images for items without images (limit to 5)
   const needsImage = items
     .map((item, i) => ({ item, index: i }))
     .filter(({ item }) => !item.imageUrl)
@@ -297,16 +325,20 @@ async function filterWithAI(items: RSSItem[], model: 'claude' | 'gemini'): Promi
   )
   const ogImageMap = new Map(ogImages.map(o => [o.index, o.imageUrl]))
 
-  return items.map((item, i) => ({
-    id: `f1-news-${i}-${Date.now()}`,
-    title: item.title,
-    description: item.description,
-    link: item.link,
-    pubDate: item.pubDate,
-    imageUrl: item.imageUrl || ogImageMap.get(i),
-    isInteresting: classifications[i]?.interesting ?? true,
-    category: (classifications[i]?.category || 'other') as F1NewsItem['category'],
-  }))
+  // Build final response using cache
+  return items.map((item, i) => {
+    const classification = classificationCache.get(item.link)
+    return {
+      id: `f1-news-${i}-${Date.now()}`,
+      title: item.title,
+      description: item.description,
+      link: item.link,
+      pubDate: item.pubDate,
+      imageUrl: item.imageUrl || ogImageMap.get(i),
+      isInteresting: classification?.isInteresting ?? true,
+      category: classification?.category ?? 'other',
+    }
+  })
 }
 
 export async function GET(request: NextRequest) {
@@ -314,16 +346,16 @@ export async function GET(request: NextRequest) {
   const model = (searchParams.get('model') || 'claude') as 'claude' | 'gemini'
   const forceRefresh = searchParams.get('refresh') === 'true'
 
-  // Check cache (keyed by model)
-  const cacheKey = model
-  const cached = newsCache.get(cacheKey)
-
-  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+  // Check response cache (just to avoid hammering RSS feed)
+  if (!forceRefresh && responseCache && Date.now() - responseCache.timestamp < RESPONSE_CACHE_DURATION) {
     return NextResponse.json({
-      items: cached.items,
+      items: responseCache.items,
       cached: true,
-      timestamp: cached.timestamp,
-      cacheAge: Math.round((Date.now() - cached.timestamp) / 1000 / 60), // minutes
+      timestamp: responseCache.timestamp,
+      cacheStats: {
+        totalClassified: classificationCache.size,
+        responseAge: Math.round((Date.now() - responseCache.timestamp) / 1000),
+      },
     })
   }
 
@@ -332,7 +364,7 @@ export async function GET(request: NextRequest) {
     const rssUrl = 'https://www.formula1.com/en/latest/all.xml'
     const response = await fetch(rssUrl, {
       headers: { 'User-Agent': 'Family-Hub/1.0' },
-      cache: 'no-store', // Always fetch fresh RSS
+      cache: 'no-store',
     })
 
     if (!response.ok) {
@@ -342,30 +374,32 @@ export async function GET(request: NextRequest) {
     const xml = await response.text()
     const rssItems = parseRSS(xml)
 
-    // Filter with AI using selected model
-    const filteredItems = await filterWithAI(rssItems, model)
+    // Get classifications (uses persistent cache, only classifies new articles)
+    const newsItems = await getClassifications(rssItems, model)
 
-    // Update cache
-    newsCache.set(cacheKey, {
-      items: filteredItems,
+    // Update response cache
+    responseCache = {
+      items: newsItems,
       timestamp: Date.now(),
-    })
+    }
 
     return NextResponse.json({
-      items: filteredItems,
+      items: newsItems,
       cached: false,
       timestamp: Date.now(),
+      cacheStats: {
+        totalClassified: classificationCache.size,
+      },
     })
   } catch (error) {
     console.error('F1 news fetch error:', error)
 
-    // Return cached data if available (even if stale)
-    if (cached) {
+    if (responseCache) {
       return NextResponse.json({
-        items: cached.items,
+        items: responseCache.items,
         cached: true,
         stale: true,
-        timestamp: cached.timestamp,
+        timestamp: responseCache.timestamp,
       })
     }
 
