@@ -18,8 +18,30 @@ type RoutineWithDetails = Routine & {
   member_ids?: string[]
 }
 
-// Demo routines for when not logged in
+// Demo routines for when not logged in (synced with RoutinesWidget)
 const DEMO_ROUTINES: RoutineWithDetails[] = [
+  {
+    id: 'demo-bedtime',
+    user_id: 'demo',
+    title: 'Bedtime Routine',
+    emoji: '🌙',
+    type: 'evening',
+    assigned_to: null,
+    scheduled_time: '19:30',
+    points_reward: 2,
+    is_active: true,
+    sort_order: 0,
+    created_at: '',
+    updated_at: '',
+    member_ids: ['demo-olivia', 'demo-ellie'],
+    steps: [
+      { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 10, sort_order: 0, created_at: '' },
+      { id: 'step-2', routine_id: 'demo-bedtime', title: 'Pajamas', emoji: '👕', duration_minutes: 5, sort_order: 1, created_at: '' },
+      { id: 'step-3', routine_id: 'demo-bedtime', title: 'Toothbrushing', emoji: '🪥', duration_minutes: 3, sort_order: 2, created_at: '' },
+      { id: 'step-4', routine_id: 'demo-bedtime', title: 'Supper Milk', emoji: '🥛', duration_minutes: 5, sort_order: 3, created_at: '' },
+      { id: 'step-5', routine_id: 'demo-bedtime', title: 'Kiss & Goodnight', emoji: '😘', duration_minutes: 2, sort_order: 4, created_at: '' },
+    ]
+  },
   {
     id: 'demo-morning',
     user_id: 'demo',
@@ -30,37 +52,15 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     scheduled_time: '07:00',
     points_reward: 2,
     is_active: true,
-    sort_order: 0,
+    sort_order: 1,
     created_at: '',
     updated_at: '',
-    member_ids: ['demo-arthur', 'demo-ellie'],
+    member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
       { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 5, sort_order: 0, created_at: '' },
       { id: 'ms2', routine_id: 'demo-morning', title: 'Brush teeth', emoji: '🪥', duration_minutes: 3, sort_order: 1, created_at: '' },
       { id: 'ms3', routine_id: 'demo-morning', title: 'Eat breakfast', emoji: '🥣', duration_minutes: 15, sort_order: 2, created_at: '' },
       { id: 'ms4', routine_id: 'demo-morning', title: 'Tidy bedroom', emoji: '🛏️', duration_minutes: 5, sort_order: 3, created_at: '' },
-    ]
-  },
-  {
-    id: 'demo-evening',
-    user_id: 'demo',
-    title: 'Bedtime Routine',
-    emoji: '🌙',
-    type: 'evening',
-    assigned_to: null,
-    scheduled_time: '19:00',
-    points_reward: 2,
-    is_active: true,
-    sort_order: 1,
-    created_at: '',
-    updated_at: '',
-    member_ids: ['demo-arthur', 'demo-ellie'],
-    steps: [
-      { id: 'es1', routine_id: 'demo-evening', title: 'Tidy living room', emoji: '🧹', duration_minutes: 5, sort_order: 0, created_at: '' },
-      { id: 'es2', routine_id: 'demo-evening', title: 'Bath time', emoji: '🛁', duration_minutes: 15, sort_order: 1, created_at: '' },
-      { id: 'es3', routine_id: 'demo-evening', title: 'Put on pyjamas', emoji: '👚', duration_minutes: 3, sort_order: 2, created_at: '' },
-      { id: 'es4', routine_id: 'demo-evening', title: 'Brush teeth', emoji: '🪥', duration_minutes: 3, sort_order: 3, created_at: '' },
-      { id: 'es5', routine_id: 'demo-evening', title: 'Bedtime story', emoji: '📖', duration_minutes: 10, sort_order: 4, created_at: '' },
     ]
   }
 ]
