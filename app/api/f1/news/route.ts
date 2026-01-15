@@ -207,7 +207,7 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
-      max_tokens: 1024,
+      max_tokens: 4096,
       messages: [{
         role: 'user',
         content: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
@@ -289,7 +289,7 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
         }],
         generationConfig: {
           temperature: 0.1,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 4096,
         },
       }),
     }
