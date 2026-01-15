@@ -4,15 +4,22 @@ import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Sun, Moon, RotateCcw, Plus, Clock, Edit2, Trash2, GripVertical, X, Play, Pause } from 'lucide-react'
+import { Sun, Moon, RotateCcw, Plus, Clock, Edit2, Trash2, GripVertical, X, Play, Pause, Star, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
-import { Routine, RoutineStep, RoutineCompletion } from '@/lib/database.types'
+import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
+
+// Extended routine type with steps and members
+type RoutineWithDetails = Routine & {
+  steps: RoutineStep[]
+  members?: FamilyMember[]
+  member_ids?: string[]
+}
 
 // Demo routines for when not logged in
-const DEMO_ROUTINES: (Routine & { steps: RoutineStep[] })[] = [
+const DEMO_ROUTINES: RoutineWithDetails[] = [
   {
     id: 'demo-morning',
     user_id: 'demo',
@@ -26,6 +33,7 @@ const DEMO_ROUTINES: (Routine & { steps: RoutineStep[] })[] = [
     sort_order: 0,
     created_at: '',
     updated_at: '',
+    member_ids: ['demo-arthur', 'demo-ellie'],
     steps: [
       { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 5, sort_order: 0, created_at: '' },
       { id: 'ms2', routine_id: 'demo-morning', title: 'Brush teeth', emoji: '🪥', duration_minutes: 3, sort_order: 1, created_at: '' },
@@ -46,6 +54,7 @@ const DEMO_ROUTINES: (Routine & { steps: RoutineStep[] })[] = [
     sort_order: 1,
     created_at: '',
     updated_at: '',
+    member_ids: ['demo-arthur', 'demo-ellie'],
     steps: [
       { id: 'es1', routine_id: 'demo-evening', title: 'Tidy living room', emoji: '🧹', duration_minutes: 5, sort_order: 0, created_at: '' },
       { id: 'es2', routine_id: 'demo-evening', title: 'Bath time', emoji: '🛁', duration_minutes: 15, sort_order: 1, created_at: '' },
@@ -58,24 +67,29 @@ const DEMO_ROUTINES: (Routine & { steps: RoutineStep[] })[] = [
 
 export default function RoutinesPage() {
   const { user } = useAuth()
-  const { members, getMember } = useFamily()
+  const { members, getMember, updateMemberPoints } = useFamily()
   const { t } = useTranslation()
-  const [routines, setRoutines] = useState<(Routine & { steps: RoutineStep[] })[]>([])
+  const [routines, setRoutines] = useState<RoutineWithDetails[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedRoutine, setSelectedRoutine] = useState<(Routine & { steps: RoutineStep[] }) | null>(null)
+  const [selectedRoutine, setSelectedRoutine] = useState<RoutineWithDetails | null>(null)
+  // Track completions per member per step: "stepId:memberId"
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
-  const [editingRoutine, setEditingRoutine] = useState<(Routine & { steps: RoutineStep[] }) | null>(null)
+  const [editingRoutine, setEditingRoutine] = useState<RoutineWithDetails | null>(null)
   const [activeTimer, setActiveTimer] = useState<{ stepId: string; timeLeft: number } | null>(null)
+
+  // Get children for routine assignment
+  const children = members.filter(m => m.role === 'child')
 
   // Form state
   const [formData, setFormData] = useState({
     title: '',
     emoji: '📋',
     type: 'morning' as 'morning' | 'evening' | 'custom',
-    assigned_to: null as string | null,
+    member_ids: [] as string[],
     scheduled_time: '',
+    points_reward: 1,
     steps: [{ title: '', emoji: '✨', duration_minutes: 5 }]
   })
 
@@ -98,32 +112,39 @@ export default function RoutinesPage() {
 
       if (routinesError) throw routinesError
 
-      // Fetch steps for each routine
-      const routinesWithSteps = await Promise.all(
+      // Fetch steps and members for each routine
+      const routinesWithDetails = await Promise.all(
         (routinesData || []).map(async (routine) => {
-          const { data: stepsData } = await supabase
-            .from('routine_steps')
-            .select('*')
-            .eq('routine_id', routine.id)
-            .order('sort_order', { ascending: true })
+          const [stepsResult, membersResult] = await Promise.all([
+            supabase
+              .from('routine_steps')
+              .select('*')
+              .eq('routine_id', routine.id)
+              .order('sort_order', { ascending: true }),
+            supabase
+              .from('routine_members')
+              .select('member_id')
+              .eq('routine_id', routine.id)
+          ])
 
           return {
             ...routine,
-            steps: stepsData || []
+            steps: stepsResult.data || [],
+            member_ids: (membersResult.data || []).map(rm => rm.member_id)
           }
         })
       )
 
-      setRoutines(routinesWithSteps as (Routine & { steps: RoutineStep[] })[])
+      setRoutines(routinesWithDetails as RoutineWithDetails[])
 
       // Auto-select based on time of day
       const hour = new Date().getHours()
-      const morning = routinesWithSteps.find(r => r.type === 'morning')
-      const evening = routinesWithSteps.find(r => r.type === 'evening')
+      const morning = routinesWithDetails.find(r => r.type === 'morning')
+      const evening = routinesWithDetails.find(r => r.type === 'evening')
       setSelectedRoutine(
         hour < 14
-          ? (morning || routinesWithSteps[0] || null)
-          : (evening || routinesWithSteps[0] || null)
+          ? (morning || routinesWithDetails[0] || null)
+          : (evening || routinesWithDetails[0] || null)
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
@@ -134,7 +155,7 @@ export default function RoutinesPage() {
     setLoading(false)
   }, [user])
 
-  // Load completions for today
+  // Load completions for today (per-member tracking with "stepId:memberId" keys)
   const loadCompletions = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0]
 
@@ -149,11 +170,12 @@ export default function RoutinesPage() {
     try {
       const { data } = await supabase
         .from('routine_completions')
-        .select('step_id')
+        .select('step_id, member_id')
         .eq('completed_date', today)
 
       if (data) {
-        setCompletedSteps(new Set(data.map(c => c.step_id)))
+        // Create keys as "stepId:memberId" for per-member tracking
+        setCompletedSteps(new Set(data.map(c => `${c.step_id}:${c.member_id}`)))
       }
     } catch (error) {
       console.error('Error loading completions:', error)
@@ -165,12 +187,14 @@ export default function RoutinesPage() {
     loadCompletions()
   }, [fetchRoutines, loadCompletions])
 
-  const toggleStep = async (stepId: string) => {
+  // Toggle step completion for a specific member
+  const toggleStepForMember = async (stepId: string, memberId: string) => {
     const today = new Date().toISOString().split('T')[0]
+    const key = `${stepId}:${memberId}`
     const newCompleted = new Set(completedSteps)
 
-    if (newCompleted.has(stepId)) {
-      newCompleted.delete(stepId)
+    if (newCompleted.has(key)) {
+      newCompleted.delete(key)
       if (!user) {
         localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
       } else {
@@ -178,10 +202,11 @@ export default function RoutinesPage() {
           .from('routine_completions')
           .delete()
           .eq('step_id', stepId)
+          .eq('member_id', memberId)
           .eq('completed_date', today)
       }
     } else {
-      newCompleted.add(stepId)
+      newCompleted.add(key)
       if (!user) {
         localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
       } else {
@@ -190,12 +215,49 @@ export default function RoutinesPage() {
           .insert({
             routine_id: selectedRoutine?.id,
             step_id: stepId,
+            member_id: memberId,
             completed_date: today
           })
+      }
+
+      // Check if this member completed all steps - award stars if enabled
+      if (selectedRoutine) {
+        const memberCompletedAll = selectedRoutine.steps.every(
+          s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
+        )
+        if (memberCompletedAll && selectedRoutine.points_reward > 0) {
+          const member = getMember(memberId)
+          if (member?.stars_enabled) {
+            updateMemberPoints(memberId, selectedRoutine.points_reward)
+          }
+        }
       }
     }
 
     setCompletedSteps(newCompleted)
+  }
+
+  // Legacy toggle for simple mode (marks all members as complete)
+  const toggleStep = async (stepId: string) => {
+    const routineMembers = selectedRoutine?.member_ids || []
+    if (routineMembers.length === 0) {
+      // No specific members - use a default key
+      const today = new Date().toISOString().split('T')[0]
+      const key = `${stepId}:all`
+      const newCompleted = new Set(completedSteps)
+      if (newCompleted.has(key)) {
+        newCompleted.delete(key)
+      } else {
+        newCompleted.add(key)
+      }
+      localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
+      setCompletedSteps(newCompleted)
+    } else {
+      // Toggle for all assigned members
+      for (const memberId of routineMembers) {
+        await toggleStepForMember(stepId, memberId)
+      }
+    }
   }
 
   const resetRoutine = async () => {
@@ -203,7 +265,11 @@ export default function RoutinesPage() {
 
     const today = new Date().toISOString().split('T')[0]
     const stepIds = selectedRoutine.steps.map(s => s.id)
-    const newCompleted = new Set([...completedSteps].filter(id => !stepIds.includes(id)))
+    // Filter out any completion keys that start with this routine's step IDs
+    const newCompleted = new Set([...completedSteps].filter(key => {
+      const stepId = key.split(':')[0]
+      return !stepIds.includes(stepId)
+    }))
 
     if (!user) {
       localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
@@ -255,24 +321,26 @@ export default function RoutinesPage() {
     if (!formData.title || formData.steps.every(s => !s.title)) return
 
     const validSteps = formData.steps.filter(s => s.title.trim())
+    const routineId = 'demo-' + Date.now()
 
     if (!user) {
-      const newRoutine: Routine & { steps: RoutineStep[] } = {
-        id: 'demo-' + Date.now(),
+      const newRoutine: RoutineWithDetails = {
+        id: routineId,
         user_id: 'demo',
         title: formData.title,
         emoji: formData.emoji,
         type: formData.type,
-        points_reward: 1,
-        assigned_to: formData.assigned_to,
+        points_reward: formData.points_reward,
+        assigned_to: null,
         scheduled_time: formData.scheduled_time || null,
         is_active: true,
         sort_order: routines.length,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        member_ids: formData.member_ids,
         steps: validSteps.map((s, i) => ({
           id: 'step-' + Date.now() + '-' + i,
-          routine_id: 'demo-' + Date.now(),
+          routine_id: routineId,
           title: s.title,
           emoji: s.emoji,
           duration_minutes: s.duration_minutes,
@@ -293,7 +361,7 @@ export default function RoutinesPage() {
           title: formData.title,
           emoji: formData.emoji,
           type: formData.type,
-          assigned_to: formData.assigned_to,
+          points_reward: formData.points_reward,
           scheduled_time: formData.scheduled_time || null,
           sort_order: routines.length
         })
@@ -317,6 +385,20 @@ export default function RoutinesPage() {
 
       if (stepsError) throw stepsError
 
+      // Insert routine members
+      if (formData.member_ids.length > 0) {
+        const membersToInsert = formData.member_ids.map(memberId => ({
+          routine_id: routineData.id,
+          member_id: memberId
+        }))
+
+        const { error: membersError } = await supabase
+          .from('routine_members')
+          .insert(membersToInsert)
+
+        if (membersError) throw membersError
+      }
+
       await fetchRoutines()
       setShowAddModal(false)
       resetForm()
@@ -338,7 +420,8 @@ export default function RoutinesPage() {
               title: formData.title,
               emoji: formData.emoji,
               type: formData.type,
-              assigned_to: formData.assigned_to,
+              points_reward: formData.points_reward,
+              member_ids: formData.member_ids,
               scheduled_time: formData.scheduled_time || null,
               steps: validSteps.map((s, i) => ({
                 id: 'step-' + Date.now() + '-' + i,
@@ -369,7 +452,7 @@ export default function RoutinesPage() {
           title: formData.title,
           emoji: formData.emoji,
           type: formData.type,
-          assigned_to: formData.assigned_to,
+          points_reward: formData.points_reward,
           scheduled_time: formData.scheduled_time || null
         })
         .eq('id', editingRoutine.id)
@@ -393,6 +476,23 @@ export default function RoutinesPage() {
       await supabase
         .from('routine_steps')
         .insert(stepsToInsert)
+
+      // Update routine members
+      await supabase
+        .from('routine_members')
+        .delete()
+        .eq('routine_id', editingRoutine.id)
+
+      if (formData.member_ids.length > 0) {
+        const membersToInsert = formData.member_ids.map(memberId => ({
+          routine_id: editingRoutine.id,
+          member_id: memberId
+        }))
+
+        await supabase
+          .from('routine_members')
+          .insert(membersToInsert)
+      }
 
       await fetchRoutines()
       setShowEditModal(false)
@@ -423,14 +523,15 @@ export default function RoutinesPage() {
     }
   }
 
-  const openEditModal = (routine: Routine & { steps: RoutineStep[] }) => {
+  const openEditModal = (routine: RoutineWithDetails) => {
     setEditingRoutine(routine)
     setFormData({
       title: routine.title,
       emoji: routine.emoji,
       type: routine.type,
-      assigned_to: routine.assigned_to ?? null,
+      member_ids: routine.member_ids || [],
       scheduled_time: routine.scheduled_time || '',
+      points_reward: routine.points_reward,
       steps: routine.steps.map(s => ({
         title: s.title,
         emoji: s.emoji,
@@ -445,8 +546,9 @@ export default function RoutinesPage() {
       title: '',
       emoji: '📋',
       type: 'morning',
-      assigned_to: null,
+      member_ids: [],
       scheduled_time: '',
+      points_reward: 1,
       steps: [{ title: '', emoji: '✨', duration_minutes: 5 }]
     })
   }
@@ -471,12 +573,26 @@ export default function RoutinesPage() {
     setFormData({ ...formData, steps: newSteps })
   }
 
-  const getProgress = (routine: Routine & { steps: RoutineStep[] }) => {
-    const completed = routine.steps.filter(s => completedSteps.has(s.id)).length
+  // Check if a step is complete for a member
+  const isStepCompleteForMember = (stepId: string, memberId: string) => {
+    return completedSteps.has(`${stepId}:${memberId}`)
+  }
+
+  // Check if step is complete (all assigned members done, or no members assigned)
+  const isStepComplete = (stepId: string, memberIds: string[] = []) => {
+    if (memberIds.length === 0) {
+      return completedSteps.has(`${stepId}:all`)
+    }
+    return memberIds.every(mid => completedSteps.has(`${stepId}:${mid}`))
+  }
+
+  const getProgress = (routine: RoutineWithDetails) => {
+    const memberIds = routine.member_ids || []
+    const completed = routine.steps.filter(s => isStepComplete(s.id, memberIds)).length
     return { completed, total: routine.steps.length }
   }
 
-  const getTotalDuration = (routine: Routine & { steps: RoutineStep[] }) => {
+  const getTotalDuration = (routine: RoutineWithDetails) => {
     return routine.steps.reduce((acc, s) => acc + s.duration_minutes, 0)
   }
 
@@ -561,13 +677,28 @@ export default function RoutinesPage() {
                   {selectedRoutine.scheduled_time && (
                     <span>{t('routines.startsAt')} {selectedRoutine.scheduled_time}</span>
                   )}
-                  {selectedRoutine.assigned_to && (
+                  {selectedRoutine.points_reward > 0 && (
                     <span className="flex items-center gap-1">
-                      <span
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: getMember(selectedRoutine.assigned_to)?.color || '#888' }}
-                      />
-                      {getMember(selectedRoutine.assigned_to)?.name}
+                      <Star className="w-4 h-4 text-amber-500" />
+                      {selectedRoutine.points_reward}
+                    </span>
+                  )}
+                  {(selectedRoutine.member_ids?.length || 0) > 0 && (
+                    <span className="flex items-center gap-1">
+                      {selectedRoutine.member_ids?.slice(0, 3).map(memberId => {
+                        const member = getMember(memberId)
+                        return member ? (
+                          <span
+                            key={memberId}
+                            className="w-4 h-4 rounded-full"
+                            style={{ backgroundColor: member.color }}
+                            title={member.name}
+                          />
+                        ) : null
+                      })}
+                      {(selectedRoutine.member_ids?.length || 0) > 3 && (
+                        <span className="text-xs">+{(selectedRoutine.member_ids?.length || 0) - 3}</span>
+                      )}
                     </span>
                   )}
                 </div>
@@ -592,13 +723,15 @@ export default function RoutinesPage() {
 
           <div className="space-y-3">
             {selectedRoutine.steps.map((step, index) => {
-              const isDone = completedSteps.has(step.id)
+              const routineMembers = selectedRoutine.member_ids || []
+              const hasMembers = routineMembers.length > 0
+              const isDone = isStepComplete(step.id, routineMembers)
               const isTimerActive = activeTimer?.stepId === step.id
 
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-4 p-4 rounded-xl border-2 transition-all ${
+                  className={`p-4 rounded-xl border-2 transition-all ${
                     isDone
                       ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700'
                       : isTimerActive
@@ -606,48 +739,88 @@ export default function RoutinesPage() {
                       : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  <span className="text-lg font-medium text-slate-400 w-6">{index + 1}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-lg font-medium text-slate-400 w-6">{index + 1}</span>
 
-                  <button
-                    onClick={() => toggleStep(step.id)}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
-                      isDone
-                        ? 'bg-green-500 text-white'
-                        : 'bg-slate-200 dark:bg-slate-600 text-slate-400 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-500'
-                    }`}
-                  >
-                    {isDone ? '✓' : step.emoji}
-                  </button>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-slate-200 dark:bg-slate-600">
+                      {step.emoji}
+                    </div>
 
-                  <div className="flex-1">
-                    <p className={`font-medium text-lg ${isDone ? 'text-green-700 dark:text-green-300 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
-                      {step.title}
-                    </p>
-                    {isTimerActive && activeTimer && (
-                      <p className="text-amber-600 dark:text-amber-400 font-mono text-lg">
-                        {formatTime(activeTimer.timeLeft)}
+                    <div className="flex-1">
+                      <p className={`font-medium text-lg ${isDone ? 'text-green-700 dark:text-green-300 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {step.title}
                       </p>
-                    )}
+                      {isTimerActive && activeTimer && (
+                        <p className="text-amber-600 dark:text-amber-400 font-mono text-lg">
+                          {formatTime(activeTimer.timeLeft)}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                        <Clock className="w-4 h-4" />
+                        {step.duration_minutes}m
+                      </span>
+                      {!isDone && (
+                        <button
+                          onClick={() => startTimer(step)}
+                          className={`p-2 rounded-lg transition-colors ${
+                            isTimerActive
+                              ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
+                              : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500'
+                          }`}
+                        >
+                          {isTimerActive ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {step.duration_minutes}m
-                    </span>
-                    {!isDone && (
+                  {/* Per-member completion buttons */}
+                  {hasMembers ? (
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
+                      <span className="text-xs text-slate-500 dark:text-slate-400">{t('routines.tapToComplete')}:</span>
+                      <div className="flex gap-2">
+                        {routineMembers.map(memberId => {
+                          const member = getMember(memberId)
+                          if (!member) return null
+                          const memberDone = isStepCompleteForMember(step.id, memberId)
+                          return (
+                            <button
+                              key={memberId}
+                              onClick={() => toggleStepForMember(step.id, memberId)}
+                              className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all ${
+                                memberDone ? 'ring-2 ring-green-500 ring-offset-2' : 'hover:scale-110'
+                              }`}
+                              style={{ backgroundColor: member.color }}
+                            >
+                              {member.avatar || member.name.charAt(0)}
+                              {memberDone && (
+                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                  <Check className="w-3 h-3 text-white" />
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
                       <button
-                        onClick={() => startTimer(step)}
-                        className={`p-2 rounded-lg transition-colors ${
-                          isTimerActive
-                            ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
-                            : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500'
+                        onClick={() => toggleStep(step.id)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+                          isDone
+                            ? 'bg-green-500 text-white'
+                            : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-300'
                         }`}
                       >
-                        {isTimerActive ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                        {isDone ? <Check className="w-4 h-4" /> : null}
+                        {isDone ? t('routines.done') : t('routines.tapToComplete')}
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -732,21 +905,6 @@ export default function RoutinesPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                {t('routines.assignedTo')}
-              </label>
-              <select
-                value={formData.assigned_to || ''}
-                onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value || null })}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
-              >
-                <option value="">{t('routines.everyone')}</option>
-                {members.map(m => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 {t('routines.startTime')}
               </label>
               <input
@@ -756,7 +914,69 @@ export default function RoutinesPage() {
                 className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
               />
             </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {t('routines.starsReward')}
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={formData.points_reward}
+                  onChange={(e) => setFormData({ ...formData, points_reward: parseInt(e.target.value) || 0 })}
+                  min="0"
+                  max="10"
+                  className="w-20 px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent text-center"
+                />
+                <Star className="w-5 h-5 text-amber-500" />
+              </div>
+            </div>
           </div>
+
+          {/* Participants - Multi-select for children */}
+          {children.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                {t('routines.participants')}
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {children.map(child => {
+                  const isSelected = formData.member_ids.includes(child.id)
+                  return (
+                    <button
+                      key={child.id}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setFormData({ ...formData, member_ids: formData.member_ids.filter(id => id !== child.id) })
+                        } else {
+                          setFormData({ ...formData, member_ids: [...formData.member_ids, child.id] })
+                        }
+                      }}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
+                        isSelected
+                          ? 'border-sage-500 bg-sage-50 dark:bg-sage-900/30'
+                          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                        style={{ backgroundColor: child.color }}
+                      >
+                        {child.avatar || child.name.charAt(0)}
+                      </div>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{child.name}</span>
+                      {isSelected && <Check className="w-4 h-4 text-sage-600" />}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                {formData.member_ids.length === 0
+                  ? t('routines.everyone')
+                  : `${formData.member_ids.length} selected`}
+              </p>
+            </div>
+          )}
 
           <div>
             <div className="flex items-center justify-between mb-3">
