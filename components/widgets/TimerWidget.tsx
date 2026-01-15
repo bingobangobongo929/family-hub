@@ -1,27 +1,22 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Moon, Bath, Utensils, BookOpen } from 'lucide-react'
+import { Timer, Play, Pause, X, Plus, Volume2, VolumeX } from 'lucide-react'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { useTranslation } from '@/lib/i18n-context'
 
-interface TimerPreset {
+interface ActiveTimer {
   id: string
-  label: string
-  minutes: number
-  emoji: string
-  icon: React.ComponentType<{ className?: string }>
-  color: string
+  label?: string
+  emoji?: string
+  totalSeconds: number
+  secondsLeft: number
+  isRunning: boolean
+  isComplete: boolean
 }
 
-const TIMER_PRESETS: TimerPreset[] = [
-  { id: 'bedtime-5', label: '5 min to bed', minutes: 5, emoji: '🛏️', icon: Moon, color: 'from-indigo-500 to-purple-500' },
-  { id: 'bedtime-10', label: '10 min to bed', minutes: 10, emoji: '🌙', icon: Moon, color: 'from-indigo-500 to-purple-500' },
-  { id: 'bath', label: 'Bath time', minutes: 15, emoji: '🛁', icon: Bath, color: 'from-cyan-500 to-blue-500' },
-  { id: 'dinner', label: 'Dinner soon', minutes: 5, emoji: '🍽️', icon: Utensils, color: 'from-orange-500 to-amber-500' },
-  { id: 'story', label: 'Story time', minutes: 10, emoji: '📖', icon: BookOpen, color: 'from-emerald-500 to-teal-500' },
-  { id: 'tidy', label: 'Tidy up', minutes: 5, emoji: '🧹', icon: Timer, color: 'from-pink-500 to-rose-500' },
-]
+// Quick emoji options for timers
+const QUICK_EMOJIS = ['⏰', '🍳', '📚', '🧹', '🛁', '🍽️', '🏃', '💪', '🎮', '📺', '🛏️', '☕']
 
 // Sound effects using Web Audio API
 function playSound(type: 'tick' | 'alarm' | 'start') {
@@ -71,76 +66,86 @@ function playSound(type: 'tick' | 'alarm' | 'start') {
 }
 
 export default function TimerWidget() {
-  const [ref, { size }] = useWidgetSize()
+  const [ref, { size, height }] = useWidgetSize()
   const { t } = useTranslation()
-  const [selectedPreset, setSelectedPreset] = useState<TimerPreset | null>(null)
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
+  const [timers, setTimers] = useState<ActiveTimer[]>([])
   const [soundEnabled, setSoundEnabled] = useState(true)
-  const [isComplete, setIsComplete] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newMinutes, setNewMinutes] = useState(5)
+  const [newSeconds, setNewSeconds] = useState(0)
+  const [newLabel, setNewLabel] = useState('')
+  const [newEmoji, setNewEmoji] = useState('')
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Clean up interval on unmount
+  // Timer tick logic
   useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [])
+    const hasRunningTimers = timers.some(t => t.isRunning && t.secondsLeft > 0)
 
-  // Timer logic
-  useEffect(() => {
-    if (isRunning && timeLeft > 0) {
+    if (hasRunningTimers) {
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false)
-            setIsComplete(true)
-            if (soundEnabled) {
-              playSound('alarm')
-            }
-            return 0
+        setTimers(prev => prev.map(timer => {
+          if (!timer.isRunning || timer.secondsLeft <= 0) return timer
+
+          const newSecondsLeft = timer.secondsLeft - 1
+
+          if (newSecondsLeft <= 0) {
+            if (soundEnabled) playSound('alarm')
+            return { ...timer, secondsLeft: 0, isRunning: false, isComplete: true }
           }
+
           // Tick sound for last 10 seconds
-          if (prev <= 11 && soundEnabled) {
+          if (newSecondsLeft <= 10 && soundEnabled) {
             playSound('tick')
           }
-          return prev - 1
-        })
+
+          return { ...timer, secondsLeft: newSecondsLeft }
+        }))
       }, 1000)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
     }
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
+        intervalRef.current = null
       }
     }
-  }, [isRunning, soundEnabled])
+  }, [timers, soundEnabled])
 
-  const startTimer = useCallback((preset: TimerPreset) => {
-    setSelectedPreset(preset)
-    setTimeLeft(preset.minutes * 60)
-    setIsRunning(true)
-    setIsComplete(false)
-    if (soundEnabled) {
-      playSound('start')
+  const addTimer = useCallback(() => {
+    const totalSeconds = newMinutes * 60 + newSeconds
+    if (totalSeconds <= 0) return
+
+    const newTimer: ActiveTimer = {
+      id: Date.now().toString(),
+      label: newLabel.trim() || undefined,
+      emoji: newEmoji || undefined,
+      totalSeconds,
+      secondsLeft: totalSeconds,
+      isRunning: true,
+      isComplete: false,
     }
-  }, [soundEnabled])
 
-  const togglePause = () => {
-    setIsRunning(prev => !prev)
+    if (soundEnabled) playSound('start')
+    setTimers(prev => [...prev, newTimer])
+    setShowAddForm(false)
+    setNewMinutes(5)
+    setNewSeconds(0)
+    setNewLabel('')
+    setNewEmoji('')
+  }, [newMinutes, newSeconds, newLabel, newEmoji, soundEnabled])
+
+  const toggleTimer = (id: string) => {
+    setTimers(prev => prev.map(t =>
+      t.id === id ? { ...t, isRunning: !t.isRunning } : t
+    ))
   }
 
-  const resetTimer = () => {
-    setIsRunning(false)
-    setTimeLeft(0)
-    setSelectedPreset(null)
-    setIsComplete(false)
+  const removeTimer = (id: string) => {
+    setTimers(prev => prev.filter(t => t.id !== id))
+  }
+
+  const dismissComplete = (id: string) => {
+    setTimers(prev => prev.filter(t => t.id !== id))
   }
 
   const formatTime = (seconds: number) => {
@@ -149,127 +154,217 @@ export default function TimerWidget() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // Calculate progress percentage
-  const progress = selectedPreset ? ((selectedPreset.minutes * 60 - timeLeft) / (selectedPreset.minutes * 60)) * 100 : 0
-
   const compactMode = size === 'small'
-  const showPresets = !selectedPreset
-  const presetsToShow = compactMode ? 4 : 6
+  const hasTimers = timers.length > 0
+  const activeTimers = timers.filter(t => !t.isComplete)
+  const completedTimers = timers.filter(t => t.isComplete)
+
+  // Calculate how many timers we can show based on widget height
+  const timerRowHeight = compactMode ? 36 : 44
+  const headerHeight = 44
+  const addButtonHeight = 40
+  const availableHeight = height - headerHeight - addButtonHeight - 16
+  const maxVisibleTimers = Math.max(1, Math.floor(availableHeight / timerRowHeight))
 
   return (
     <div
       ref={ref}
-      className={`h-full flex flex-col p-4 rounded-3xl shadow-widget dark:shadow-widget-dark transition-all ${
-        isComplete
-          ? 'bg-gradient-to-br from-teal-400 to-emerald-500 animate-pulse'
-          : selectedPreset
-          ? `bg-gradient-to-br ${selectedPreset.color}`
-          : 'bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-700'
-      }`}
+      className="h-full flex flex-col p-3 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <Timer className={`w-4 h-4 ${selectedPreset || isComplete ? 'text-white' : 'text-teal-500'}`} />
-          <h3 className={`font-display font-semibold ${selectedPreset || isComplete ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
-            {isComplete ? t('timer.timesUp') : selectedPreset ? selectedPreset.label : t('timer.title')}
+          <Timer className="w-4 h-4 text-teal-500" />
+          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100 text-sm">
+            {t('timer.title')}
           </h3>
+          {hasTimers && (
+            <span className="text-xs text-slate-400">({activeTimers.length})</span>
+          )}
         </div>
         <button
           onClick={() => setSoundEnabled(!soundEnabled)}
-          className={`p-1.5 rounded-lg transition-colors ${
-            selectedPreset || isComplete
-              ? 'hover:bg-white/20 text-white'
-              : 'hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500'
-          }`}
+          className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500 transition-colors"
         >
           {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
         </button>
       </div>
 
-      {/* Timer Display or Preset Selection */}
-      {showPresets ? (
-        <div className={`flex-1 grid ${compactMode ? 'grid-cols-2 gap-2' : 'grid-cols-2 gap-2'}`}>
-          {TIMER_PRESETS.slice(0, presetsToShow).map(preset => {
-            const Icon = preset.icon
-            return (
-              <button
-                key={preset.id}
-                onClick={() => startTimer(preset)}
-                className={`flex ${compactMode ? 'flex-col' : 'flex-row'} items-center ${compactMode ? 'justify-center' : 'gap-2'} p-2 rounded-xl bg-white dark:bg-slate-700 hover:bg-teal-50 dark:hover:bg-slate-600 border border-slate-200 dark:border-slate-600 transition-all hover:scale-[1.02] active:scale-[0.98]`}
-              >
-                <span className={`${compactMode ? 'text-xl' : 'text-2xl'}`}>{preset.emoji}</span>
-                <div className={`${compactMode ? 'text-center' : ''}`}>
-                  <p className={`${compactMode ? 'text-[10px]' : 'text-xs'} font-medium text-slate-700 dark:text-slate-200 truncate`}>
-                    {compactMode ? `${preset.minutes}m` : preset.label}
-                  </p>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center">
-          {/* Circular Progress */}
-          <div className="relative">
-            <svg className={`${compactMode ? 'w-20 h-20' : 'w-32 h-32'} transform -rotate-90`}>
-              <circle
-                cx="50%"
-                cy="50%"
-                r={compactMode ? 35 : 58}
-                stroke="rgba(255,255,255,0.3)"
-                strokeWidth={compactMode ? 6 : 8}
-                fill="none"
+      {/* Add Timer Form */}
+      {showAddForm && (
+        <div className="mb-2 p-2 bg-white dark:bg-slate-700 rounded-xl border border-teal-200 dark:border-slate-600 flex-shrink-0">
+          {/* Time inputs */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={99}
+                value={newMinutes}
+                onChange={e => setNewMinutes(Math.max(0, Math.min(99, parseInt(e.target.value) || 0)))}
+                className="w-12 px-2 py-1 text-center text-lg font-mono bg-slate-100 dark:bg-slate-600 rounded border-0 focus:ring-2 focus:ring-teal-500"
               />
-              <circle
-                cx="50%"
-                cy="50%"
-                r={compactMode ? 35 : 58}
-                stroke="white"
-                strokeWidth={compactMode ? 6 : 8}
-                fill="none"
-                strokeDasharray={compactMode ? 220 : 364}
-                strokeDashoffset={compactMode ? 220 - (220 * (100 - progress) / 100) : 364 - (364 * (100 - progress) / 100)}
-                strokeLinecap="round"
-                className="transition-all duration-1000"
+              <span className="text-slate-500 text-xs">m</span>
+            </div>
+            <span className="text-slate-400 text-lg">:</span>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                min={0}
+                max={59}
+                value={newSeconds}
+                onChange={e => setNewSeconds(Math.max(0, Math.min(59, parseInt(e.target.value) || 0)))}
+                className="w-12 px-2 py-1 text-center text-lg font-mono bg-slate-100 dark:bg-slate-600 rounded border-0 focus:ring-2 focus:ring-teal-500"
               />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              {isComplete ? (
-                <span className={`${compactMode ? 'text-3xl' : 'text-5xl'}`}>🎉</span>
-              ) : (
-                <>
-                  <span className={`${compactMode ? 'text-lg' : 'text-3xl'} font-bold text-white`}>
-                    {formatTime(timeLeft)}
-                  </span>
-                  <span className={`${compactMode ? 'text-xl' : 'text-2xl'} mt-1`}>{selectedPreset?.emoji}</span>
-                </>
-              )}
+              <span className="text-slate-500 text-xs">s</span>
             </div>
           </div>
 
-          {/* Controls */}
-          <div className="flex items-center gap-2 mt-4">
-            {!isComplete && (
+          {/* Optional label */}
+          <input
+            type="text"
+            placeholder={t('timer.optionalName')}
+            value={newLabel}
+            onChange={e => setNewLabel(e.target.value)}
+            maxLength={20}
+            className="w-full px-2 py-1 text-sm bg-slate-100 dark:bg-slate-600 rounded border-0 focus:ring-2 focus:ring-teal-500 mb-2"
+          />
+
+          {/* Quick emoji picker */}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {QUICK_EMOJIS.map(emoji => (
               <button
-                onClick={togglePause}
-                className="p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+                key={emoji}
+                onClick={() => setNewEmoji(newEmoji === emoji ? '' : emoji)}
+                className={`w-7 h-7 rounded text-base hover:bg-teal-100 dark:hover:bg-slate-500 transition-colors ${
+                  newEmoji === emoji ? 'bg-teal-200 dark:bg-slate-500 ring-2 ring-teal-400' : ''
+                }`}
               >
-                {isRunning ? (
-                  <Pause className="w-5 h-5 text-white" />
-                ) : (
-                  <Play className="w-5 h-5 text-white" />
-                )}
+                {emoji}
               </button>
-            )}
+            ))}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
             <button
-              onClick={resetTimer}
-              className="p-3 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              onClick={addTimer}
+              disabled={newMinutes === 0 && newSeconds === 0}
+              className="flex-1 py-1.5 bg-teal-500 hover:bg-teal-600 disabled:bg-slate-300 text-white text-sm font-medium rounded-lg transition-colors"
             >
-              <RotateCcw className="w-5 h-5 text-white" />
+              {t('timer.start')}
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="px-3 py-1.5 bg-slate-200 dark:bg-slate-600 hover:bg-slate-300 dark:hover:bg-slate-500 text-slate-600 dark:text-slate-300 text-sm rounded-lg transition-colors"
+            >
+              {t('common.cancel')}
             </button>
           </div>
         </div>
+      )}
+
+      {/* Timer List */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {!hasTimers && !showAddForm ? (
+          <div className="h-full flex flex-col items-center justify-center text-center">
+            <Timer className="w-8 h-8 text-slate-300 dark:text-slate-500 mb-2" />
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
+              {t('timer.noTimers')}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            {/* Completed timers (show first with celebration) */}
+            {completedTimers.slice(0, Math.min(1, maxVisibleTimers)).map(timer => (
+              <div
+                key={timer.id}
+                className="flex items-center gap-2 p-2 bg-gradient-to-r from-teal-400 to-emerald-500 rounded-xl animate-pulse"
+              >
+                <span className="text-xl">🎉</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white font-medium text-sm truncate">
+                    {timer.emoji || timer.label || t('timer.timesUp')}
+                  </p>
+                </div>
+                <button
+                  onClick={() => dismissComplete(timer.id)}
+                  className="p-1.5 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+              </div>
+            ))}
+
+            {/* Active timers */}
+            {activeTimers.slice(0, maxVisibleTimers - completedTimers.length).map(timer => {
+              const progress = ((timer.totalSeconds - timer.secondsLeft) / timer.totalSeconds) * 100
+              return (
+                <div
+                  key={timer.id}
+                  className="relative flex items-center gap-2 p-2 bg-white dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600 overflow-hidden"
+                >
+                  {/* Progress bar background */}
+                  <div
+                    className="absolute inset-0 bg-teal-100 dark:bg-teal-900/30 transition-all duration-1000"
+                    style={{ width: `${progress}%` }}
+                  />
+
+                  {/* Content */}
+                  <div className="relative flex items-center gap-2 flex-1 min-w-0">
+                    {timer.emoji && <span className="text-lg flex-shrink-0">{timer.emoji}</span>}
+                    <div className="flex-1 min-w-0">
+                      {timer.label && (
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{timer.label}</p>
+                      )}
+                      <p className={`font-mono font-bold ${compactMode ? 'text-base' : 'text-lg'} text-slate-800 dark:text-slate-100`}>
+                        {formatTime(timer.secondsLeft)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Controls */}
+                  <div className="relative flex items-center gap-1">
+                    <button
+                      onClick={() => toggleTimer(timer.id)}
+                      className="p-1.5 rounded-lg bg-teal-100 dark:bg-teal-800 hover:bg-teal-200 dark:hover:bg-teal-700 transition-colors"
+                    >
+                      {timer.isRunning ? (
+                        <Pause className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+                      ) : (
+                        <Play className="w-4 h-4 text-teal-600 dark:text-teal-300" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => removeTimer(timer.id)}
+                      className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                    >
+                      <X className="w-4 h-4 text-slate-400 hover:text-red-500" />
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+
+            {/* Show more indicator */}
+            {(activeTimers.length + completedTimers.length) > maxVisibleTimers && (
+              <p className="text-xs text-slate-400 text-center">
+                +{(activeTimers.length + completedTimers.length) - maxVisibleTimers} more
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Add Timer Button */}
+      {!showAddForm && (
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="mt-2 flex items-center justify-center gap-2 py-2 w-full bg-teal-500 hover:bg-teal-600 text-white text-sm font-medium rounded-xl transition-colors flex-shrink-0"
+        >
+          <Plus className="w-4 h-4" />
+          {t('timer.addTimer')}
+        </button>
       )}
     </div>
   )

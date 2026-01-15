@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2 } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -60,7 +60,23 @@ interface StandingsData {
   year: number
 }
 
-type TabType = 'calendar' | 'drivers' | 'constructors'
+interface F1NewsItem {
+  id: string
+  title: string
+  description: string
+  link: string
+  pubDate: string
+  imageUrl?: string
+  isInteresting: boolean
+}
+
+interface NewsData {
+  items: F1NewsItem[]
+  cached: boolean
+  timestamp: number
+}
+
+type TabType = 'calendar' | 'drivers' | 'constructors' | 'news'
 
 export default function F1Page() {
   const { t, locale } = useTranslation()
@@ -68,7 +84,10 @@ export default function F1Page() {
   const [activeTab, setActiveTab] = useState<TabType>('calendar')
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
+  const [news, setNews] = useState<NewsData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [showAllNews, setShowAllNews] = useState(false)
   const [selectedYear] = useState(2026)
 
   // Fetch data
@@ -96,6 +115,25 @@ export default function F1Page() {
 
     fetchData()
   }, [selectedYear])
+
+  // Fetch news when tab changes to news
+  useEffect(() => {
+    async function fetchNews() {
+      if (activeTab !== 'news' || news) return
+      setNewsLoading(true)
+      try {
+        const response = await fetch('/api/f1/news')
+        if (response.ok) {
+          setNews(await response.json())
+        }
+      } catch (error) {
+        console.error('Error fetching F1 news:', error)
+      } finally {
+        setNewsLoading(false)
+      }
+    }
+    fetchNews()
+  }, [activeTab, news])
 
   // Find next race
   const nextRace = useMemo(() => {
@@ -147,6 +185,7 @@ export default function F1Page() {
           <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700">
             {[
               { id: 'calendar', label: t('f1.calendar'), icon: '📅' },
+              { id: 'news', label: t('f1.news'), icon: '📰' },
               { id: 'drivers', label: t('f1.drivers'), icon: '👤' },
               { id: 'constructors', label: t('f1.teams'), icon: '🏢' },
             ].map(tab => (
@@ -177,6 +216,16 @@ export default function F1Page() {
                   races={schedule.schedule}
                   upcomingRaces={upcomingRaces}
                   pastRaces={pastRaces}
+                  t={t}
+                  locale={locale}
+                />
+              )}
+              {activeTab === 'news' && (
+                <NewsView
+                  news={news}
+                  loading={newsLoading}
+                  showAll={showAllNews}
+                  onToggleShowAll={() => setShowAllNews(!showAllNews)}
                   t={t}
                   locale={locale}
                 />
@@ -575,6 +624,144 @@ function ConstructorsStandings({ constructors, t }: { constructors: F1Constructo
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+// News view component
+function NewsView({
+  news,
+  loading,
+  showAll,
+  onToggleShowAll,
+  t,
+  locale,
+}: {
+  news: NewsData | null
+  loading: boolean
+  showAll: boolean
+  onToggleShowAll: () => void
+  t: (key: string, params?: Record<string, any>) => string
+  locale: string
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
+          <p className="text-slate-500 dark:text-slate-400">{t('f1.filteringNews')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!news || news.items.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-500">
+        <Newspaper className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+        <p>{t('f1.noNews')}</p>
+      </div>
+    )
+  }
+
+  const interestingNews = news.items.filter(item => item.isInteresting)
+  const otherNews = news.items.filter(item => !item.isInteresting)
+  const displayNews = showAll ? news.items : interestingNews
+
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr)
+      return date.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    } catch {
+      return dateStr
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header with filter toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Star className="w-5 h-5 text-yellow-500" />
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            {t('f1.aiFiltered', { count: interestingNews.length, total: news.items.length })}
+          </span>
+        </div>
+        <button
+          onClick={onToggleShowAll}
+          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+            showAll
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+          }`}
+        >
+          {showAll ? t('f1.showFiltered') : t('f1.showAll')}
+        </button>
+      </div>
+
+      {/* News list */}
+      <div className="space-y-3">
+        {displayNews.map(item => (
+          <a
+            key={item.id}
+            href={item.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`block bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-2 transition-all hover:shadow-md ${
+              item.isInteresting
+                ? 'border-red-200 dark:border-red-900/50'
+                : 'border-slate-200 dark:border-slate-700 opacity-70'
+            }`}
+          >
+            <div className="flex gap-4">
+              {item.imageUrl && (
+                <div className="w-24 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={item.imageUrl}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2">
+                    {item.title}
+                  </h3>
+                  <ExternalLink className="w-4 h-4 text-slate-400 flex-shrink-0 mt-1" />
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
+                  {item.description}
+                </p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-xs text-slate-400">
+                    {formatDate(item.pubDate)}
+                  </span>
+                  {item.isInteresting && (
+                    <span className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
+                      <Star className="w-3 h-3" />
+                      {t('f1.recommended')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+
+      {/* Show filtered count */}
+      {!showAll && otherNews.length > 0 && (
+        <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+          {t('f1.hiddenNews', { count: otherNews.length })}
+        </p>
+      )}
     </div>
   )
 }

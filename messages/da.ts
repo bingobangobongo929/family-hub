@@ -23,6 +23,9 @@ export const da: Translations = {
     tomorrow: 'I morgen',
     yesterday: 'I går',
     now: 'Nu',
+    justNow: 'Lige nu',
+    hoursAgo: '{hours}t siden',
+    viewAll: 'Se alle',
     more: '+{count} mere',
     noResults: 'Ingen resultater',
     tryAgain: 'Prøv igen',
@@ -718,6 +721,14 @@ export const da: Translations = {
     standingsWillAppear: 'Stillingerne vises når sæsonen starter',
     live: 'LIVE',
     noRaces: 'Ingen løb',
+    news: 'Nyheder',
+    filteringNews: 'Filtrerer nyheder med AI...',
+    noNews: 'Ingen nyheder tilgængelige',
+    aiFiltered: '{count} af {total} artikler anbefalet',
+    showFiltered: 'Vis anbefalede',
+    showAll: 'Vis alle',
+    recommended: 'Anbefalet',
+    hiddenNews: '{count} mindre relevante artikler skjult',
   },
 
   // F1 Sessions
@@ -781,14 +792,10 @@ export const da: Translations = {
   timer: {
     title: 'Timer',
     timesUp: 'Tiden er udløbet!',
-    presets: {
-      fiveMinToBed: '5 min til sengetid',
-      tenMinToBed: '10 min til sengetid',
-      bathTime: 'Badetid',
-      dinnerSoon: 'Snart aftensmad',
-      storyTime: 'Godnathistorie',
-      tidyUp: 'Ryd op',
-    },
+    noTimers: 'Ingen aktive timere',
+    addTimer: 'Tilføj Timer',
+    start: 'Start',
+    optionalName: 'Navn (valgfrit)',
   },
 
   // Weather widget

@@ -20,6 +20,7 @@ import {
   BindicatorWidget,
   GooglePhotosWidget,
   F1Widget,
+  F1NewsWidget,
   AVAILABLE_WIDGETS,
   DEFAULT_LAYOUT,
 } from '@/components/widgets'
@@ -53,6 +54,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   bindicator: BindicatorWidget,
   googlephotos: GooglePhotosWidget,
   f1: F1Widget,
+  f1news: F1NewsWidget,
 }
 
 const STORAGE_KEY = 'family-hub-widget-layout'

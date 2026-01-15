@@ -20,6 +20,8 @@ export interface FamilyMember {
   avatar: string | null    // Emoji avatar
   photo_url: string | null // Uploaded photo URL
   date_of_birth: string | null // Birthday for profile display
+  aliases: string[]        // Alternative names (e.g., "Mum", "Mama", "Chelina")
+  description: string | null // Free-form context about this person
   points: number
   sort_order: number
   created_at: string
@@ -27,6 +29,15 @@ export interface FamilyMember {
 }
 
 export type InsertFamilyMember = Omit<FamilyMember, 'id' | 'created_at' | 'updated_at'>
+
+// Family context for overall family description
+export interface FamilyContext {
+  id: string
+  user_id: string
+  context_text: string
+  created_at: string
+  updated_at: string
+}
 export type UpdateFamilyMember = Partial<InsertFamilyMember>
 
 // ============================================

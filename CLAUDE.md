@@ -8,9 +8,11 @@ Family Hub is a family dashboard application designed for touchscreen displays (
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS with custom design system
 - **Database:** Supabase (dual database architecture)
-- **Drag/Resize:** react-grid-layout
-- **Date Handling:** date-fns
+- **Drag/Resize:** react-grid-layout (desktop only)
+- **Date Handling:** date-fns with locale support
 - **Icons:** lucide-react
+- **i18n:** Custom React Context solution (English/Danish)
+- **Mobile App:** Capacitor (iOS with push notifications)
 
 ## Project Structure
 ```
@@ -26,11 +28,17 @@ family-hub/
 │   │   │   ├── schedule/   # Season schedule
 │   │   │   └── standings/  # Driver/constructor standings
 │   │   ├── google-calendar/ # Google Calendar OAuth & sync
-│   │   └── google-photos/  # Google Photos integration
-│   │       ├── albums/     # Album listing
-│   │       ├── auth/       # OAuth flow
-│   │       ├── callback/   # OAuth callback
-│   │       └── photos/     # Photo fetching
+│   │   ├── google-photos/  # Google Photos integration
+│   │   │   ├── albums/     # Album listing
+│   │   │   ├── auth/       # OAuth flow
+│   │   │   ├── callback/   # OAuth callback
+│   │   │   └── photos/     # Photo fetching
+│   │   └── notifications/  # Push notification APIs
+│   │       ├── send/       # Send notifications
+│   │       └── triggers/   # Cron-triggered notifications
+│   │           ├── events/ # Event reminders (every 15 min)
+│   │           ├── bins/   # Bin day reminders (7pm daily)
+│   │           └── chores/ # Chore reminders (9am daily)
 │   ├── bindicator/         # Bin collection schedule page
 │   ├── calendar/           # Calendar page with AI smart add
 │   ├── contacts/           # Contacts & birthdays management
@@ -53,6 +61,7 @@ family-hub/
 │   ├── EmojiPicker.tsx         # Emoji selection component
 │   ├── EventDetailModal.tsx    # Calendar event detail view/edit
 │   ├── ImageCropper.tsx        # Avatar image cropping
+│   ├── LanguageToggle.tsx      # EN/DA language switcher
 │   ├── MemberAvatarStack.tsx   # Stacked member avatars display
 │   ├── MemberMultiSelect.tsx   # Multi-member chip selector
 │   ├── MemberProfileModal.tsx  # Family member profile editor
@@ -60,7 +69,7 @@ family-hub/
 │   ├── PhotoUpload.tsx         # Photo upload with cropping
 │   ├── RecurrenceSelector.tsx  # Recurring event pattern selector
 │   ├── Screensaver.tsx         # Idle screensaver (clock/photos/gradient)
-│   ├── Sidebar.tsx             # Navigation sidebar
+│   ├── Sidebar.tsx             # Navigation sidebar with language toggle
 │   ├── ui/
 │   │   ├── Button.tsx          # Styled button component
 │   │   └── Modal.tsx           # Modal dialog component
@@ -88,16 +97,25 @@ family-hub/
 │   ├── categories-context.tsx  # Event categories context
 │   ├── contacts-context.tsx    # Contacts & birthdays context
 │   ├── database.types.ts       # TypeScript types for DB
+│   ├── date-locale.ts          # date-fns locale mapping for i18n
 │   ├── edit-mode-context.tsx   # Dashboard edit mode state
 │   ├── encryption.ts           # Token encryption utilities
 │   ├── f1-api.ts               # Formula 1 API client (Jolpica/OpenF1)
 │   ├── family-context.tsx      # Family members context
 │   ├── google-auth.ts          # Google OAuth helpers
+│   ├── i18n-context.tsx        # Internationalization context (EN/DA)
+│   ├── push-context.tsx        # Push notification context (iOS)
+│   ├── push-notifications.ts   # Capacitor push notification utilities
 │   ├── rrule.ts                # RFC 5545 recurrence rule utilities
 │   ├── settings-context.tsx    # App settings context
 │   ├── supabase.ts             # Supabase clients (dual DB)
 │   ├── theme-context.tsx       # Light/dark/system theme context
 │   └── useWidgetSize.ts        # Widget size detection hook
+├── messages/                   # Translation files
+│   ├── en.ts                   # English translations
+│   └── da.ts                   # Danish translations
+├── ios/                        # Capacitor iOS project
+│   └── App/                    # Xcode project files
 ├── supabase/
 │   └── migrations/             # Database migration files
 │       ├── 001_family_hub_schema.sql
@@ -106,7 +124,13 @@ family-hub/
 │       ├── 004_contacts_avatar.sql
 │       ├── 005_member_birthdays.sql
 │       ├── 006_countdown_events.sql
-│       └── 007_user_integrations.sql
+│       ├── 007_user_integrations.sql
+│       ├── 008_contact_display_name.sql
+│       ├── 009_widget_layouts.sql      # Cross-device widget layout sync
+│       └── 20240115_push_tokens.sql    # Push notification tokens
+├── capacitor.config.ts         # Capacitor configuration for iOS
+├── vercel.json                 # Vercel config with cron jobs
+├── IOS_SETUP.md                # iOS app setup documentation
 └── tailwind.config.ts          # Tailwind with custom theme
 ```
 
@@ -174,6 +198,7 @@ All widgets are registered in `AVAILABLE_WIDGETS` with:
 | bindicator | Bindicator | 2x2 | Bin collection schedule |
 | googlephotos | Google Photos | 2x2 | Google Photos slideshow |
 | f1 | Formula 1 | 2x2 | Next F1 race countdown |
+| routine | Routine | 4x2 | Morning/evening routine tracker |
 
 ### Widget Size Hook (`useWidgetSize`)
 Widgets use `useWidgetSize()` hook for responsive behavior:
@@ -203,6 +228,58 @@ const [ref, { size, isWide, isTall }] = useWidgetSize()
 </div>
 ```
 
+### Mobile vs Desktop Layout
+The dashboard uses different layout systems for mobile and desktop:
+
+**Desktop (768px+):**
+- Uses react-grid-layout with drag-and-drop
+- Configurable widget positions and sizes
+- Layout saved to database for cross-device sync
+
+**Mobile (< 768px):**
+- Uses simple CSS grid (1-2 columns)
+- Widgets stack vertically with sensible min-heights
+- No drag/resize (not practical on touch)
+- Min-heights by widget type:
+  - Tall (schedule, chores, f1, timer, routine): 280px
+  - Medium (countdown, notes, shopping, bindicator): 220px
+  - Compact (clock, weather, etc): 180px
+
+## Internationalization (i18n)
+
+### Setup
+Custom React Context solution supporting English and Danish:
+
+```tsx
+// lib/i18n-context.tsx
+const { t, locale, setLocale } = useTranslation()
+
+// Usage
+<h1>{t('dashboard.greeting.morning')}</h1>
+<span>{t('common.more', { count: 5 })}</span> // "+5 more"
+```
+
+### Translation Files
+Located in `messages/` folder:
+- `en.ts` - English (default)
+- `da.ts` - Danish
+
+Organized by domain: `common`, `nav`, `dashboard`, `calendar`, `chores`, `shopping`, `bins`, `f1`, etc.
+
+### Date Formatting with Locales
+```tsx
+import { format } from 'date-fns'
+import { getDateLocale } from '@/lib/date-locale'
+
+const { locale } = useTranslation()
+format(date, 'EEEE, d MMMM', { locale: getDateLocale(locale) })
+// English: "Monday, 14 January"
+// Danish: "mandag 14. januar"
+```
+
+### Language Toggle
+Flag button in sidebar header switches between EN/DA. Preference saved to localStorage.
+
 ## Database Architecture
 
 ### Dual Supabase Setup
@@ -227,30 +304,58 @@ export const recipeVaultSupabase = createClient(...) // Recipe Vault
 - `notes` - Pinned notes
 - `app_settings` - User settings
 - `user_integrations` - OAuth tokens for Google Calendar/Photos
+- `widget_layouts` - Cross-device widget layout sync (user_id, active_widgets, layouts)
+- `push_tokens` - iOS push notification tokens
 - `shopping_list_items` - Shopping list (Recipe Vault DB)
 
 ### Storage Buckets
 - `avatars` - Family member profile photos
 - `contact-photos` - Contact profile photos
 
+## iOS App (Capacitor)
+
+### Setup
+The app uses Capacitor to wrap the web app for iOS distribution:
+
+```bash
+npx cap sync ios    # Sync web assets to iOS
+npx cap open ios    # Open in Xcode
+```
+
+### Configuration (`capacitor.config.ts`)
+- **Server Mode**: Loads from Vercel URL (not bundled assets)
+- **Push Notifications**: Configured for APNs
+- **App ID**: `com.familyhub.app`
+
+### Push Notifications
+- Event reminders (15 min before)
+- Bin day reminders (7pm night before)
+- Chore reminders (9am daily)
+
+See `IOS_SETUP.md` for complete setup guide.
+
 ## Contexts
 
 ### Provider Hierarchy (in layout.tsx)
 ```tsx
 <ThemeProvider>
-  <AuthProvider>
-    <FamilyProvider>
-      <SettingsProvider>
-        <CategoriesProvider>
-          <ContactsProvider>
-            <EditModeProvider>
-              {children}
-            </EditModeProvider>
-          </ContactsProvider>
-        </CategoriesProvider>
-      </SettingsProvider>
-    </FamilyProvider>
-  </AuthProvider>
+  <I18nProvider>
+    <AuthProvider>
+      <FamilyProvider>
+        <SettingsProvider>
+          <CategoriesProvider>
+            <ContactsProvider>
+              <EditModeProvider>
+                <PushProvider>
+                  {children}
+                </PushProvider>
+              </EditModeProvider>
+            </ContactsProvider>
+          </CategoriesProvider>
+        </SettingsProvider>
+      </FamilyProvider>
+    </AuthProvider>
+  </I18nProvider>
 </ThemeProvider>
 ```
 
@@ -262,6 +367,11 @@ export const recipeVaultSupabase = createClient(...) // Recipe Vault
 - `theme` - Current theme: 'light' | 'dark' | 'system'
 - `toggleTheme` - Toggle between light/dark
 - `setTheme` - Set specific theme
+
+### I18nContext (`useTranslation`)
+- `t(key, params?)` - Get translated string
+- `locale` - Current locale: 'en' | 'da'
+- `setLocale` - Change language
 
 ### FamilyContext (`useFamily`)
 - `members` - Array of family members
@@ -295,6 +405,8 @@ export const recipeVaultSupabase = createClient(...) // Recipe Vault
 - `isEditMode` - Whether dashboard is in edit mode
 - `toggleEditMode` - Toggle edit mode on/off
 
+Note: In edit mode, widgets have `pointer-events-none` to prevent accidental clicks while dragging. Close button is enlarged (w-10 h-10) for easy tapping.
+
 ## Environment Variables
 ```env
 # Supabase - Family Hub Database
@@ -319,6 +431,12 @@ ENCRYPTION_KEY=                 # For encrypting OAuth tokens
 
 # App
 NEXT_PUBLIC_APP_URL=            # App URL for OAuth callbacks
+
+# Push Notifications (iOS)
+APNS_KEY_ID=
+APNS_TEAM_ID=
+APNS_AUTH_KEY=                  # Contents of .p8 file
+CRON_SECRET=                    # Secret for cron job auth
 ```
 
 ## Demo Mode
@@ -347,6 +465,22 @@ Events support RFC 5545 recurrence rules via `lib/rrule.ts`:
 - `rruleToPattern(rrule)` - Parse RRULE to UI pattern
 - `generateOccurrences(rrule, startDate, rangeStart, rangeEnd)` - Expand occurrences
 
+### Widget Layout Sync
+Widget layouts are synced to database for cross-device consistency:
+- Saved to `widget_layouts` table with user_id
+- Debounced saves (500ms) to prevent excessive writes
+- Falls back to localStorage for non-logged-in users
+- Migration from localStorage to DB on first login
+
+## Calendar Views
+The calendar supports multiple view modes:
+- **Month**: Traditional month grid
+- **Week**: 7-day view
+- **Day**: Single day focus
+- **Agenda**: Scrollable list of upcoming events (30 days)
+
+On mobile, defaults to Agenda view for better usability. Month view is optimized to fit screen without scrolling.
+
 ## Development Notes
 
 ### Running Locally
@@ -360,14 +494,20 @@ npm run dev
 npm run build
 ```
 
+### iOS Development
+```bash
+npx cap sync ios    # Sync after web changes
+npx cap open ios    # Open Xcode
+```
+
 ### Target Device
 Primary target is touchscreen tablets/displays, but fully functional with mouse/keyboard for development.
 
 ## Feature Summary
 
 ### Core Features
-- **Dashboard**: Customizable widget grid with drag-and-drop layout
-- **Calendar**: Event management with AI-powered natural language input
+- **Dashboard**: Customizable widget grid with drag-and-drop layout (desktop) / CSS grid (mobile)
+- **Calendar**: Event management with AI-powered natural language input, multiple view modes
 - **Chores/Tasks**: Task assignments with optional reward points
 - **Shopping List**: Shared with Recipe Vault app
 - **Contacts**: Manage birthdays and relationships
@@ -381,9 +521,12 @@ Primary target is touchscreen tablets/displays, but fully functional with mouse/
 - **Bindicator**: Bin collection schedule for 2026 (configurable in `lib/bin-schedule.ts`)
 - **Formula 1**: Race calendar, countdowns, and standings via Jolpica/OpenF1 APIs
 - **Screensaver**: Idle screen with clock, photo slideshow, or gradient modes
+- **Push Notifications**: iOS notifications for events, bins, and chores
 
 ### User Experience
 - **Dark Mode**: System-aware with manual toggle
+- **Internationalization**: English and Danish language support
 - **Edit Mode**: Lock/unlock dashboard for safe touchscreen use
 - **Responsive Widgets**: Adapt content based on widget size
 - **Touch-Optimized**: Large tap targets for touchscreen use
+- **Cross-Device Sync**: Widget layouts sync across devices when logged in

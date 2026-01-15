@@ -21,6 +21,9 @@ export const en = {
     tomorrow: 'Tomorrow',
     yesterday: 'Yesterday',
     now: 'Now',
+    justNow: 'Just now',
+    hoursAgo: '{hours}h ago',
+    viewAll: 'View all',
     more: '+{count} more',
     noResults: 'No results',
     tryAgain: 'Try again',
@@ -716,6 +719,14 @@ export const en = {
     standingsWillAppear: 'Standings will appear once the season starts',
     live: 'LIVE',
     noRaces: 'No races',
+    news: 'News',
+    filteringNews: 'Filtering news with AI...',
+    noNews: 'No news available',
+    aiFiltered: '{count} of {total} articles recommended',
+    showFiltered: 'Show recommended',
+    showAll: 'Show all',
+    recommended: 'Recommended',
+    hiddenNews: '{count} less relevant articles hidden',
   },
 
   // F1 Sessions
@@ -779,14 +790,10 @@ export const en = {
   timer: {
     title: 'Timer',
     timesUp: "Time's Up!",
-    presets: {
-      fiveMinToBed: '5 min to bed',
-      tenMinToBed: '10 min to bed',
-      bathTime: 'Bath time',
-      dinnerSoon: 'Dinner soon',
-      storyTime: 'Story time',
-      tidyUp: 'Tidy up',
-    },
+    noTimers: 'No active timers',
+    addTimer: 'Add Timer',
+    start: 'Start',
+    optionalName: 'Name (optional)',
   },
 
   // Weather widget

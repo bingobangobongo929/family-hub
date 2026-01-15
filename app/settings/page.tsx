@@ -5,7 +5,7 @@ import Card, { CardHeader } from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import AlbumSelector from '@/components/AlbumSelector'
-import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper, ImageIcon } from 'lucide-react'
+import { Settings, Users, Moon, Sun, Monitor, Clock, CloudSun, Plus, Edit2, Trash2, ChevronUp, ChevronDown, Image, Palette, Star, Sparkles, Calendar, Link, Unlink, RefreshCw, Loader2, CheckCircle, Cake, Camera, PartyPopper, ImageIcon, FileText, Save } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -52,8 +52,14 @@ export default function SettingsPage() {
     role: 'child' as 'parent' | 'child' | 'pet',
     avatar: '',
     photo_url: null as string | null,
-    date_of_birth: ''
+    date_of_birth: '',
+    aliases: '',  // Comma-separated alternative names
+    description: ''
   })
+
+  // Family context state
+  const [familyContext, setFamilyContext] = useState('')
+  const [familyContextSaving, setFamilyContextSaving] = useState(false)
 
   const fetchSettings = useCallback(async () => {
     if (!user) {
@@ -145,11 +151,51 @@ export default function SettingsPage() {
     }
   }
 
+  const fetchFamilyContext = useCallback(async () => {
+    if (!user) {
+      const saved = localStorage.getItem('family-hub-family-context')
+      if (saved) setFamilyContext(saved)
+      return
+    }
+
+    try {
+      const { data } = await supabase
+        .from('family_context')
+        .select('context_text')
+        .eq('user_id', user.id)
+        .single()
+
+      if (data) setFamilyContext(data.context_text)
+    } catch (error) {
+      // No context found yet
+    }
+  }, [user])
+
+  const saveFamilyContext = async (text: string) => {
+    setFamilyContext(text)
+
+    if (!user) {
+      localStorage.setItem('family-hub-family-context', text)
+      return
+    }
+
+    setFamilyContextSaving(true)
+    try {
+      await supabase
+        .from('family_context')
+        .upsert({ user_id: user.id, context_text: text }, { onConflict: 'user_id' })
+    } catch (error) {
+      console.error('Error saving family context:', error)
+    }
+    setFamilyContextSaving(false)
+  }
+
   useEffect(() => {
     fetchSettings()
     fetchCountdownEvents()
+    fetchFamilyContext()
     checkGoogleConnection()
-  }, [fetchSettings, fetchCountdownEvents])
+  }, [fetchSettings, fetchCountdownEvents, fetchFamilyContext])
 
   // Check Google Calendar connection status
   const checkGoogleConnection = async () => {
@@ -304,6 +350,11 @@ export default function SettingsPage() {
     }
 
     try {
+      const aliasesArray = memberForm.aliases
+        .split(',')
+        .map(a => a.trim())
+        .filter(a => a.length > 0)
+
       const { error } = await supabase
         .from('family_members')
         .insert({
@@ -314,6 +365,8 @@ export default function SettingsPage() {
           avatar: memberForm.avatar || null,
           photo_url: memberForm.photo_url,
           date_of_birth: memberForm.date_of_birth || null,
+          aliases: aliasesArray,
+          description: memberForm.description || null,
           sort_order: members.length
         })
 
@@ -335,6 +388,11 @@ export default function SettingsPage() {
     }
 
     try {
+      const aliasesArray = memberForm.aliases
+        .split(',')
+        .map(a => a.trim())
+        .filter(a => a.length > 0)
+
       const { error } = await supabase
         .from('family_members')
         .update({
@@ -343,7 +401,9 @@ export default function SettingsPage() {
           role: memberForm.role,
           avatar: memberForm.avatar || null,
           photo_url: memberForm.photo_url,
-          date_of_birth: memberForm.date_of_birth || null
+          date_of_birth: memberForm.date_of_birth || null,
+          aliases: aliasesArray,
+          description: memberForm.description || null
         })
         .eq('id', editingMember.id)
 
@@ -381,7 +441,9 @@ export default function SettingsPage() {
       role: member.role,
       avatar: member.avatar || '',
       photo_url: member.photo_url || null,
-      date_of_birth: member.date_of_birth || ''
+      date_of_birth: member.date_of_birth || '',
+      aliases: (member.aliases || []).join(', '),
+      description: member.description || ''
     })
     setShowMemberModal(true)
   }
@@ -393,7 +455,9 @@ export default function SettingsPage() {
       role: 'child',
       avatar: '',
       photo_url: null,
-      date_of_birth: ''
+      date_of_birth: '',
+      aliases: '',
+      description: ''
     })
   }
 
@@ -677,6 +741,38 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Family Context */}
+      <Card className="mb-6">
+        <CardHeader title="Family Context" icon={<FileText className="w-5 h-5" />} />
+        <div className="mt-4 space-y-4">
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Describe your family for AI assistants. This helps when sharing screenshots or asking about family members.
+          </p>
+          <textarea
+            value={familyContext}
+            onChange={(e) => setFamilyContext(e.target.value)}
+            onBlur={(e) => saveFamilyContext(e.target.value)}
+            placeholder={`Example:\n- Ed (Dad) - works in tech, manages the family hub\n- Chelina (Mum) - also known as "Mama"\n- Olivia (7) - loves drawing and gymnastics\n- Luna - our dog, a golden retriever`}
+            rows={6}
+            className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 resize-none"
+          />
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              {familyContextSaving ? 'Saving...' : 'Auto-saves when you click away'}
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => saveFamilyContext(familyContext)}
+              disabled={familyContextSaving}
+            >
+              {familyContextSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4 mr-1" />}
+              Save
+            </Button>
           </div>
         </div>
       </Card>
@@ -1306,6 +1402,35 @@ export default function SettingsPage() {
             <p className="text-xs text-center text-slate-500 dark:text-slate-400 mt-2">
               Tap to upload a photo or choose an emoji
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Aliases / Nicknames
+            </label>
+            <input
+              type="text"
+              value={memberForm.aliases}
+              onChange={(e) => setMemberForm({ ...memberForm, aliases: e.target.value })}
+              placeholder="Mum, Mama, Chelina (comma-separated)"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
+            />
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              Other names this person might be called
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Description
+            </label>
+            <textarea
+              value={memberForm.description}
+              onChange={(e) => setMemberForm({ ...memberForm, description: e.target.value })}
+              placeholder="Brief description for AI context (hobbies, job, etc.)"
+              rows={2}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 resize-none"
+            />
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
