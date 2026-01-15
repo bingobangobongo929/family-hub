@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2 } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -69,6 +69,7 @@ interface F1NewsItem {
   pubDate: string
   imageUrl?: string
   isInteresting: boolean
+  category?: 'race' | 'driver' | 'technical' | 'calendar' | 'other'
 }
 
 interface NewsData {
@@ -90,6 +91,7 @@ export default function F1Page() {
   const [loading, setLoading] = useState(true)
   const [newsLoading, setNewsLoading] = useState(false)
   const [showAllNews, setShowAllNews] = useState(false)
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(['race', 'driver', 'technical', 'calendar', 'other'])
   const [selectedYear] = useState(2026)
 
   // Fetch data
@@ -118,24 +120,29 @@ export default function F1Page() {
     fetchData()
   }, [selectedYear])
 
+  // Fetch news function
+  const fetchNews = async (forceRefresh = false) => {
+    setNewsLoading(true)
+    try {
+      const url = `/api/f1/news?model=${aiModel}${forceRefresh ? '&refresh=true' : ''}`
+      const response = await fetch(url)
+      if (response.ok) {
+        setNews(await response.json())
+      }
+    } catch (error) {
+      console.error('Error fetching F1 news:', error)
+    } finally {
+      setNewsLoading(false)
+    }
+  }
+
   // Fetch news when tab changes to news
   useEffect(() => {
-    async function fetchNews() {
-      if (activeTab !== 'news' || news) return
-      setNewsLoading(true)
-      try {
-        const response = await fetch(`/api/f1/news?model=${aiModel}`)
-        if (response.ok) {
-          setNews(await response.json())
-        }
-      } catch (error) {
-        console.error('Error fetching F1 news:', error)
-      } finally {
-        setNewsLoading(false)
-      }
+    if (activeTab === 'news' && !news) {
+      fetchNews()
     }
-    fetchNews()
-  }, [activeTab, news, aiModel])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
 
   // Find next race
   const nextRace = useMemo(() => {
@@ -228,6 +235,9 @@ export default function F1Page() {
                   loading={newsLoading}
                   showAll={showAllNews}
                   onToggleShowAll={() => setShowAllNews(!showAllNews)}
+                  selectedCategories={selectedCategories}
+                  onCategoryChange={setSelectedCategories}
+                  onRefresh={() => fetchNews(true)}
                   t={t}
                   locale={locale}
                 />
@@ -630,12 +640,24 @@ function ConstructorsStandings({ constructors, t }: { constructors: F1Constructo
   )
 }
 
+// Category config
+const CATEGORIES = [
+  { id: 'race', label: 'Race', icon: '🏁', color: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+  { id: 'driver', label: 'Driver', icon: '👤', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+  { id: 'technical', label: 'Technical', icon: '🔧', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
+  { id: 'calendar', label: 'Calendar', icon: '📅', color: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+  { id: 'other', label: 'Other', icon: '📰', color: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-400' },
+]
+
 // News view component
 function NewsView({
   news,
   loading,
   showAll,
   onToggleShowAll,
+  selectedCategories,
+  onCategoryChange,
+  onRefresh,
   t,
   locale,
 }: {
@@ -643,9 +665,22 @@ function NewsView({
   loading: boolean
   showAll: boolean
   onToggleShowAll: () => void
+  selectedCategories: string[]
+  onCategoryChange: (categories: string[]) => void
+  onRefresh: () => void
   t: (key: string, params?: Record<string, any>) => string
   locale: string
 }) {
+  const toggleCategory = (categoryId: string) => {
+    if (selectedCategories.includes(categoryId)) {
+      if (selectedCategories.length > 1) {
+        onCategoryChange(selectedCategories.filter(c => c !== categoryId))
+      }
+    } else {
+      onCategoryChange([...selectedCategories, categoryId])
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -666,102 +701,172 @@ function NewsView({
     )
   }
 
+  // Filter by interesting and categories
   const interestingNews = news.items.filter(item => item.isInteresting)
-  const otherNews = news.items.filter(item => !item.isInteresting)
-  const displayNews = showAll ? news.items : interestingNews
+  const baseNews = showAll ? news.items : interestingNews
+  const displayNews = baseNews.filter(item =>
+    selectedCategories.includes(item.category || 'other')
+  )
 
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr)
+      if (isNaN(date.getTime())) return ''
+
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+      const diffDays = Math.floor(diffHours / 24)
+
+      if (diffHours < 1) return locale === 'da' ? 'Lige nu' : 'Just now'
+      if (diffHours < 24) return locale === 'da' ? `${diffHours}t siden` : `${diffHours}h ago`
+      if (diffDays < 7) return locale === 'da' ? `${diffDays}d siden` : `${diffDays}d ago`
+
       return date.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', {
         day: 'numeric',
         month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
       })
     } catch {
-      return dateStr
+      return ''
     }
   }
 
+  const getCategoryConfig = (category: string) =>
+    CATEGORIES.find(c => c.id === category) || CATEGORIES[4]
+
+  // Count articles per category
+  const categoryCounts = CATEGORIES.reduce((acc, cat) => {
+    acc[cat.id] = baseNews.filter(item => (item.category || 'other') === cat.id).length
+    return acc
+  }, {} as Record<string, number>)
+
   return (
     <div className="space-y-4">
-      {/* Header with filter toggle */}
+      {/* Category filters */}
+      <div className="flex flex-wrap items-center gap-2 p-3 bg-white dark:bg-slate-800 rounded-xl">
+        <Filter className="w-4 h-4 text-slate-400" />
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => toggleCategory(cat.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+              selectedCategories.includes(cat.id)
+                ? cat.color
+                : 'bg-slate-50 text-slate-400 dark:bg-slate-700/50'
+            }`}
+          >
+            <span>{cat.icon}</span>
+            <span>{cat.label}</span>
+            <span className="text-xs opacity-70">({categoryCounts[cat.id]})</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Header with toggles and refresh */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-yellow-500" />
-          <span className="text-sm text-slate-600 dark:text-slate-400">
-            {t('f1.aiFiltered', { count: interestingNews.length, total: news.items.length })}
-          </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 text-yellow-500" />
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              {t('f1.aiFiltered', { count: interestingNews.length, total: news.items.length })}
+            </span>
+          </div>
+          {news.cached && (
+            <span className="text-xs text-slate-400">
+              (cached)
+            </span>
+          )}
         </div>
-        <button
-          onClick={onToggleShowAll}
-          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-            showAll
-              ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
-          }`}
-        >
-          {showAll ? t('f1.showFiltered') : t('f1.showAll')}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onRefresh}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+            title="Refresh news"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+          <button
+            onClick={onToggleShowAll}
+            className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+              showAll
+                ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+            }`}
+          >
+            {showAll ? t('f1.showFiltered') : t('f1.showAll')}
+          </button>
+        </div>
       </div>
 
       {/* News list */}
       <div className="space-y-3">
-        {displayNews.map(item => (
-          <a
-            key={item.id}
-            href={item.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`block bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border-2 transition-all hover:shadow-md ${
-              item.isInteresting
-                ? 'border-red-200 dark:border-red-900/50'
-                : 'border-slate-200 dark:border-slate-700 opacity-70'
-            }`}
-          >
-            <div className="flex gap-4">
-              {item.imageUrl && (
-                <div className="w-24 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-700">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.imageUrl}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2">
-                    {item.title}
-                  </h3>
-                  <ExternalLink className="w-4 h-4 text-slate-400 flex-shrink-0 mt-1" />
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mt-1">
-                  {item.description}
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-slate-400">
-                    {formatDate(item.pubDate)}
-                  </span>
-                  {item.isInteresting && (
-                    <span className="flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
-                      <Star className="w-3 h-3" />
-                      {t('f1.recommended')}
-                    </span>
+        {displayNews.length === 0 ? (
+          <p className="text-center py-8 text-slate-500">
+            No articles match the selected filters
+          </p>
+        ) : (
+          displayNews.map(item => {
+            const catConfig = getCategoryConfig(item.category || 'other')
+            return (
+              <a
+                key={item.id}
+                href={item.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`block bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm border-2 transition-all hover:shadow-md ${
+                  item.isInteresting
+                    ? 'border-red-200 dark:border-red-900/50'
+                    : 'border-slate-200 dark:border-slate-700 opacity-70'
+                }`}
+              >
+                <div className="flex">
+                  {/* Image */}
+                  {item.imageUrl && (
+                    <div className="w-32 sm:w-40 flex-shrink-0 bg-slate-100 dark:bg-slate-700">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        style={{ minHeight: '100px' }}
+                      />
+                    </div>
                   )}
+                  {/* Content */}
+                  <div className="flex-1 p-4 min-w-0">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${catConfig.color}`}>
+                          {catConfig.icon} {catConfig.label}
+                        </span>
+                        {item.isInteresting && (
+                          <Star className="w-3.5 h-3.5 text-yellow-500" />
+                        )}
+                      </div>
+                      <ExternalLink className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    </div>
+                    <h3 className="font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 mb-1">
+                      {item.title}
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-2">
+                      {item.description}
+                    </p>
+                    <span className="text-xs text-slate-400">
+                      {formatDate(item.pubDate)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </a>
-        ))}
+              </a>
+            )
+          })
+        )}
       </div>
 
-      {/* Show filtered count */}
-      {!showAll && otherNews.length > 0 && (
+      {/* Hidden count */}
+      {!showAll && news.items.filter(i => !i.isInteresting).length > 0 && (
         <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-          {t('f1.hiddenNews', { count: otherNews.length })}
+          {t('f1.hiddenNews', { count: news.items.filter(i => !i.isInteresting).length })}
         </p>
       )}
     </div>
