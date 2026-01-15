@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import {
@@ -86,7 +87,23 @@ export default function F1Page() {
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
   const { aiModel, f1SpoilerFreeAutoWeekend, f1SpoilerFreeManualOverride, updateSetting } = useSettings()
-  const [activeTab, setActiveTab] = useState<TabType>('calendar')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
+  // Get initial tab from URL or default to 'calendar'
+  const tabFromUrl = searchParams.get('tab') as TabType | null
+  const validTabs: TabType[] = ['calendar', 'drivers', 'constructors', 'news']
+  const initialTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'calendar'
+
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab)
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tab', tab)
+    router.replace(`/f1?${params.toString()}`, { scroll: false })
+  }
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
   const [news, setNews] = useState<NewsData | null>(null)
@@ -286,7 +303,7 @@ export default function F1Page() {
             ].map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as TabType)}
+                onClick={() => handleTabChange(tab.id as TabType)}
                 className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'text-red-600 border-b-2 border-red-600'

@@ -193,6 +193,8 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('No Anthropic API key')
 
+  console.log(`Classifying ${items.length} articles with Claude...`)
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -205,7 +207,7 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
       max_tokens: 4096,
       messages: [{
         role: 'user',
-        content: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
+        content: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}\n\nIMPORTANT: Respond with ONLY the JSON object, no markdown, no explanation. Start your response with { and end with }`,
       }],
     }),
   })
@@ -218,11 +220,12 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
 
   const data = await response.json()
   const content = data.content?.find((c: any) => c.type === 'text')?.text || '{}'
+  console.log('Claude raw response:', content.substring(0, 500))
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
   // Try to extract JSON - handle markdown code blocks
-  let jsonStr = content
+  let jsonStr = content.trim()
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlockMatch) {
     jsonStr = codeBlockMatch[1].trim()
@@ -231,19 +234,25 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
   try {
     const parsed = JSON.parse(jsonStr)
     const results = parsed.results || []
+    console.log(`Parsed ${results.length} classification results`)
     for (const r of results) {
+      console.log(`Article ${r.index}: category=${r.category}, interesting=${r.interesting}, spoiler=${r.spoiler}`)
       resultMap.set(r.index, {
         interesting: r.interesting ?? false,
         category: r.category || 'other',
         spoiler: r.spoiler ?? false
       })
     }
-  } catch {
+  } catch (parseError) {
+    console.error('Initial JSON parse failed:', parseError)
+    // Try to find JSON object in response
     const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
-        for (const r of (parsed.results || [])) {
+        const results = parsed.results || []
+        console.log(`Fallback parsed ${results.length} classification results`)
+        for (const r of results) {
           resultMap.set(r.index, {
             interesting: r.interesting ?? false,
             category: r.category || 'other',
@@ -251,10 +260,15 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
           })
         }
       } catch (e) {
-        console.error('JSON parse error:', e)
+        console.error('Fallback JSON parse error:', e)
+        console.error('Attempted to parse:', jsonMatch[0].substring(0, 300))
       }
+    } else {
+      console.error('No JSON object found in response')
     }
   }
+
+  console.log(`Returning ${resultMap.size} classifications`)
   return resultMap
 }
 
@@ -262,6 +276,8 @@ async function classifyWithClaude(items: { index: number, title: string, descrip
 async function classifyWithGemini(items: { index: number, title: string, description: string }[]): Promise<Map<number, { interesting: boolean, category: string, spoiler: boolean }>> {
   const apiKey = process.env.GOOGLE_AI_API_KEY
   if (!apiKey) throw new Error('No Google AI API key')
+
+  console.log(`Classifying ${items.length} articles with Gemini...`)
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -271,7 +287,7 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
       body: JSON.stringify({
         contents: [{
           parts: [{
-            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}`,
+            text: `${FILTER_PROMPT}\n${JSON.stringify(items, null, 2)}\n\nIMPORTANT: Respond with ONLY the JSON object, no markdown, no explanation. Start your response with { and end with }`,
           }],
         }],
         generationConfig: {
@@ -290,10 +306,11 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
 
   const data = await response.json()
   const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}'
+  console.log('Gemini raw response:', content.substring(0, 500))
 
   const resultMap = new Map<number, { interesting: boolean, category: string, spoiler: boolean }>()
 
-  let jsonStr = content
+  let jsonStr = content.trim()
   const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/)
   if (codeBlockMatch) {
     jsonStr = codeBlockMatch[1].trim()
@@ -302,19 +319,24 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
   try {
     const parsed = JSON.parse(jsonStr)
     const results = parsed.results || []
+    console.log(`Parsed ${results.length} classification results`)
     for (const r of results) {
+      console.log(`Article ${r.index}: category=${r.category}, interesting=${r.interesting}, spoiler=${r.spoiler}`)
       resultMap.set(r.index, {
         interesting: r.interesting ?? false,
         category: r.category || 'other',
         spoiler: r.spoiler ?? false
       })
     }
-  } catch {
+  } catch (parseError) {
+    console.error('Initial JSON parse failed:', parseError)
     const jsonMatch = jsonStr.match(/\{[\s\S]*"results"[\s\S]*\}/)
     if (jsonMatch) {
       try {
         const parsed = JSON.parse(jsonMatch[0])
-        for (const r of (parsed.results || [])) {
+        const results = parsed.results || []
+        console.log(`Fallback parsed ${results.length} classification results`)
+        for (const r of results) {
           resultMap.set(r.index, {
             interesting: r.interesting ?? false,
             category: r.category || 'other',
@@ -322,10 +344,15 @@ async function classifyWithGemini(items: { index: number, title: string, descrip
           })
         }
       } catch (e) {
-        console.error('JSON parse error:', e)
+        console.error('Fallback JSON parse error:', e)
+        console.error('Attempted to parse:', jsonMatch[0].substring(0, 300))
       }
+    } else {
+      console.error('No JSON object found in response')
     }
   }
+
+  console.log(`Returning ${resultMap.size} classifications`)
   return resultMap
 }
 
