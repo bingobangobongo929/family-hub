@@ -369,9 +369,17 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const model = (searchParams.get('model') || 'claude') as 'claude' | 'gemini'
   const forceRefresh = searchParams.get('refresh') === 'true'
+  const forceReclassify = searchParams.get('reclassify') === 'true'
+
+  // Clear classification cache if reclassify requested
+  if (forceReclassify) {
+    classificationCache.clear()
+    responseCache = null
+    console.log('Classification cache cleared - will re-classify all articles')
+  }
 
   // Check response cache (just to avoid hammering RSS feed)
-  if (!forceRefresh && responseCache && Date.now() - responseCache.timestamp < RESPONSE_CACHE_DURATION) {
+  if (!forceRefresh && !forceReclassify && responseCache && Date.now() - responseCache.timestamp < RESPONSE_CACHE_DURATION) {
     return NextResponse.json({
       items: responseCache.items,
       cached: true,

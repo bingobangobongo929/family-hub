@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -160,10 +160,12 @@ export default function F1Page() {
   }, [selectedYear])
 
   // Fetch news function
-  const fetchNews = async (forceRefresh = false) => {
+  const fetchNews = async (forceRefresh = false, reclassify = false) => {
     setNewsLoading(true)
     try {
-      const url = `/api/f1/news?model=${aiModel}${forceRefresh ? '&refresh=true' : ''}`
+      let url = `/api/f1/news?model=${aiModel}`
+      if (reclassify) url += '&reclassify=true'
+      else if (forceRefresh) url += '&refresh=true'
       const response = await fetch(url)
       if (response.ok) {
         setNews(await response.json())
@@ -322,6 +324,7 @@ export default function F1Page() {
                   selectedCategories={selectedCategories}
                   onCategoryChange={setSelectedCategories}
                   onRefresh={() => fetchNews(true)}
+                  onReclassify={() => fetchNews(false, true)}
                   spoilerFree={spoilerFreeActive}
                   t={t}
                   locale={locale}
@@ -743,6 +746,7 @@ function NewsView({
   selectedCategories,
   onCategoryChange,
   onRefresh,
+  onReclassify,
   spoilerFree,
   t,
   locale,
@@ -754,6 +758,7 @@ function NewsView({
   selectedCategories: string[]
   onCategoryChange: (categories: string[]) => void
   onRefresh: () => void
+  onReclassify: () => void
   spoilerFree: boolean
   t: (key: string, params?: Record<string, any>) => string
   locale: string
@@ -884,6 +889,14 @@ function NewsView({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={onReclassify}
+            disabled={loading}
+            className="p-2 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 text-purple-500 transition-colors"
+            title="Re-classify all articles with AI"
+          >
+            <Sparkles className={`w-4 h-4 ${loading ? 'animate-pulse' : ''}`} />
+          </button>
           <button
             onClick={onRefresh}
             disabled={loading}
