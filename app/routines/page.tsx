@@ -18,6 +18,12 @@ type RoutineWithDetails = Routine & {
   member_ids?: string[]
 }
 
+// Demo family members (synced with RoutinesWidget)
+const DEMO_MEMBERS: FamilyMember[] = [
+  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, stars_enabled: true, sort_order: 2, created_at: '', updated_at: '' },
+  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, stars_enabled: false, sort_order: 3, created_at: '', updated_at: '' },
+]
+
 // Demo routines for when not logged in (synced with RoutinesWidget)
 const DEMO_ROUTINES: RoutineWithDetails[] = [
   {
@@ -78,6 +84,13 @@ export default function RoutinesPage() {
   const [editingRoutine, setEditingRoutine] = useState<RoutineWithDetails | null>(null)
 
   const children = members.filter(m => m.role === 'child')
+
+  // Helper to get member, falling back to demo members when not logged in
+  const getRoutineMember = (memberId: string): FamilyMember | undefined => {
+    const member = getMember(memberId)
+    if (member) return member
+    return DEMO_MEMBERS.find(m => m.id === memberId)
+  }
 
   const [formData, setFormData] = useState({
     title: '',
@@ -220,7 +233,7 @@ export default function RoutinesPage() {
           s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
         )
         if (memberCompletedAll && selectedRoutine.points_reward > 0) {
-          const member = getMember(memberId)
+          const member = getRoutineMember(memberId)
           if (member?.stars_enabled) {
             updateMemberPoints(memberId, selectedRoutine.points_reward)
           }
@@ -633,7 +646,7 @@ export default function RoutinesPage() {
                   {(selectedRoutine.member_ids?.length || 0) > 0 && (
                     <span className="flex items-center gap-1">
                       {selectedRoutine.member_ids?.map(memberId => {
-                        const member = getMember(memberId)
+                        const member = getRoutineMember(memberId)
                         return member ? (
                           <span
                             key={memberId}
@@ -707,7 +720,7 @@ export default function RoutinesPage() {
                   {hasMembers ? (
                     <div className="flex gap-2">
                       {routineMembers.map(memberId => {
-                        const member = getMember(memberId)
+                        const member = getRoutineMember(memberId)
                         if (!member) return null
                         const memberDone = isStepCompleteForMember(step.id, memberId)
                         return (
