@@ -1,15 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Card from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check } from 'lucide-react'
+import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, FamilyMember } from '@/lib/database.types'
+import Confetti from '@/components/Confetti'
 
 // Extended routine type with steps and members
 type RoutineWithDetails = Routine & {
@@ -82,6 +83,10 @@ export default function RoutinesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<RoutineWithDetails | null>(null)
+  const [confettiTrigger, setConfettiTrigger] = useState(0)
+  const [confettiConfig, setConfettiConfig] = useState<{ intensity: 'small' | 'medium' | 'big' | 'epic', emoji?: string }>({ intensity: 'small' })
+  const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
+  const [draggingRoutine, setDraggingRoutine] = useState<string | null>(null)
 
   const children = members.filter(m => m.role === 'child')
 
@@ -215,6 +220,16 @@ export default function RoutinesPage() {
       }
     } else {
       newCompleted.add(key)
+
+      // Find the step emoji for confetti
+      const step = selectedRoutine?.steps.find(s => s.id === stepId)
+
+      // Celebrate! Small burst for individual completion
+      setCelebratingStep(stepId)
+      setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
+      setConfettiTrigger(t => t + 1)
+      setTimeout(() => setCelebratingStep(null), 600)
+
       if (!user) {
         localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
       } else {
@@ -237,6 +252,25 @@ export default function RoutinesPage() {
           if (member?.stars_enabled) {
             updateMemberPoints(memberId, selectedRoutine.points_reward)
           }
+          // BIG celebration for completing all steps!
+          setTimeout(() => {
+            setConfettiConfig({ intensity: 'big', emoji: '⭐' })
+            setConfettiTrigger(t => t + 1)
+          }, 300)
+        }
+
+        // Check if ALL members completed ALL steps
+        const routineMembers = selectedRoutine.member_ids || []
+        const allMembersCompletedAll = routineMembers.length > 0 && routineMembers.every(mid =>
+          selectedRoutine.steps.every(s =>
+            newCompleted.has(`${s.id}:${mid}`) || (s.id === stepId && mid === memberId)
+          )
+        )
+        if (allMembersCompletedAll) {
+          setTimeout(() => {
+            setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
+            setConfettiTrigger(t => t + 1)
+          }, 500)
         }
       }
     }
@@ -555,6 +589,76 @@ export default function RoutinesPage() {
     return { completed, total: routine.steps.length }
   }
 
+  // Drag and drop handlers for routine reordering
+  const handleDragStart = (e: React.DragEvent, routineId: string) => {
+    setDraggingRoutine(routineId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!draggingRoutine || draggingRoutine === targetId) {
+      setDraggingRoutine(null)
+      return
+    }
+
+    const dragIndex = routines.findIndex(r => r.id === draggingRoutine)
+    const dropIndex = routines.findIndex(r => r.id === targetId)
+
+    if (dragIndex === -1 || dropIndex === -1) {
+      setDraggingRoutine(null)
+      return
+    }
+
+    const newRoutines = [...routines]
+    const [removed] = newRoutines.splice(dragIndex, 1)
+    newRoutines.splice(dropIndex, 0, removed)
+
+    // Update sort_order for all routines
+    const updatedRoutines = newRoutines.map((r, i) => ({ ...r, sort_order: i }))
+    setRoutines(updatedRoutines)
+    setDraggingRoutine(null)
+
+    // Persist to database
+    if (user) {
+      for (let i = 0; i < updatedRoutines.length; i++) {
+        await supabase
+          .from('routines')
+          .update({ sort_order: i })
+          .eq('id', updatedRoutines[i].id)
+      }
+    }
+  }
+
+  const moveRoutine = async (routineId: string, direction: 'up' | 'down') => {
+    const index = routines.findIndex(r => r.id === routineId)
+    if (index === -1) return
+    if (direction === 'up' && index === 0) return
+    if (direction === 'down' && index === routines.length - 1) return
+
+    const newIndex = direction === 'up' ? index - 1 : index + 1
+    const newRoutines = [...routines]
+    const [removed] = newRoutines.splice(index, 1)
+    newRoutines.splice(newIndex, 0, removed)
+
+    const updatedRoutines = newRoutines.map((r, i) => ({ ...r, sort_order: i }))
+    setRoutines(updatedRoutines)
+
+    if (user) {
+      for (let i = 0; i < updatedRoutines.length; i++) {
+        await supabase
+          .from('routines')
+          .update({ sort_order: i })
+          .eq('id', updatedRoutines[i].id)
+      }
+    }
+  }
+
   if (loading) {
     return (
       <div className="page-container">
@@ -567,57 +671,90 @@ export default function RoutinesPage() {
   }
 
   return (
-    <div className="page-container">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="page-header">{t('routines.title')}</h1>
-          <p className="page-subtitle">{t('routines.subtitle')}</p>
+    <>
+      <Confetti trigger={confettiTrigger} {...confettiConfig} />
+      <div className="page-container">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div>
+            <h1 className="page-header">{t('routines.title')}</h1>
+            <p className="page-subtitle">{t('routines.subtitle')}</p>
+          </div>
+          <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
+            <Plus className="w-5 h-5 mr-2" />
+            {t('routines.addRoutine')}
+          </Button>
         </div>
-        <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
-          <Plus className="w-5 h-5 mr-2" />
-          {t('routines.addRoutine')}
-        </Button>
-      </div>
 
-      {/* Routine Selector */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-        {routines.map(routine => {
-          const progress = getProgress(routine)
-          const isComplete = progress.completed === progress.total
-          const isSelected = selectedRoutine?.id === routine.id
+        {/* Routine Selector with Drag & Drop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+          {routines.map((routine, index) => {
+            const progress = getProgress(routine)
+            const isComplete = progress.completed === progress.total
+            const isSelected = selectedRoutine?.id === routine.id
+            const isDragging = draggingRoutine === routine.id
 
-          return (
-            <Card
-              key={routine.id}
-              className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-sage-400 dark:ring-sage-500' : ''}`}
-              onClick={() => setSelectedRoutine(routine)}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                  routine.type === 'morning'
-                    ? 'bg-gradient-to-br from-amber-400 to-orange-500'
-                    : routine.type === 'evening'
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
-                    : 'bg-gradient-to-br from-sage-400 to-sage-600'
-                }`}>
-                  {routine.emoji}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{routine.title}</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{progress.completed}/{progress.total} {t('routines.done')}</p>
-                </div>
-                {isComplete && <span className="text-2xl">✓</span>}
+            return (
+              <div
+                key={routine.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, routine.id)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, routine.id)}
+                onDragEnd={() => setDraggingRoutine(null)}
+                className={`transition-all duration-200 ${isDragging ? 'opacity-50 scale-95' : ''}`}
+              >
+                <Card
+                  className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-sage-400 dark:ring-sage-500' : ''} ${
+                    isComplete ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' : ''
+                  }`}
+                  onClick={() => setSelectedRoutine(routine)}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Drag handle & reorder buttons */}
+                    <div className="flex flex-col items-center gap-0.5 -ml-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'up') }}
+                        className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        disabled={index === 0}
+                      >
+                        <ChevronUp className="w-4 h-4 text-slate-400" />
+                      </button>
+                      <GripVertical className="w-4 h-4 text-slate-300 cursor-grab active:cursor-grabbing" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'down') }}
+                        className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === routines.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                        disabled={index === routines.length - 1}
+                      >
+                        <ChevronDown className="w-4 h-4 text-slate-400" />
+                      </button>
+                    </div>
+
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-transform ${isComplete ? 'animate-celebrate' : ''} ${
+                      routine.type === 'morning'
+                        ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                        : routine.type === 'evening'
+                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                        : 'bg-gradient-to-br from-sage-400 to-sage-600'
+                    }`}>
+                      {routine.emoji}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{routine.title}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{progress.completed}/{progress.total} {t('routines.done')}</p>
+                    </div>
+                    {isComplete && <span className="text-2xl animate-bounce">🎉</span>}
+                  </div>
+                  <div className="mt-3 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-sage-500'}`}
+                      style={{ width: `${(progress.completed / progress.total) * 100}%` }}
+                    />
+                  </div>
+                </Card>
               </div>
-              <div className="mt-3 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-sage-500 transition-all duration-300"
-                  style={{ width: `${(progress.completed / progress.total) * 100}%` }}
-                />
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
 
       {/* Selected Routine - Simple Checklist */}
       {selectedRoutine && (
@@ -679,46 +816,67 @@ export default function RoutinesPage() {
             </div>
           </div>
 
-          {/* Simple Step Checklist */}
-          <div className="space-y-2">
+          {/* Fun Step Checklist */}
+          <div className="space-y-3">
             {selectedRoutine.steps.map((step, index) => {
               const routineMembers = selectedRoutine.member_ids || []
               const hasMembers = routineMembers.length > 0
               const isDone = isStepComplete(step.id, routineMembers)
+              const isCelebrating = celebratingStep === step.id
 
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
+                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 ${
                     isDone
-                      ? 'bg-green-50 dark:bg-green-900/20'
+                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 scale-[0.98]'
                       : 'bg-slate-50 dark:bg-slate-800/50'
-                  }`}
+                  } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 scale-105 shadow-lg' : ''}`}
                 >
                   {/* Step number & emoji */}
                   <div className="flex items-center gap-3">
-                    <span className={`text-lg font-bold ${isDone ? 'text-green-500' : 'text-slate-400'}`}>
-                      {index + 1}
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-all ${
+                      isDone
+                        ? 'bg-green-500 text-white'
+                        : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
+                    } ${isCelebrating ? '!bg-yellow-400 !text-yellow-900 animate-pop' : ''}`}>
+                      {isDone ? '✓' : index + 1}
                     </span>
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all ${
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-all ${
                       isDone
                         ? 'bg-green-100 dark:bg-green-900/50'
-                        : 'bg-white dark:bg-slate-700'
-                    }`}>
-                      {isDone ? <Check className="w-6 h-6 text-green-500" /> : step.emoji}
+                        : 'bg-white dark:bg-slate-700 shadow-sm'
+                    } ${isCelebrating ? '!bg-yellow-100 dark:!bg-yellow-900/50 animate-bounce' : ''}`}>
+                      {isDone ? (
+                        <div className="relative">
+                          <Check className="w-8 h-8 text-green-500" />
+                          <span className="absolute -top-1 -right-1 text-base animate-bounce">✨</span>
+                        </div>
+                      ) : (
+                        <span className={isCelebrating ? 'animate-bounce' : ''}>{step.emoji}</span>
+                      )}
                     </div>
                   </div>
 
                   {/* Step title */}
                   <div className="flex-1">
-                    <p className={`font-medium text-lg ${isDone ? 'text-green-700 dark:text-green-300 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
+                    <p className={`font-semibold text-lg transition-all ${
+                      isDone
+                        ? 'text-green-600 dark:text-green-400 line-through decoration-2'
+                        : 'text-slate-800 dark:text-slate-100'
+                    }`}>
                       {step.title}
                     </p>
+                    {isDone && (
+                      <p className="text-sm text-green-500 dark:text-green-400 font-medium animate-fade-in">
+                        Great job! 🌟
+                      </p>
+                    )}
                   </div>
 
-                  {/* Member completion buttons */}
+                  {/* Member completion buttons - bigger and more fun */}
                   {hasMembers ? (
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       {routineMembers.map(memberId => {
                         const member = getRoutineMember(memberId)
                         if (!member) return null
@@ -727,13 +885,19 @@ export default function RoutinesPage() {
                           <button
                             key={memberId}
                             onClick={() => toggleStepForMember(step.id, memberId)}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold transition-all hover:scale-110 active:scale-95 ${
-                              memberDone ? 'ring-3 ring-green-400 ring-offset-2' : 'opacity-70 hover:opacity-100'
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg ${
+                              memberDone
+                                ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200'
+                                : 'opacity-80 hover:opacity-100'
                             }`}
                             style={{ backgroundColor: member.color }}
                             title={member.name}
                           >
-                            {memberDone ? '✓' : member.name.charAt(0)}
+                            {memberDone ? (
+                              <span className="animate-pop">✓</span>
+                            ) : (
+                              member.name.charAt(0)
+                            )}
                           </button>
                         )
                       })}
@@ -741,10 +905,10 @@ export default function RoutinesPage() {
                   ) : (
                     <button
                       onClick={() => toggleStep(step.id)}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 ${
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 ${
                         isDone
-                          ? 'bg-green-500 text-white'
-                          : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300'
+                          ? 'bg-green-500 text-white shadow-lg shadow-green-200'
+                          : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-300'
                       }`}
                     >
                       {isDone ? '✓' : '○'}
@@ -966,6 +1130,7 @@ export default function RoutinesPage() {
           </div>
         </div>
       </Modal>
-    </div>
+      </div>
+    </>
   )
 }
