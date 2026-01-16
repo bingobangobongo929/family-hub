@@ -10,8 +10,8 @@ import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
 import Confetti from '@/components/Confetti'
 
-// Demo routines for when not logged in
-const DEMO_ROUTINES: (Routine & { steps: RoutineStep[], members: FamilyMember[] })[] = [
+// Default routines (used when database is empty)
+const DEFAULT_ROUTINES: (Routine & { steps: RoutineStep[], members: FamilyMember[] })[] = [
   {
     id: 'demo-bedtime',
     user_id: 'demo',
@@ -60,7 +60,7 @@ export default function RoutinesWidget() {
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      setRoutines(DEMO_ROUTINES)
+      setRoutines(DEFAULT_ROUTINES)
       setCompletions([
         { id: 'c1', routine_id: 'demo-bedtime', step_id: 'step-1', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
         { id: 'c2', routine_id: 'demo-bedtime', step_id: 'step-2', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
@@ -106,12 +106,12 @@ export default function RoutinesWidget() {
         setRoutines(routinesWithData)
         setCompletions(completionsData || [])
       } else {
-        setRoutines(DEMO_ROUTINES)
+        setRoutines(DEFAULT_ROUTINES)
         setCompletions([])
       }
     } catch (error) {
       console.error('Error fetching routines:', error)
-      setRoutines(DEMO_ROUTINES)
+      setRoutines(DEFAULT_ROUTINES)
     }
   }, [user, today])
 

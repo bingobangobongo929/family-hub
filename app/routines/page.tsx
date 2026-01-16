@@ -19,14 +19,14 @@ type RoutineWithDetails = Routine & {
   member_ids?: string[]
 }
 
-// Demo family members (synced with RoutinesWidget)
-const DEMO_MEMBERS: FamilyMember[] = [
+// Default family members
+const DEFAULT_MEMBERS: FamilyMember[] = [
   { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, stars_enabled: true, sort_order: 2, created_at: '', updated_at: '' },
   { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, stars_enabled: false, sort_order: 3, created_at: '', updated_at: '' },
 ]
 
-// Demo routines for when not logged in (synced with RoutinesWidget)
-const DEMO_ROUTINES: RoutineWithDetails[] = [
+// Default routines (used when database is empty)
+const DEFAULT_ROUTINES: RoutineWithDetails[] = [
   {
     id: 'demo-bedtime',
     user_id: 'demo',
@@ -40,7 +40,7 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     sort_order: 0,
     created_at: '',
     updated_at: '',
-    members: DEMO_MEMBERS,
+    members: DEFAULT_MEMBERS,
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
       { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 0, sort_order: 0, created_at: '' },
@@ -63,7 +63,7 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     sort_order: 1,
     created_at: '',
     updated_at: '',
-    members: DEMO_MEMBERS,
+    members: DEFAULT_MEMBERS,
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
       { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 0, sort_order: 0, created_at: '' },
@@ -96,7 +96,7 @@ export default function RoutinesPage() {
   const getRoutineMember = (memberId: string): FamilyMember | undefined => {
     const member = getMember(memberId)
     if (member) return member
-    return DEMO_MEMBERS.find(m => m.id === memberId)
+    return DEFAULT_MEMBERS.find(m => m.id === memberId)
   }
 
   const [formData, setFormData] = useState({
@@ -111,11 +111,11 @@ export default function RoutinesPage() {
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      setRoutines(DEMO_ROUTINES)
+      setRoutines(DEFAULT_ROUTINES)
       const hour = new Date().getHours()
-      const morning = DEMO_ROUTINES.find(r => r.type === 'morning')
-      const evening = DEMO_ROUTINES.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || DEMO_ROUTINES[0]) : (evening || DEMO_ROUTINES[0]))
+      const morning = DEFAULT_ROUTINES.find(r => r.type === 'morning')
+      const evening = DEFAULT_ROUTINES.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || DEFAULT_ROUTINES[0]) : (evening || DEFAULT_ROUTINES[0]))
       setLoading(false)
       return
     }
@@ -156,7 +156,7 @@ export default function RoutinesPage() {
         })
       )
 
-      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : DEMO_ROUTINES
+      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : DEFAULT_ROUTINES
       setRoutines(finalRoutines as RoutineWithDetails[])
 
       const hour = new Date().getHours()
@@ -169,11 +169,11 @@ export default function RoutinesPage() {
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
-      setRoutines(DEMO_ROUTINES)
+      setRoutines(DEFAULT_ROUTINES)
       const hour = new Date().getHours()
-      const morning = DEMO_ROUTINES.find(r => r.type === 'morning')
-      const evening = DEMO_ROUTINES.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || DEMO_ROUTINES[0]) : (evening || DEMO_ROUTINES[0]))
+      const morning = DEFAULT_ROUTINES.find(r => r.type === 'morning')
+      const evening = DEFAULT_ROUTINES.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || DEFAULT_ROUTINES[0]) : (evening || DEFAULT_ROUTINES[0]))
     }
     setLoading(false)
   }, [user])
