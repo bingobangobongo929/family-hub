@@ -40,6 +40,7 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     sort_order: 0,
     created_at: '',
     updated_at: '',
+    members: DEMO_MEMBERS,
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
       { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 0, sort_order: 0, created_at: '' },
@@ -62,6 +63,7 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     sort_order: 1,
     created_at: '',
     updated_at: '',
+    members: DEMO_MEMBERS,
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
       { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 0, sort_order: 0, created_at: '' },
@@ -137,14 +139,19 @@ export default function RoutinesPage() {
               .order('sort_order', { ascending: true }),
             supabase
               .from('routine_members')
-              .select('member_id')
+              .select('*, member:family_members(*)')
               .eq('routine_id', routine.id)
           ])
+
+          const memberData = (membersResult.data || [])
+            .map((rm: { member: FamilyMember }) => rm.member)
+            .filter(Boolean) as FamilyMember[]
 
           return {
             ...routine,
             steps: stepsResult.data || [],
-            member_ids: (membersResult.data || []).map(rm => rm.member_id)
+            members: memberData,
+            member_ids: memberData.map(m => m.id)
           }
         })
       )
@@ -780,24 +787,21 @@ export default function RoutinesPage() {
                       +{selectedRoutine.points_reward}
                     </span>
                   )}
-                  {(selectedRoutine.member_ids?.length || 0) > 0 && (
+                  {(selectedRoutine.members?.length || 0) > 0 && (
                     <span className="flex items-center gap-1">
-                      {selectedRoutine.member_ids?.map(memberId => {
-                        const member = getRoutineMember(memberId)
-                        return member ? (
-                          <span
-                            key={memberId}
-                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
-                            style={{ backgroundColor: member.photo_url ? undefined : member.color }}
-                          >
-                            {member.photo_url ? (
-                              <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              member.name.charAt(0)
-                            )}
-                          </span>
-                        ) : null
-                      })}
+                      {selectedRoutine.members?.map(member => (
+                        <span
+                          key={member.id}
+                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+                          style={{ backgroundColor: member.photo_url ? undefined : member.color }}
+                        >
+                          {member.photo_url ? (
+                            <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                          ) : (
+                            member.name.charAt(0)
+                          )}
+                        </span>
+                      ))}
                     </span>
                   )}
                 </div>
@@ -823,9 +827,10 @@ export default function RoutinesPage() {
           {/* Fun Step Checklist */}
           <div className="space-y-3">
             {selectedRoutine.steps.map((step, index) => {
-              const routineMembers = selectedRoutine.member_ids || []
+              const routineMembers = selectedRoutine.members || []
+              const routineMemberIds = selectedRoutine.member_ids || []
               const hasMembers = routineMembers.length > 0
-              const isDone = isStepComplete(step.id, routineMembers)
+              const isDone = isStepComplete(step.id, routineMemberIds)
               const isCelebrating = celebratingStep === step.id
 
               return (
@@ -881,14 +886,12 @@ export default function RoutinesPage() {
                   {/* Member completion buttons - bigger and more fun */}
                   {hasMembers ? (
                     <div className="flex gap-3">
-                      {routineMembers.map(memberId => {
-                        const member = getRoutineMember(memberId)
-                        if (!member) return null
-                        const memberDone = isStepCompleteForMember(step.id, memberId)
+                      {routineMembers.map(member => {
+                        const memberDone = isStepCompleteForMember(step.id, member.id)
                         return (
                           <button
-                            key={memberId}
-                            onClick={() => toggleStepForMember(step.id, memberId)}
+                            key={member.id}
+                            onClick={() => toggleStepForMember(step.id, member.id)}
                             className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg overflow-hidden ${
                               memberDone
                                 ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200'
