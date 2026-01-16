@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Card, { CardHeader } from '@/components/Card'
+import Card from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Sun, Moon, RotateCcw, Plus, Clock, Edit2, Trash2, GripVertical, X, Play, Pause, Star, Check } from 'lucide-react'
+import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
-import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
+import { Routine, RoutineStep, FamilyMember } from '@/lib/database.types'
 
 // Extended routine type with steps and members
 type RoutineWithDetails = Routine & {
@@ -35,11 +35,11 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     updated_at: '',
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
-      { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 10, sort_order: 0, created_at: '' },
-      { id: 'step-2', routine_id: 'demo-bedtime', title: 'Pajamas', emoji: '👕', duration_minutes: 5, sort_order: 1, created_at: '' },
-      { id: 'step-3', routine_id: 'demo-bedtime', title: 'Toothbrushing', emoji: '🪥', duration_minutes: 3, sort_order: 2, created_at: '' },
-      { id: 'step-4', routine_id: 'demo-bedtime', title: 'Supper Milk', emoji: '🥛', duration_minutes: 5, sort_order: 3, created_at: '' },
-      { id: 'step-5', routine_id: 'demo-bedtime', title: 'Kiss & Goodnight', emoji: '😘', duration_minutes: 2, sort_order: 4, created_at: '' },
+      { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 0, sort_order: 0, created_at: '' },
+      { id: 'step-2', routine_id: 'demo-bedtime', title: 'Pajamas', emoji: '👕', duration_minutes: 0, sort_order: 1, created_at: '' },
+      { id: 'step-3', routine_id: 'demo-bedtime', title: 'Toothbrushing', emoji: '🪥', duration_minutes: 0, sort_order: 2, created_at: '' },
+      { id: 'step-4', routine_id: 'demo-bedtime', title: 'Supper Milk', emoji: '🥛', duration_minutes: 0, sort_order: 3, created_at: '' },
+      { id: 'step-5', routine_id: 'demo-bedtime', title: 'Kiss & Goodnight', emoji: '😘', duration_minutes: 0, sort_order: 4, created_at: '' },
     ]
   },
   {
@@ -57,10 +57,10 @@ const DEMO_ROUTINES: RoutineWithDetails[] = [
     updated_at: '',
     member_ids: ['demo-olivia', 'demo-ellie'],
     steps: [
-      { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 5, sort_order: 0, created_at: '' },
-      { id: 'ms2', routine_id: 'demo-morning', title: 'Brush teeth', emoji: '🪥', duration_minutes: 3, sort_order: 1, created_at: '' },
-      { id: 'ms3', routine_id: 'demo-morning', title: 'Eat breakfast', emoji: '🥣', duration_minutes: 15, sort_order: 2, created_at: '' },
-      { id: 'ms4', routine_id: 'demo-morning', title: 'Tidy bedroom', emoji: '🛏️', duration_minutes: 5, sort_order: 3, created_at: '' },
+      { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 0, sort_order: 0, created_at: '' },
+      { id: 'ms2', routine_id: 'demo-morning', title: 'Brush teeth', emoji: '🪥', duration_minutes: 0, sort_order: 1, created_at: '' },
+      { id: 'ms3', routine_id: 'demo-morning', title: 'Eat breakfast', emoji: '🥣', duration_minutes: 0, sort_order: 2, created_at: '' },
+      { id: 'ms4', routine_id: 'demo-morning', title: 'Tidy bedroom', emoji: '🛏️', duration_minutes: 0, sort_order: 3, created_at: '' },
     ]
   }
 ]
@@ -72,17 +72,13 @@ export default function RoutinesPage() {
   const [routines, setRoutines] = useState<RoutineWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedRoutine, setSelectedRoutine] = useState<RoutineWithDetails | null>(null)
-  // Track completions per member per step: "stepId:memberId"
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingRoutine, setEditingRoutine] = useState<RoutineWithDetails | null>(null)
-  const [activeTimer, setActiveTimer] = useState<{ stepId: string; timeLeft: number } | null>(null)
 
-  // Get children for routine assignment
   const children = members.filter(m => m.role === 'child')
 
-  // Form state
   const [formData, setFormData] = useState({
     title: '',
     emoji: '📋',
@@ -90,13 +86,12 @@ export default function RoutinesPage() {
     member_ids: [] as string[],
     scheduled_time: '',
     points_reward: 1,
-    steps: [{ title: '', emoji: '✨', duration_minutes: 5 }]
+    steps: [{ title: '', emoji: '✨' }]
   })
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
       setRoutines(DEMO_ROUTINES)
-      // Auto-select based on time of day
       const hour = new Date().getHours()
       const morning = DEMO_ROUTINES.find(r => r.type === 'morning')
       const evening = DEMO_ROUTINES.find(r => r.type === 'evening')
@@ -114,7 +109,6 @@ export default function RoutinesPage() {
 
       if (routinesError) throw routinesError
 
-      // Fetch steps and members for each routine
       const routinesWithDetails = await Promise.all(
         (routinesData || []).map(async (routine) => {
           const [stepsResult, membersResult] = await Promise.all([
@@ -137,11 +131,9 @@ export default function RoutinesPage() {
         })
       )
 
-      // If no routines in DB, use demo data as starting point
       const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : DEMO_ROUTINES
       setRoutines(finalRoutines as RoutineWithDetails[])
 
-      // Auto-select based on time of day
       const hour = new Date().getHours()
       const morning = finalRoutines.find(r => r.type === 'morning')
       const evening = finalRoutines.find(r => r.type === 'evening')
@@ -161,7 +153,6 @@ export default function RoutinesPage() {
     setLoading(false)
   }, [user])
 
-  // Load completions for today (per-member tracking with "stepId:memberId" keys)
   const loadCompletions = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0]
 
@@ -180,7 +171,6 @@ export default function RoutinesPage() {
         .eq('completed_date', today)
 
       if (data) {
-        // Create keys as "stepId:memberId" for per-member tracking
         setCompletedSteps(new Set(data.map(c => `${c.step_id}:${c.member_id}`)))
       }
     } catch (error) {
@@ -193,7 +183,6 @@ export default function RoutinesPage() {
     loadCompletions()
   }, [fetchRoutines, loadCompletions])
 
-  // Toggle step completion for a specific member
   const toggleStepForMember = async (stepId: string, memberId: string) => {
     const today = new Date().toISOString().split('T')[0]
     const key = `${stepId}:${memberId}`
@@ -226,7 +215,6 @@ export default function RoutinesPage() {
           })
       }
 
-      // Check if this member completed all steps - award stars if enabled
       if (selectedRoutine) {
         const memberCompletedAll = selectedRoutine.steps.every(
           s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
@@ -243,11 +231,9 @@ export default function RoutinesPage() {
     setCompletedSteps(newCompleted)
   }
 
-  // Legacy toggle for simple mode (marks all members as complete)
   const toggleStep = async (stepId: string) => {
     const routineMembers = selectedRoutine?.member_ids || []
     if (routineMembers.length === 0) {
-      // No specific members - use a default key
       const today = new Date().toISOString().split('T')[0]
       const key = `${stepId}:all`
       const newCompleted = new Set(completedSteps)
@@ -259,7 +245,6 @@ export default function RoutinesPage() {
       localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
       setCompletedSteps(newCompleted)
     } else {
-      // Toggle for all assigned members
       for (const memberId of routineMembers) {
         await toggleStepForMember(stepId, memberId)
       }
@@ -271,7 +256,6 @@ export default function RoutinesPage() {
 
     const today = new Date().toISOString().split('T')[0]
     const stepIds = selectedRoutine.steps.map(s => s.id)
-    // Filter out any completion keys that start with this routine's step IDs
     const newCompleted = new Set([...completedSteps].filter(key => {
       const stepId = key.split(':')[0]
       return !stepIds.includes(stepId)
@@ -288,39 +272,6 @@ export default function RoutinesPage() {
     }
 
     setCompletedSteps(newCompleted)
-    setActiveTimer(null)
-  }
-
-  const startTimer = (step: RoutineStep) => {
-    if (activeTimer?.stepId === step.id) {
-      setActiveTimer(null)
-    } else {
-      setActiveTimer({ stepId: step.id, timeLeft: step.duration_minutes * 60 })
-    }
-  }
-
-  // Timer countdown
-  useEffect(() => {
-    if (!activeTimer) return
-
-    const interval = setInterval(() => {
-      setActiveTimer(prev => {
-        if (!prev || prev.timeLeft <= 0) {
-          // Auto-complete when timer finishes
-          if (prev) toggleStep(prev.stepId)
-          return null
-        }
-        return { ...prev, timeLeft: prev.timeLeft - 1 }
-      })
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [activeTimer?.stepId])
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   const handleAddRoutine = async () => {
@@ -349,7 +300,7 @@ export default function RoutinesPage() {
           routine_id: routineId,
           title: s.title,
           emoji: s.emoji,
-          duration_minutes: s.duration_minutes,
+          duration_minutes: 0,
           sort_order: i,
           created_at: new Date().toISOString()
         }))
@@ -376,12 +327,11 @@ export default function RoutinesPage() {
 
       if (routineError) throw routineError
 
-      // Insert steps
       const stepsToInsert = validSteps.map((s, i) => ({
         routine_id: routineData.id,
         title: s.title,
         emoji: s.emoji,
-        duration_minutes: s.duration_minutes,
+        duration_minutes: 0,
         sort_order: i
       }))
 
@@ -391,7 +341,6 @@ export default function RoutinesPage() {
 
       if (stepsError) throw stepsError
 
-      // Insert routine members
       if (formData.member_ids.length > 0) {
         const membersToInsert = formData.member_ids.map(memberId => ({
           routine_id: routineData.id,
@@ -434,7 +383,7 @@ export default function RoutinesPage() {
                 routine_id: r.id,
                 title: s.title,
                 emoji: s.emoji,
-                duration_minutes: s.duration_minutes,
+                duration_minutes: 0,
                 sort_order: i,
                 created_at: new Date().toISOString()
               }))
@@ -465,7 +414,6 @@ export default function RoutinesPage() {
 
       if (routineError) throw routineError
 
-      // Delete old steps and insert new ones
       await supabase
         .from('routine_steps')
         .delete()
@@ -475,7 +423,7 @@ export default function RoutinesPage() {
         routine_id: editingRoutine.id,
         title: s.title,
         emoji: s.emoji,
-        duration_minutes: s.duration_minutes,
+        duration_minutes: 0,
         sort_order: i
       }))
 
@@ -483,7 +431,6 @@ export default function RoutinesPage() {
         .from('routine_steps')
         .insert(stepsToInsert)
 
-      // Update routine members
       await supabase
         .from('routine_members')
         .delete()
@@ -540,8 +487,7 @@ export default function RoutinesPage() {
       points_reward: routine.points_reward,
       steps: routine.steps.map(s => ({
         title: s.title,
-        emoji: s.emoji,
-        duration_minutes: s.duration_minutes
+        emoji: s.emoji
       }))
     })
     setShowEditModal(true)
@@ -555,14 +501,14 @@ export default function RoutinesPage() {
       member_ids: [],
       scheduled_time: '',
       points_reward: 1,
-      steps: [{ title: '', emoji: '✨', duration_minutes: 5 }]
+      steps: [{ title: '', emoji: '✨' }]
     })
   }
 
   const addStep = () => {
     setFormData({
       ...formData,
-      steps: [...formData.steps, { title: '', emoji: '✨', duration_minutes: 5 }]
+      steps: [...formData.steps, { title: '', emoji: '✨' }]
     })
   }
 
@@ -573,18 +519,16 @@ export default function RoutinesPage() {
     })
   }
 
-  const updateStep = (index: number, field: string, value: string | number) => {
+  const updateStep = (index: number, field: string, value: string) => {
     const newSteps = [...formData.steps]
     newSteps[index] = { ...newSteps[index], [field]: value }
     setFormData({ ...formData, steps: newSteps })
   }
 
-  // Check if a step is complete for a member
   const isStepCompleteForMember = (stepId: string, memberId: string) => {
     return completedSteps.has(`${stepId}:${memberId}`)
   }
 
-  // Check if step is complete (all assigned members done, or no members assigned)
   const isStepComplete = (stepId: string, memberIds: string[] = []) => {
     if (memberIds.length === 0) {
       return completedSteps.has(`${stepId}:all`)
@@ -596,10 +540,6 @@ export default function RoutinesPage() {
     const memberIds = routine.member_ids || []
     const completed = routine.steps.filter(s => isStepComplete(s.id, memberIds)).length
     return { completed, total: routine.steps.length }
-  }
-
-  const getTotalDuration = (routine: RoutineWithDetails) => {
-    return routine.steps.reduce((acc, s) => acc + s.duration_minutes, 0)
   }
 
   if (loading) {
@@ -655,7 +595,6 @@ export default function RoutinesPage() {
                 </div>
                 {isComplete && <span className="text-2xl">✓</span>}
               </div>
-              {/* Progress bar */}
               <div className="mt-3 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-sage-500 transition-all duration-300"
@@ -667,44 +606,44 @@ export default function RoutinesPage() {
         })}
       </div>
 
-      {/* Selected Routine */}
+      {/* Selected Routine - Simple Checklist */}
       {selectedRoutine && (
         <Card>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">{selectedRoutine.emoji}</span>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl ${
+                selectedRoutine.type === 'morning'
+                  ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                  : selectedRoutine.type === 'evening'
+                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                  : 'bg-gradient-to-br from-sage-400 to-sage-600'
+              }`}>
+                {selectedRoutine.emoji}
+              </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</h2>
                 <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-                  <span className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    ~{getTotalDuration(selectedRoutine)} min
-                  </span>
-                  {selectedRoutine.scheduled_time && (
-                    <span>{t('routines.startsAt')} {selectedRoutine.scheduled_time}</span>
-                  )}
+                  {selectedRoutine.type === 'morning' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
                   {selectedRoutine.points_reward > 0 && (
-                    <span className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-amber-500" />
-                      {selectedRoutine.points_reward}
+                    <span className="flex items-center gap-1 text-amber-600">
+                      <Star className="w-4 h-4" />
+                      +{selectedRoutine.points_reward}
                     </span>
                   )}
                   {(selectedRoutine.member_ids?.length || 0) > 0 && (
                     <span className="flex items-center gap-1">
-                      {selectedRoutine.member_ids?.slice(0, 3).map(memberId => {
+                      {selectedRoutine.member_ids?.map(memberId => {
                         const member = getMember(memberId)
                         return member ? (
                           <span
                             key={memberId}
-                            className="w-4 h-4 rounded-full"
+                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
                             style={{ backgroundColor: member.color }}
-                            title={member.name}
-                          />
+                          >
+                            {member.name.charAt(0)}
+                          </span>
                         ) : null
                       })}
-                      {(selectedRoutine.member_ids?.length || 0) > 3 && (
-                        <span className="text-xs">+{(selectedRoutine.member_ids?.length || 0) - 3}</span>
-                      )}
                     </span>
                   )}
                 </div>
@@ -727,105 +666,76 @@ export default function RoutinesPage() {
             </div>
           </div>
 
-          <div className="space-y-3">
+          {/* Simple Step Checklist */}
+          <div className="space-y-2">
             {selectedRoutine.steps.map((step, index) => {
               const routineMembers = selectedRoutine.member_ids || []
               const hasMembers = routineMembers.length > 0
               const isDone = isStepComplete(step.id, routineMembers)
-              const isTimerActive = activeTimer?.stepId === step.id
 
               return (
                 <div
                   key={step.id}
-                  className={`p-4 rounded-xl border-2 transition-all ${
+                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${
                     isDone
-                      ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-700'
-                      : isTimerActive
-                      ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700'
-                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+                      ? 'bg-green-50 dark:bg-green-900/20'
+                      : 'bg-slate-50 dark:bg-slate-800/50'
                   }`}
                 >
-                  <div className="flex items-center gap-4">
-                    <span className="text-lg font-medium text-slate-400 w-6">{index + 1}</span>
-
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-slate-200 dark:bg-slate-600">
-                      {step.emoji}
-                    </div>
-
-                    <div className="flex-1">
-                      <p className={`font-medium text-lg ${isDone ? 'text-green-700 dark:text-green-300 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
-                        {step.title}
-                      </p>
-                      {isTimerActive && activeTimer && (
-                        <p className="text-amber-600 dark:text-amber-400 font-mono text-lg">
-                          {formatTime(activeTimer.timeLeft)}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {step.duration_minutes}m
-                      </span>
-                      {!isDone && (
-                        <button
-                          onClick={() => startTimer(step)}
-                          className={`p-2 rounded-lg transition-colors ${
-                            isTimerActive
-                              ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400'
-                              : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500'
-                          }`}
-                        >
-                          {isTimerActive ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-                        </button>
-                      )}
+                  {/* Step number & emoji */}
+                  <div className="flex items-center gap-3">
+                    <span className={`text-lg font-bold ${isDone ? 'text-green-500' : 'text-slate-400'}`}>
+                      {index + 1}
+                    </span>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all ${
+                      isDone
+                        ? 'bg-green-100 dark:bg-green-900/50'
+                        : 'bg-white dark:bg-slate-700'
+                    }`}>
+                      {isDone ? <Check className="w-6 h-6 text-green-500" /> : step.emoji}
                     </div>
                   </div>
 
-                  {/* Per-member completion buttons */}
+                  {/* Step title */}
+                  <div className="flex-1">
+                    <p className={`font-medium text-lg ${isDone ? 'text-green-700 dark:text-green-300 line-through' : 'text-slate-800 dark:text-slate-100'}`}>
+                      {step.title}
+                    </p>
+                  </div>
+
+                  {/* Member completion buttons */}
                   {hasMembers ? (
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{t('routines.tapToComplete')}:</span>
-                      <div className="flex gap-2">
-                        {routineMembers.map(memberId => {
-                          const member = getMember(memberId)
-                          if (!member) return null
-                          const memberDone = isStepCompleteForMember(step.id, memberId)
-                          return (
-                            <button
-                              key={memberId}
-                              onClick={() => toggleStepForMember(step.id, memberId)}
-                              className={`relative w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-medium transition-all ${
-                                memberDone ? 'ring-2 ring-green-500 ring-offset-2' : 'hover:scale-110'
-                              }`}
-                              style={{ backgroundColor: member.color }}
-                            >
-                              {member.avatar || member.name.charAt(0)}
-                              {memberDone && (
-                                <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-                                  <Check className="w-3 h-3 text-white" />
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
+                    <div className="flex gap-2">
+                      {routineMembers.map(memberId => {
+                        const member = getMember(memberId)
+                        if (!member) return null
+                        const memberDone = isStepCompleteForMember(step.id, memberId)
+                        return (
+                          <button
+                            key={memberId}
+                            onClick={() => toggleStepForMember(step.id, memberId)}
+                            className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold transition-all hover:scale-110 active:scale-95 ${
+                              memberDone ? 'ring-3 ring-green-400 ring-offset-2' : 'opacity-70 hover:opacity-100'
+                            }`}
+                            style={{ backgroundColor: member.color }}
+                            title={member.name}
+                          >
+                            {memberDone ? '✓' : member.name.charAt(0)}
+                          </button>
+                        )
+                      })}
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 mt-3 pt-3 border-t border-slate-200 dark:border-slate-600">
-                      <button
-                        onClick={() => toggleStep(step.id)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                          isDone
-                            ? 'bg-green-500 text-white'
-                            : 'bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-300'
-                        }`}
-                      >
-                        {isDone ? <Check className="w-4 h-4" /> : null}
-                        {isDone ? t('routines.done') : t('routines.tapToComplete')}
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => toggleStep(step.id)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 ${
+                        isDone
+                          ? 'bg-green-500 text-white'
+                          : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300'
+                      }`}
+                    >
+                      {isDone ? '✓' : '○'}
+                    </button>
                   )}
                 </div>
               )
@@ -833,9 +743,10 @@ export default function RoutinesPage() {
           </div>
 
           {getProgress(selectedRoutine).completed === selectedRoutine.steps.length && (
-            <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/50 dark:to-emerald-900/50 text-green-700 dark:text-green-300 text-center">
-              <p className="text-xl font-bold mb-1">{t('routines.allDoneGreat')}</p>
-              <p className="text-sm">
+            <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-center">
+              <div className="text-4xl mb-2">🎉</div>
+              <p className="text-xl font-bold text-green-700 dark:text-green-300 mb-1">{t('routines.allDoneGreat')}</p>
+              <p className="text-green-600 dark:text-green-400">
                 {selectedRoutine.type === 'morning' ? t('routines.haveGreatDay') : selectedRoutine.type === 'evening' ? t('routines.sweetDreams') : t('routines.wellDone')}
               </p>
             </div>
@@ -894,7 +805,7 @@ export default function RoutinesPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 {t('routines.type')}
@@ -908,17 +819,6 @@ export default function RoutinesPage() {
                 <option value="evening">{t('routines.evening')}</option>
                 <option value="custom">{t('routines.custom')}</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                {t('routines.startTime')}
-              </label>
-              <input
-                type="time"
-                value={formData.scheduled_time}
-                onChange={(e) => setFormData({ ...formData, scheduled_time: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-sage-500 focus:border-transparent"
-              />
             </div>
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -938,7 +838,7 @@ export default function RoutinesPage() {
             </div>
           </div>
 
-          {/* Participants - Multi-select for children */}
+          {/* Participants */}
           {children.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
@@ -976,14 +876,10 @@ export default function RoutinesPage() {
                   )
                 })}
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-                {formData.member_ids.length === 0
-                  ? t('routines.everyone')
-                  : `${formData.member_ids.length} selected`}
-              </p>
             </div>
           )}
 
+          {/* Steps - simplified, no duration */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -1004,7 +900,7 @@ export default function RoutinesPage() {
                     type="text"
                     value={step.emoji}
                     onChange={(e) => updateStep(index, 'emoji', e.target.value)}
-                    className="w-12 px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-center"
+                    className="w-14 px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-center text-xl"
                   />
                   <input
                     type="text"
@@ -1013,16 +909,6 @@ export default function RoutinesPage() {
                     placeholder={t('routines.stepTitlePlaceholder')}
                     className="flex-1 px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
                   />
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="number"
-                      value={step.duration_minutes}
-                      onChange={(e) => updateStep(index, 'duration_minutes', parseInt(e.target.value) || 1)}
-                      className="w-16 px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-center"
-                      min="1"
-                    />
-                    <span className="text-sm text-slate-500">min</span>
-                  </div>
                   {formData.steps.length > 1 && (
                     <button
                       onClick={() => removeStep(index)}

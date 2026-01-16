@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { ClipboardList, Play, Check, Moon, Sun, Clock } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { ClipboardList, Check, Moon, Sun, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
-import { useWidgetSize } from '@/lib/useWidgetSize'
 
 // Demo routines for when not logged in
 const DEMO_ROUTINES: (Routine & { steps: RoutineStep[], members: FamilyMember[] })[] = [
@@ -43,25 +42,21 @@ interface RoutineWithData extends Routine {
   members: FamilyMember[]
 }
 
-interface Props {
-  onOpenRoutine?: (routine: RoutineWithData, completions: RoutineCompletion[]) => void
-}
-
-export default function RoutinesWidget({ onOpenRoutine }: Props) {
+export default function RoutinesWidget() {
   const { user } = useAuth()
-  const { getMember } = useFamily()
+  const { getMember, updateMemberPoints } = useFamily()
   const { rewardsEnabled } = useSettings()
   const { t } = useTranslation()
   const [routines, setRoutines] = useState<RoutineWithData[]>([])
   const [completions, setCompletions] = useState<RoutineCompletion[]>([])
-  const [ref, { size }] = useWidgetSize()
+  const [cooldowns, setCooldowns] = useState<Set<string>>(new Set())
+  const cooldownTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
 
   const today = new Date().toISOString().split('T')[0]
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
       setRoutines(DEMO_ROUTINES)
-      // Demo completions - Olivia completed first 2 steps, Ellie completed first step
       setCompletions([
         { id: 'c1', routine_id: 'demo-bedtime', step_id: 'step-1', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
         { id: 'c2', routine_id: 'demo-bedtime', step_id: 'step-2', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
@@ -71,7 +66,6 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
     }
 
     try {
-      // Fetch routines with steps and members
       const { data: routinesData } = await supabase
         .from('routines')
         .select('*')
@@ -79,27 +73,23 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
         .order('sort_order', { ascending: true })
 
       if (routinesData && routinesData.length > 0) {
-        // Fetch steps for all routines
         const { data: stepsData } = await supabase
           .from('routine_steps')
           .select('*')
           .in('routine_id', routinesData.map(r => r.id))
           .order('sort_order', { ascending: true })
 
-        // Fetch routine members
         const { data: membersData } = await supabase
           .from('routine_members')
           .select('*, member:family_members(*)')
           .in('routine_id', routinesData.map(r => r.id))
 
-        // Fetch today's completions
         const { data: completionsData } = await supabase
           .from('routine_completions')
           .select('*')
           .in('routine_id', routinesData.map(r => r.id))
           .eq('completed_date', today)
 
-        // Combine data
         const routinesWithData: RoutineWithData[] = routinesData.map(routine => ({
           ...routine,
           steps: (stepsData || []).filter(s => s.routine_id === routine.id),
@@ -112,7 +102,6 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
         setRoutines(routinesWithData)
         setCompletions(completionsData || [])
       } else {
-        // No routines in DB - show demo data as starting point
         setRoutines(DEMO_ROUTINES)
         setCompletions([])
       }
@@ -124,33 +113,89 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
 
   useEffect(() => {
     fetchRoutines()
+    return () => {
+      // Cleanup timers on unmount
+      cooldownTimers.current.forEach(timer => clearTimeout(timer))
+    }
   }, [fetchRoutines])
 
-  // Get routine type icon
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'morning': return <Sun className="w-3 h-3 text-amber-500" />
-      case 'evening': return <Moon className="w-3 h-3 text-indigo-500" />
-      default: return <Clock className="w-3 h-3 text-slate-500" />
-    }
-  }
-
-  // Check if a step is completed by a member
   const isStepCompletedBy = (routineId: string, stepId: string, memberId: string) => {
     return completions.some(
       c => c.routine_id === routineId && c.step_id === stepId && c.member_id === memberId
     )
   }
 
-  // Get completion count for a step (how many members completed it)
-  const getStepCompletionCount = (routineId: string, stepId: string, totalMembers: number) => {
-    const count = completions.filter(
-      c => c.routine_id === routineId && c.step_id === stepId
-    ).length
-    return { count, total: totalMembers }
+  const toggleStepForMember = async (routine: RoutineWithData, stepId: string, memberId: string) => {
+    const cooldownKey = `${stepId}:${memberId}`
+
+    // Check cooldown
+    if (cooldowns.has(cooldownKey)) return
+
+    const isCompleted = isStepCompletedBy(routine.id, stepId, memberId)
+
+    // Set 5-second cooldown
+    setCooldowns(prev => new Set(prev).add(cooldownKey))
+    const timer = setTimeout(() => {
+      setCooldowns(prev => {
+        const next = new Set(prev)
+        next.delete(cooldownKey)
+        return next
+      })
+      cooldownTimers.current.delete(cooldownKey)
+    }, 5000)
+    cooldownTimers.current.set(cooldownKey, timer)
+
+    if (isCompleted) {
+      // Remove completion
+      setCompletions(prev => prev.filter(
+        c => !(c.routine_id === routine.id && c.step_id === stepId && c.member_id === memberId)
+      ))
+
+      if (user) {
+        await supabase
+          .from('routine_completions')
+          .delete()
+          .eq('routine_id', routine.id)
+          .eq('step_id', stepId)
+          .eq('member_id', memberId)
+          .eq('completed_date', today)
+      }
+    } else {
+      // Add completion
+      const newCompletion: RoutineCompletion = {
+        id: `temp-${Date.now()}`,
+        routine_id: routine.id,
+        step_id: stepId,
+        member_id: memberId,
+        completed_date: today,
+        completed_at: new Date().toISOString()
+      }
+      setCompletions(prev => [...prev, newCompletion])
+
+      if (user) {
+        await supabase
+          .from('routine_completions')
+          .insert({
+            routine_id: routine.id,
+            step_id: stepId,
+            member_id: memberId,
+            completed_date: today
+          })
+      }
+
+      // Check if member completed all steps - award stars
+      const memberNowCompletedAll = routine.steps.every(s =>
+        s.id === stepId || isStepCompletedBy(routine.id, s.id, memberId)
+      )
+      if (memberNowCompletedAll && routine.points_reward > 0 && rewardsEnabled) {
+        const member = getMember(memberId)
+        if (member?.stars_enabled) {
+          updateMemberPoints(memberId, routine.points_reward)
+        }
+      }
+    }
   }
 
-  // Check if routine is fully complete (all members completed all steps)
   const isRoutineComplete = (routine: RoutineWithData) => {
     if (routine.steps.length === 0 || routine.members.length === 0) return false
     return routine.steps.every(step =>
@@ -160,162 +205,122 @@ export default function RoutinesWidget({ onOpenRoutine }: Props) {
     )
   }
 
-  // Calculate overall progress for a routine
-  const getRoutineProgress = (routine: RoutineWithData) => {
-    if (routine.steps.length === 0 || routine.members.length === 0) return 0
-    const totalPossible = routine.steps.length * routine.members.length
-    const completed = routine.steps.reduce((acc, step) => {
-      return acc + routine.members.filter(m => isStepCompletedBy(routine.id, step.id, m.id)).length
-    }, 0)
-    return Math.round((completed / totalPossible) * 100)
+  // Select the appropriate routine based on time of day
+  const hour = new Date().getHours()
+  const activeRoutine = routines.find(r =>
+    hour < 14 ? r.type === 'morning' : r.type === 'evening'
+  ) || routines[0]
+
+  if (!activeRoutine) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
+        <ClipboardList className="w-8 h-8 text-slate-300 mb-2" />
+        <p className="text-sm text-slate-500">{t('routines.noRoutines')}</p>
+      </div>
+    )
   }
 
-  const compactMode = size === 'small'
-  const showMultiple = size === 'large' || size === 'xlarge'
+  const complete = isRoutineComplete(activeRoutine)
 
   return (
-    <div
-      ref={ref}
-      className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark"
-    >
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <ClipboardList className="w-4 h-4 text-indigo-500" />
-          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-            {t('routines.title')}
-          </h3>
+    <div className="h-full flex flex-col bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden">
+      {/* Compact Header */}
+      <div className="flex items-center justify-between px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500">
+        <div className="flex items-center gap-2 text-white">
+          {activeRoutine.type === 'morning' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          <span className="font-semibold text-sm">{activeRoutine.title}</span>
         </div>
+        {complete && (
+          <div className="flex items-center gap-1 text-white/90">
+            <Check className="w-4 h-4" />
+            <span className="text-xs font-medium">{t('routines.done')}</span>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 space-y-3 overflow-hidden">
-        {routines.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-            <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center mb-2">
-              <ClipboardList className="w-6 h-6 text-indigo-400" />
-            </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">{t('routines.noRoutines')}</p>
-          </div>
-        ) : (
-          routines.slice(0, showMultiple ? 2 : 1).map(routine => {
-            const progress = getRoutineProgress(routine)
-            const complete = isRoutineComplete(routine)
+      {/* Steps Grid - Fill the rest */}
+      <div className="flex-1 p-3 flex flex-col">
+        {/* Large Step Icons */}
+        <div className="flex-1 flex flex-wrap justify-center items-center gap-2 content-center">
+          {activeRoutine.steps.map((step) => {
+            const allMembersDone = activeRoutine.members.every(m =>
+              isStepCompletedBy(activeRoutine.id, step.id, m.id)
+            )
+            const someMembersDone = activeRoutine.members.some(m =>
+              isStepCompletedBy(activeRoutine.id, step.id, m.id)
+            )
 
             return (
-              <button
-                key={routine.id}
-                onClick={() => onOpenRoutine?.(routine, completions.filter(c => c.routine_id === routine.id))}
-                className={`w-full p-3 rounded-2xl transition-all text-left ${
-                  complete
-                    ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
-                    : 'bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 border border-transparent'
+              <div
+                key={step.id}
+                className={`relative flex flex-col items-center transition-all duration-300 ${
+                  allMembersDone ? 'scale-90 opacity-60' : ''
                 }`}
               >
-                {/* Header */}
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className={compactMode ? 'text-lg' : 'text-xl'}>{routine.emoji}</span>
-                    <span className={`font-medium ${compactMode ? 'text-sm' : 'text-base'} text-slate-800 dark:text-slate-100`}>
-                      {routine.title}
-                    </span>
-                    {getTypeIcon(routine.type)}
-                  </div>
-                  {complete ? (
-                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 dark:bg-green-900/50 text-green-600 dark:text-green-400">
-                      <Check className="w-3 h-3" />
-                      <span className="text-xs font-medium">{t('routines.done')}</span>
-                    </div>
+                {/* Step Icon */}
+                <div
+                  className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-all ${
+                    allMembersDone
+                      ? 'bg-green-100 dark:bg-green-900/50 ring-2 ring-green-400'
+                      : someMembersDone
+                      ? 'bg-amber-50 dark:bg-amber-900/30 ring-2 ring-amber-300'
+                      : 'bg-slate-100 dark:bg-slate-700'
+                  }`}
+                >
+                  {allMembersDone ? (
+                    <Check className="w-7 h-7 text-green-500" />
                   ) : (
-                    <div className="flex items-center gap-1">
-                      <Play className="w-4 h-4 text-indigo-500" />
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{progress}%</span>
-                    </div>
+                    step.emoji
                   )}
                 </div>
 
-                {/* Steps progress - horizontal */}
-                <div className="flex items-center gap-1 mb-2 overflow-x-auto">
-                  {routine.steps.map((step, index) => {
-                    const { count, total } = getStepCompletionCount(routine.id, step.id, routine.members.length)
-                    const allComplete = count === total && total > 0
+                {/* Member buttons below each step */}
+                <div className="flex gap-1 mt-1.5">
+                  {activeRoutine.members.map(member => {
+                    const done = isStepCompletedBy(activeRoutine.id, step.id, member.id)
+                    const cooldownKey = `${step.id}:${member.id}`
+                    const onCooldown = cooldowns.has(cooldownKey)
 
                     return (
-                      <div key={step.id} className="flex items-center">
-                        {/* Step emoji with completion indicator */}
-                        <div
-                          className={`relative flex flex-col items-center ${compactMode ? 'min-w-[36px]' : 'min-w-[44px]'}`}
-                        >
-                          <div
-                            className={`${compactMode ? 'w-8 h-8 text-base' : 'w-10 h-10 text-lg'} rounded-full flex items-center justify-center transition-all ${
-                              allComplete
-                                ? 'bg-green-100 dark:bg-green-900/50 ring-2 ring-green-400'
-                                : count > 0
-                                ? 'bg-amber-100 dark:bg-amber-900/30 ring-2 ring-amber-400'
-                                : 'bg-slate-100 dark:bg-slate-600'
-                            }`}
-                          >
-                            {allComplete ? (
-                              <Check className={`${compactMode ? 'w-4 h-4' : 'w-5 h-5'} text-green-600 dark:text-green-400`} />
-                            ) : (
-                              step.emoji
-                            )}
-                          </div>
-
-                          {/* Member completion dots */}
-                          {!compactMode && routine.members.length > 0 && (
-                            <div className="flex gap-0.5 mt-1">
-                              {routine.members.map(member => (
-                                <div
-                                  key={member.id}
-                                  className={`w-2 h-2 rounded-full transition-all ${
-                                    isStepCompletedBy(routine.id, step.id, member.id)
-                                      ? ''
-                                      : 'opacity-30'
-                                  }`}
-                                  style={{ backgroundColor: member.color }}
-                                  title={member.name}
-                                />
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Arrow between steps */}
-                        {index < routine.steps.length - 1 && (
-                          <div className={`text-slate-300 dark:text-slate-600 ${compactMode ? 'text-xs' : 'text-sm'}`}>
-                            →
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-
-                {/* Member avatars */}
-                {!compactMode && (
-                  <div className="flex items-center gap-1 pt-2 border-t border-slate-100 dark:border-slate-600">
-                    <span className="text-xs text-slate-400 dark:text-slate-500 mr-1">
-                      {t('routines.participants')}:
-                    </span>
-                    {routine.members.map(member => (
-                      <div
+                      <button
                         key={member.id}
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-medium ring-2 ring-white dark:ring-slate-700"
+                        onClick={() => toggleStepForMember(activeRoutine, step.id, member.id)}
+                        disabled={onCooldown}
+                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white transition-all ${
+                          onCooldown
+                            ? 'opacity-50 cursor-not-allowed'
+                            : 'hover:scale-110 active:scale-95'
+                        } ${
+                          done ? 'ring-2 ring-green-400 ring-offset-1' : ''
+                        }`}
                         style={{ backgroundColor: member.color }}
                         title={member.name}
                       >
-                        {member.avatar || member.name.charAt(0)}
-                      </div>
-                    ))}
-                    {rewardsEnabled && routine.points_reward > 0 && (
-                      <span className="ml-auto text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        +{routine.points_reward} ⭐
-                      </span>
-                    )}
-                  </div>
-                )}
-              </button>
+                        {done ? '✓' : member.name.charAt(0)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
             )
-          })
+          })}
+        </div>
+
+        {/* Completion message */}
+        {complete && (
+          <div className="text-center py-2 animate-bounce">
+            <span className="text-lg">
+              {activeRoutine.type === 'evening' ? '🌟 ' + t('routines.sweetDreams') + ' 🌟' : '🌟 ' + t('routines.haveGreatDay') + ' 🌟'}
+            </span>
+          </div>
+        )}
+
+        {/* Stars reward indicator */}
+        {rewardsEnabled && activeRoutine.points_reward > 0 && !complete && (
+          <div className="flex items-center justify-center gap-1 text-amber-500 text-xs">
+            <Star className="w-3 h-3" />
+            <span>+{activeRoutine.points_reward} {t('routines.starsReward')}</span>
+          </div>
         )}
       </div>
     </div>
