@@ -321,17 +321,23 @@ export default function RoutinesWidget() {
                         key={member.id}
                         onClick={() => toggleStepForMember(activeRoutine, step.id, member.id)}
                         disabled={onCooldown}
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white transition-all duration-200 ${
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white transition-all duration-200 overflow-hidden ${
                           onCooldown
                             ? 'opacity-50 cursor-not-allowed'
                             : 'hover:scale-110 active:scale-90'
                         } ${
                           done ? 'ring-2 ring-green-400 ring-offset-1 shadow-lg' : 'hover:shadow-md'
                         }`}
-                        style={{ backgroundColor: member.color }}
+                        style={{ backgroundColor: member.photo_url ? undefined : member.color }}
                         title={member.name}
                       >
-                        {done ? '✓' : member.name.charAt(0)}
+                        {done ? (
+                          <span className="text-green-500 bg-white rounded-full w-6 h-6 flex items-center justify-center">✓</span>
+                        ) : member.photo_url ? (
+                          <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                        ) : (
+                          member.name.charAt(0)
+                        )}
                       </button>
                     )
                   })}

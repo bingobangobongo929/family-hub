@@ -787,10 +787,14 @@ export default function RoutinesPage() {
                         return member ? (
                           <span
                             key={memberId}
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                            style={{ backgroundColor: member.color }}
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
+                            style={{ backgroundColor: member.photo_url ? undefined : member.color }}
                           >
-                            {member.name.charAt(0)}
+                            {member.photo_url ? (
+                              <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
+                            ) : (
+                              member.name.charAt(0)
+                            )}
                           </span>
                         ) : null
                       })}
@@ -885,16 +889,18 @@ export default function RoutinesPage() {
                           <button
                             key={memberId}
                             onClick={() => toggleStepForMember(step.id, memberId)}
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg ${
+                            className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg overflow-hidden ${
                               memberDone
                                 ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200'
                                 : 'opacity-80 hover:opacity-100'
                             }`}
-                            style={{ backgroundColor: member.color }}
+                            style={{ backgroundColor: member.photo_url ? undefined : member.color }}
                             title={member.name}
                           >
                             {memberDone ? (
-                              <span className="animate-pop">✓</span>
+                              <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center">✓</span>
+                            ) : member.photo_url ? (
+                              <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
                             ) : (
                               member.name.charAt(0)
                             )}
