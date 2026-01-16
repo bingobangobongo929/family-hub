@@ -5,6 +5,7 @@ import Card from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown } from 'lucide-react'
+import { AvatarDisplay } from '@/components/PhotoUpload'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
@@ -790,17 +791,14 @@ export default function RoutinesPage() {
                   {(selectedRoutine.members?.length || 0) > 0 && (
                     <span className="flex items-center gap-1">
                       {selectedRoutine.members?.map(member => (
-                        <span
+                        <AvatarDisplay
                           key={member.id}
-                          className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold overflow-hidden"
-                          style={{ backgroundColor: member.photo_url ? undefined : member.color }}
-                        >
-                          {member.photo_url ? (
-                            <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
-                          ) : (
-                            member.name.charAt(0)
-                          )}
-                        </span>
+                          photoUrl={member.photo_url}
+                          emoji={member.avatar}
+                          name={member.name}
+                          color={member.color}
+                          size="xs"
+                        />
                       ))}
                     </span>
                   )}
@@ -892,20 +890,25 @@ export default function RoutinesPage() {
                           <button
                             key={member.id}
                             onClick={() => toggleStepForMember(step.id, member.id)}
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg overflow-hidden ${
+                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg overflow-hidden ${
                               memberDone
                                 ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200'
                                 : 'opacity-80 hover:opacity-100'
                             }`}
-                            style={{ backgroundColor: member.photo_url ? undefined : member.color }}
                             title={member.name}
                           >
-                            {memberDone ? (
-                              <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center">✓</span>
-                            ) : member.photo_url ? (
-                              <img src={member.photo_url} alt={member.name} className="w-full h-full object-cover" />
-                            ) : (
-                              member.name.charAt(0)
+                            <AvatarDisplay
+                              photoUrl={member.photo_url}
+                              emoji={member.avatar}
+                              name={member.name}
+                              color={member.color}
+                              size="md"
+                              className="w-full h-full"
+                            />
+                            {memberDone && (
+                              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">✓</span>
+                              </span>
                             )}
                           </button>
                         )
