@@ -322,34 +322,34 @@ export default function RoutinesWidget() {
   }, 0)
   const progressPercent = totalStepMemberPairs > 0 ? (completedStepMemberPairs / totalStepMemberPairs) * 100 : 0
 
-  // Get emoji size based on widget size
+  // Get emoji size based on widget size - BIGGER!
   const getEmojiSize = () => {
     switch (widgetSize) {
-      case 'tiny': return 'text-5xl'
-      case 'compact': return 'text-6xl'
-      case 'standard': return 'text-7xl'
-      case 'large': return 'text-8xl'
-      case 'xlarge': return 'text-9xl'
+      case 'tiny': return 'text-6xl'
+      case 'compact': return 'text-7xl'
+      case 'standard': return 'text-8xl'
+      case 'large': return 'text-9xl'
+      case 'xlarge': return 'text-[10rem]'
     }
   }
 
-  // Get avatar size based on widget size
+  // Get avatar size based on widget size - BIGGER tap targets!
   const getAvatarSize = () => {
     switch (widgetSize) {
-      case 'tiny': return 'w-8 h-8'
-      case 'compact': return 'w-10 h-10'
-      case 'standard': return 'w-12 h-12'
-      case 'large': return 'w-14 h-14'
-      case 'xlarge': return 'w-16 h-16'
+      case 'tiny': return 'w-12 h-12'
+      case 'compact': return 'w-14 h-14'
+      case 'standard': return 'w-16 h-16'
+      case 'large': return 'w-20 h-20'
+      case 'xlarge': return 'w-24 h-24'
     }
   }
 
   const getAvatarSizeProp = (): 'xs' | 'sm' | 'md' | 'lg' => {
     switch (widgetSize) {
-      case 'tiny': return 'xs'
-      case 'compact': return 'sm'
-      case 'standard': return 'sm'
-      case 'large': return 'md'
+      case 'tiny': return 'sm'
+      case 'compact': return 'md'
+      case 'standard': return 'md'
+      case 'large': return 'lg'
       case 'xlarge': return 'lg'
     }
   }
