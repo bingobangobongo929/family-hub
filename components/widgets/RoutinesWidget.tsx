@@ -11,34 +11,6 @@ import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/dat
 import Confetti from '@/components/Confetti'
 import { AvatarDisplay } from '@/components/PhotoUpload'
 
-// Default routines (used when database is empty)
-const DEFAULT_ROUTINES: (Routine & { steps: RoutineStep[], members: FamilyMember[] })[] = [
-  {
-    id: 'demo-bedtime',
-    user_id: 'demo',
-    title: 'Bedtime Routine',
-    emoji: '🌙',
-    type: 'evening',
-    scheduled_time: '19:30',
-    points_reward: 2,
-    is_active: true,
-    sort_order: 0,
-    created_at: '',
-    updated_at: '',
-    steps: [
-      { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 10, sort_order: 0, created_at: '' },
-      { id: 'step-2', routine_id: 'demo-bedtime', title: 'Pajamas', emoji: '👕', duration_minutes: 5, sort_order: 1, created_at: '' },
-      { id: 'step-3', routine_id: 'demo-bedtime', title: 'Toothbrushing', emoji: '🪥', duration_minutes: 3, sort_order: 2, created_at: '' },
-      { id: 'step-4', routine_id: 'demo-bedtime', title: 'Supper Milk', emoji: '🥛', duration_minutes: 5, sort_order: 3, created_at: '' },
-      { id: 'step-5', routine_id: 'demo-bedtime', title: 'Kiss & Goodnight', emoji: '😘', duration_minutes: 2, sort_order: 4, created_at: '' },
-    ],
-    members: [
-      { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, stars_enabled: true, sort_order: 2, created_at: '', updated_at: '' },
-      { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, stars_enabled: false, sort_order: 3, created_at: '', updated_at: '' },
-    ],
-  },
-]
-
 interface RoutineWithData extends Routine {
   steps: RoutineStep[]
   members: FamilyMember[]
@@ -59,24 +31,9 @@ export default function RoutinesWidget() {
 
   const today = new Date().toISOString().split('T')[0]
 
-  // Get child members from family context for use in default routines
-  const { members: familyMembers } = useFamily()
-  const childMembers = familyMembers.filter(m => m.role === 'child')
-
-  // Create default routines with actual family members (with their photos)
-  const getDefaultRoutinesWithRealMembers = useCallback(() => {
-    if (childMembers.length === 0) return DEFAULT_ROUTINES
-
-    return DEFAULT_ROUTINES.map(routine => ({
-      ...routine,
-      members: childMembers,
-    }))
-  }, [childMembers])
-
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-      setRoutines(defaultWithMembers)
+      setRoutines([])
       setCompletions([])
       return
     }
@@ -118,16 +75,14 @@ export default function RoutinesWidget() {
         setRoutines(routinesWithData)
         setCompletions(completionsData || [])
       } else {
-        const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-        setRoutines(defaultWithMembers)
+        setRoutines([])
         setCompletions([])
       }
     } catch (error) {
       console.error('Error fetching routines:', error)
-      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-      setRoutines(defaultWithMembers)
+      setRoutines([])
     }
-  }, [user, today, getDefaultRoutinesWithRealMembers])
+  }, [user, today])
 
   useEffect(() => {
     fetchRoutines()

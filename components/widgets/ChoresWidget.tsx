@@ -10,16 +10,6 @@ import { useTranslation } from '@/lib/i18n-context'
 import { Chore } from '@/lib/database.types'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 
-// Demo chores
-const DEMO_CHORES: Chore[] = [
-  { id: '1', user_id: 'demo', title: 'Make bed', emoji: '🛏️', description: null, assigned_to: 'demo-olivia', points: 2, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'bedroom', sort_order: 0, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: '2', user_id: 'demo', title: 'Brush teeth', emoji: '🪥', description: null, assigned_to: 'demo-olivia', points: 1, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'completed', category: 'health', sort_order: 1, created_at: '', completed_at: new Date().toISOString(), completed_by: 'demo-olivia', updated_at: '' },
-  { id: '3', user_id: 'demo', title: 'Tidy toys', emoji: '🧸', description: null, assigned_to: 'demo-olivia', points: 3, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'tidying', sort_order: 2, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: '4', user_id: 'demo', title: 'Help set table', emoji: '🍽️', description: null, assigned_to: 'demo-olivia', points: 2, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'meals', sort_order: 3, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: '5', user_id: 'demo', title: 'Put shoes away', emoji: '👟', description: null, assigned_to: 'demo-ellie', points: 1, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'tidying', sort_order: 4, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: '6', user_id: 'demo', title: 'Water plants', emoji: '🌱', description: null, assigned_to: 'demo-olivia', points: 2, due_date: null, due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'garden', sort_order: 5, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-]
-
 export default function ChoresWidget() {
   const { user } = useAuth()
   const { getMember, updateMemberPoints } = useFamily()
@@ -30,7 +20,7 @@ export default function ChoresWidget() {
 
   const fetchChores = useCallback(async () => {
     if (!user) {
-      setChores(DEMO_CHORES)
+      setChores([])
       return
     }
 
@@ -49,7 +39,7 @@ export default function ChoresWidget() {
       }
     } catch (error) {
       console.error('Error fetching chores:', error)
-      setChores(DEMO_CHORES)
+      setChores([])
     }
   }, [user])
 
@@ -58,21 +48,10 @@ export default function ChoresWidget() {
   }, [fetchChores])
 
   const toggleChore = async (chore: Chore) => {
+    if (!user) return
+
     const newStatus = chore.status === 'completed' ? 'pending' : 'completed'
     const pointDelta = newStatus === 'completed' ? chore.points : -chore.points
-
-    if (chore.assigned_to) {
-      await updateMemberPoints(chore.assigned_to, pointDelta)
-    }
-
-    if (!user) {
-      setChores(chores.map(c =>
-        c.id === chore.id
-          ? { ...c, status: newStatus, completed_at: newStatus === 'completed' ? new Date().toISOString() : null }
-          : c
-      ))
-      return
-    }
 
     try {
       await supabase
@@ -83,6 +62,10 @@ export default function ChoresWidget() {
           completed_by: newStatus === 'completed' ? chore.assigned_to : null
         })
         .eq('id', chore.id)
+
+      if (chore.assigned_to) {
+        await updateMemberPoints(chore.assigned_to, pointDelta)
+      }
 
       await fetchChores()
     } catch (error) {

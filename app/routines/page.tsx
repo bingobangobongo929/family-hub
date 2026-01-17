@@ -20,61 +20,6 @@ type RoutineWithDetails = Routine & {
   member_ids?: string[]
 }
 
-// Default family members
-const DEFAULT_MEMBERS: FamilyMember[] = [
-  { id: 'demo-olivia', user_id: 'demo', name: 'Olivia', color: '#8b5cf6', role: 'child', avatar: null, photo_url: null, date_of_birth: '2017-09-10', aliases: [], description: null, points: 47, stars_enabled: true, sort_order: 2, created_at: '', updated_at: '' },
-  { id: 'demo-ellie', user_id: 'demo', name: 'Ellie', color: '#22c55e', role: 'child', avatar: null, photo_url: null, date_of_birth: '2020-01-28', aliases: [], description: null, points: 23, stars_enabled: false, sort_order: 3, created_at: '', updated_at: '' },
-]
-
-// Default routines (used when database is empty)
-const DEFAULT_ROUTINES: RoutineWithDetails[] = [
-  {
-    id: 'demo-bedtime',
-    user_id: 'demo',
-    title: 'Bedtime Routine',
-    emoji: '🌙',
-    type: 'evening',
-    assigned_to: null,
-    scheduled_time: '19:30',
-    points_reward: 2,
-    is_active: true,
-    sort_order: 0,
-    created_at: '',
-    updated_at: '',
-    members: DEFAULT_MEMBERS,
-    member_ids: ['demo-olivia', 'demo-ellie'],
-    steps: [
-      { id: 'step-1', routine_id: 'demo-bedtime', title: 'Porridge', emoji: '🥣', duration_minutes: 0, sort_order: 0, created_at: '' },
-      { id: 'step-2', routine_id: 'demo-bedtime', title: 'Pajamas', emoji: '👕', duration_minutes: 0, sort_order: 1, created_at: '' },
-      { id: 'step-3', routine_id: 'demo-bedtime', title: 'Toothbrushing', emoji: '🪥', duration_minutes: 0, sort_order: 2, created_at: '' },
-      { id: 'step-4', routine_id: 'demo-bedtime', title: 'Supper Milk', emoji: '🥛', duration_minutes: 0, sort_order: 3, created_at: '' },
-      { id: 'step-5', routine_id: 'demo-bedtime', title: 'Kiss & Goodnight', emoji: '😘', duration_minutes: 0, sort_order: 4, created_at: '' },
-    ]
-  },
-  {
-    id: 'demo-morning',
-    user_id: 'demo',
-    title: 'Morning Routine',
-    emoji: '☀️',
-    type: 'morning',
-    assigned_to: null,
-    scheduled_time: '07:00',
-    points_reward: 2,
-    is_active: true,
-    sort_order: 1,
-    created_at: '',
-    updated_at: '',
-    members: DEFAULT_MEMBERS,
-    member_ids: ['demo-olivia', 'demo-ellie'],
-    steps: [
-      { id: 'ms1', routine_id: 'demo-morning', title: 'Get dressed', emoji: '👕', duration_minutes: 0, sort_order: 0, created_at: '' },
-      { id: 'ms2', routine_id: 'demo-morning', title: 'Brush teeth', emoji: '🪥', duration_minutes: 0, sort_order: 1, created_at: '' },
-      { id: 'ms3', routine_id: 'demo-morning', title: 'Eat breakfast', emoji: '🥣', duration_minutes: 0, sort_order: 2, created_at: '' },
-      { id: 'ms4', routine_id: 'demo-morning', title: 'Tidy bedroom', emoji: '🛏️', duration_minutes: 0, sort_order: 3, created_at: '' },
-    ]
-  }
-]
-
 export default function RoutinesPage() {
   const { user } = useAuth()
   const { members, getMember, updateMemberPoints } = useFamily()
@@ -93,13 +38,6 @@ export default function RoutinesPage() {
 
   const children = members.filter(m => m.role === 'child')
 
-  // Helper to get member, falling back to demo members when not logged in
-  const getRoutineMember = (memberId: string): FamilyMember | undefined => {
-    const member = getMember(memberId)
-    if (member) return member
-    return DEFAULT_MEMBERS.find(m => m.id === memberId)
-  }
-
   const [formData, setFormData] = useState({
     title: '',
     emoji: '📋',
@@ -110,26 +48,10 @@ export default function RoutinesPage() {
     steps: [{ title: '', emoji: '✨' }]
   })
 
-  // Create default routines with actual family members (not hardcoded ones)
-  const getDefaultRoutinesWithRealMembers = useCallback(() => {
-    const childMembers = members.filter(m => m.role === 'child')
-    if (childMembers.length === 0) return DEFAULT_ROUTINES
-
-    return DEFAULT_ROUTINES.map(routine => ({
-      ...routine,
-      members: childMembers,
-      member_ids: childMembers.map(m => m.id)
-    }))
-  }, [members])
-
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-      setRoutines(defaultWithMembers)
-      const hour = new Date().getHours()
-      const morning = defaultWithMembers.find(r => r.type === 'morning')
-      const evening = defaultWithMembers.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || defaultWithMembers[0]) : (evening || defaultWithMembers[0]))
+      setRoutines([])
+      setSelectedRoutine(null)
       setLoading(false)
       return
     }
@@ -170,40 +92,31 @@ export default function RoutinesPage() {
         })
       )
 
-      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : defaultWithMembers
-      setRoutines(finalRoutines as RoutineWithDetails[])
+      setRoutines(routinesWithDetails as RoutineWithDetails[])
 
       const hour = new Date().getHours()
-      const morning = finalRoutines.find(r => r.type === 'morning')
-      const evening = finalRoutines.find(r => r.type === 'evening')
+      const morning = routinesWithDetails.find(r => r.type === 'morning')
+      const evening = routinesWithDetails.find(r => r.type === 'evening')
       setSelectedRoutine(
         hour < 14
-          ? (morning || finalRoutines[0] || null)
-          : (evening || finalRoutines[0] || null)
+          ? (morning || routinesWithDetails[0] || null)
+          : (evening || routinesWithDetails[0] || null)
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
-      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
-      setRoutines(defaultWithMembers)
-      const hour = new Date().getHours()
-      const morning = defaultWithMembers.find(r => r.type === 'morning')
-      const evening = defaultWithMembers.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || defaultWithMembers[0]) : (evening || defaultWithMembers[0]))
+      setRoutines([])
+      setSelectedRoutine(null)
     }
     setLoading(false)
-  }, [user, getDefaultRoutinesWithRealMembers])
+  }, [user])
 
   const loadCompletions = useCallback(async () => {
-    const today = new Date().toISOString().split('T')[0]
-
     if (!user) {
-      const saved = localStorage.getItem('routine-completions-' + today)
-      if (saved) {
-        setCompletedSteps(new Set(JSON.parse(saved)))
-      }
+      setCompletedSteps(new Set())
       return
     }
+
+    const today = new Date().toISOString().split('T')[0]
 
     try {
       const { data } = await supabase
@@ -225,22 +138,20 @@ export default function RoutinesPage() {
   }, [fetchRoutines, loadCompletions])
 
   const toggleStepForMember = async (stepId: string, memberId: string) => {
+    if (!user) return
+
     const today = new Date().toISOString().split('T')[0]
     const key = `${stepId}:${memberId}`
     const newCompleted = new Set(completedSteps)
 
     if (newCompleted.has(key)) {
       newCompleted.delete(key)
-      if (!user) {
-        localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
-      } else {
-        await supabase
-          .from('routine_completions')
-          .delete()
-          .eq('step_id', stepId)
-          .eq('member_id', memberId)
-          .eq('completed_date', today)
-      }
+      await supabase
+        .from('routine_completions')
+        .delete()
+        .eq('step_id', stepId)
+        .eq('member_id', memberId)
+        .eq('completed_date', today)
     } else {
       newCompleted.add(key)
 
@@ -253,25 +164,21 @@ export default function RoutinesPage() {
       setConfettiTrigger(t => t + 1)
       setTimeout(() => setCelebratingStep(null), 600)
 
-      if (!user) {
-        localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
-      } else {
-        await supabase
-          .from('routine_completions')
-          .insert({
-            routine_id: selectedRoutine?.id,
-            step_id: stepId,
-            member_id: memberId,
-            completed_date: today
-          })
-      }
+      await supabase
+        .from('routine_completions')
+        .insert({
+          routine_id: selectedRoutine?.id,
+          step_id: stepId,
+          member_id: memberId,
+          completed_date: today
+        })
 
       if (selectedRoutine) {
         const memberCompletedAll = selectedRoutine.steps.every(
           s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
         )
         if (memberCompletedAll && selectedRoutine.points_reward > 0) {
-          const member = getRoutineMember(memberId)
+          const member = getMember(memberId)
           if (member?.stars_enabled) {
             updateMemberPoints(memberId, selectedRoutine.points_reward)
           }
@@ -302,27 +209,15 @@ export default function RoutinesPage() {
   }
 
   const toggleStep = async (stepId: string) => {
+    if (!user) return
     const routineMembers = selectedRoutine?.member_ids || []
-    if (routineMembers.length === 0) {
-      const today = new Date().toISOString().split('T')[0]
-      const key = `${stepId}:all`
-      const newCompleted = new Set(completedSteps)
-      if (newCompleted.has(key)) {
-        newCompleted.delete(key)
-      } else {
-        newCompleted.add(key)
-      }
-      localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
-      setCompletedSteps(newCompleted)
-    } else {
-      for (const memberId of routineMembers) {
-        await toggleStepForMember(stepId, memberId)
-      }
+    for (const memberId of routineMembers) {
+      await toggleStepForMember(stepId, memberId)
     }
   }
 
   const resetRoutine = async () => {
-    if (!selectedRoutine) return
+    if (!selectedRoutine || !user) return
 
     const today = new Date().toISOString().split('T')[0]
     const stepIds = selectedRoutine.steps.map(s => s.id)
@@ -331,55 +226,19 @@ export default function RoutinesPage() {
       return !stepIds.includes(stepId)
     }))
 
-    if (!user) {
-      localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
-    } else {
-      await supabase
-        .from('routine_completions')
-        .delete()
-        .in('step_id', stepIds)
-        .eq('completed_date', today)
-    }
+    await supabase
+      .from('routine_completions')
+      .delete()
+      .in('step_id', stepIds)
+      .eq('completed_date', today)
 
     setCompletedSteps(newCompleted)
   }
 
   const handleAddRoutine = async () => {
-    if (!formData.title || formData.steps.every(s => !s.title)) return
+    if (!user || !formData.title || formData.steps.every(s => !s.title)) return
 
     const validSteps = formData.steps.filter(s => s.title.trim())
-    const routineId = 'demo-' + Date.now()
-
-    if (!user) {
-      const newRoutine: RoutineWithDetails = {
-        id: routineId,
-        user_id: 'demo',
-        title: formData.title,
-        emoji: formData.emoji,
-        type: formData.type,
-        points_reward: formData.points_reward,
-        assigned_to: null,
-        scheduled_time: formData.scheduled_time || null,
-        is_active: true,
-        sort_order: routines.length,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        member_ids: formData.member_ids,
-        steps: validSteps.map((s, i) => ({
-          id: 'step-' + Date.now() + '-' + i,
-          routine_id: routineId,
-          title: s.title,
-          emoji: s.emoji,
-          duration_minutes: 0,
-          sort_order: i,
-          created_at: new Date().toISOString()
-        }))
-      }
-      setRoutines([...routines, newRoutine])
-      setShowAddModal(false)
-      resetForm()
-      return
-    }
 
     try {
       const { data: routineData, error: routineError } = await supabase
@@ -433,42 +292,9 @@ export default function RoutinesPage() {
   }
 
   const handleEditRoutine = async () => {
-    if (!editingRoutine || !formData.title) return
+    if (!user || !editingRoutine || !formData.title) return
 
     const validSteps = formData.steps.filter(s => s.title.trim())
-
-    if (!user) {
-      const updated = routines.map(r =>
-        r.id === editingRoutine.id
-          ? {
-              ...r,
-              title: formData.title,
-              emoji: formData.emoji,
-              type: formData.type,
-              points_reward: formData.points_reward,
-              member_ids: formData.member_ids,
-              scheduled_time: formData.scheduled_time || null,
-              steps: validSteps.map((s, i) => ({
-                id: 'step-' + Date.now() + '-' + i,
-                routine_id: r.id,
-                title: s.title,
-                emoji: s.emoji,
-                duration_minutes: 0,
-                sort_order: i,
-                created_at: new Date().toISOString()
-              }))
-            }
-          : r
-      )
-      setRoutines(updated)
-      if (selectedRoutine?.id === editingRoutine.id) {
-        setSelectedRoutine(updated.find(r => r.id === editingRoutine.id) || null)
-      }
-      setShowEditModal(false)
-      setEditingRoutine(null)
-      resetForm()
-      return
-    }
 
     try {
       const { error: routineError } = await supabase
@@ -527,15 +353,7 @@ export default function RoutinesPage() {
   }
 
   const handleDeleteRoutine = async (routine: Routine) => {
-    if (!confirm('Delete this routine?')) return
-
-    if (!user) {
-      setRoutines(routines.filter(r => r.id !== routine.id))
-      if (selectedRoutine?.id === routine.id) {
-        setSelectedRoutine(routines[0] || null)
-      }
-      return
-    }
+    if (!user || !confirm('Delete this routine?')) return
 
     try {
       await supabase.from('routine_steps').delete().eq('routine_id', routine.id)

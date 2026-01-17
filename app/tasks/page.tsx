@@ -12,14 +12,6 @@ import { useFamily } from '@/lib/family-context'
 import { Chore, CHORE_CATEGORIES, getChoreCategoryConfig } from '@/lib/database.types'
 import { useTranslation } from '@/lib/i18n-context'
 
-// Demo chores
-const DEMO_CHORES: Chore[] = [
-  { id: 'demo-1', user_id: 'demo', title: 'Make bed', emoji: '🛏️', description: '', assigned_to: 'demo-olivia', points: 2, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'bedroom', sort_order: 0, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: 'demo-2', user_id: 'demo', title: 'Feed the fish', emoji: '🐠', description: '', assigned_to: 'demo-olivia', points: 3, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'pets', sort_order: 1, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-  { id: 'demo-3', user_id: 'demo', title: 'Put toys away', emoji: '🧸', description: '', assigned_to: 'demo-olivia', points: 3, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'daily', repeat_interval: 1, repeat_days: null, status: 'completed', category: 'tidying', sort_order: 2, created_at: '', completed_at: new Date().toISOString(), completed_by: 'demo-olivia', updated_at: '' },
-  { id: 'demo-4', user_id: 'demo', title: 'Restock nappies', emoji: '👶', description: '', assigned_to: 'demo-dad', points: 0, due_date: new Date().toISOString().split('T')[0], due_time: null, repeat_frequency: 'none', repeat_interval: 1, repeat_days: null, status: 'pending', category: 'baby', sort_order: 3, created_at: '', completed_at: null, completed_by: null, updated_at: '' },
-]
-
 export default function TasksPage() {
   const { user } = useAuth()
   const { members, getMember, updateMemberPoints } = useFamily()
@@ -43,7 +35,7 @@ export default function TasksPage() {
 
   const fetchChores = useCallback(async () => {
     if (!user) {
-      setChores(DEMO_CHORES)
+      setChores([])
       setLoading(false)
       return
     }
@@ -58,6 +50,7 @@ export default function TasksPage() {
       setChores((data as Chore[]) || [])
     } catch (error) {
       console.error('Error fetching chores:', error)
+      setChores([])
     }
     setLoading(false)
   }, [user])
@@ -67,21 +60,11 @@ export default function TasksPage() {
   }, [fetchChores])
 
   const handleToggleChore = async (chore: Chore) => {
+    if (!user) return
+
     const newStatus = chore.status === 'completed' ? 'pending' : 'completed'
     const completedAt = newStatus === 'completed' ? new Date().toISOString() : null
     const pointsChange = newStatus === 'completed' ? chore.points : -chore.points
-
-    if (!user) {
-      setChores(prev => prev.map(c =>
-        c.id === chore.id
-          ? { ...c, status: newStatus, completed_at: completedAt, completed_by: chore.assigned_to }
-          : c
-      ))
-      if (chore.assigned_to && chore.points > 0) {
-        updateMemberPoints(chore.assigned_to, pointsChange)
-      }
-      return
-    }
 
     try {
       const { error } = await supabase
@@ -121,7 +104,7 @@ export default function TasksPage() {
   }
 
   const handleSaveChore = async () => {
-    if (!formData.title.trim()) return
+    if (!user || !formData.title.trim()) return
 
     const choreData = {
       title: formData.title,
@@ -133,25 +116,8 @@ export default function TasksPage() {
       category: formData.category,
       repeat_frequency: formData.repeat_frequency,
       status: 'pending' as const,
-      user_id: user?.id || 'demo',
       repeat_interval: 1,
       sort_order: chores.length,
-    }
-
-    if (!user) {
-      const newChore: Chore = {
-        ...choreData,
-        id: `demo-${Date.now()}`,
-        due_time: null,
-        repeat_days: null,
-        created_at: new Date().toISOString(),
-        completed_at: null,
-        completed_by: null,
-        updated_at: new Date().toISOString(),
-      }
-      setChores(prev => [...prev, newChore])
-      setShowAddModal(false)
-      return
     }
 
     try {
@@ -168,10 +134,7 @@ export default function TasksPage() {
   }
 
   const handleDeleteChore = async (choreId: string) => {
-    if (!user) {
-      setChores(prev => prev.filter(c => c.id !== choreId))
-      return
-    }
+    if (!user) return
 
     try {
       const { error } = await supabase
