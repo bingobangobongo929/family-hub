@@ -43,6 +43,9 @@ export default function RoutinesPage() {
   const [syncedRoutineId, setSyncedRoutineId] = useState<string | null>(null) // The active routine synced across devices
   const longPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const [longPressActive, setLongPressActive] = useState<string | null>(null) // Shows visual feedback during long-press
+  const [stepToRemove, setStepToRemove] = useState<{ routineId: string, step: RoutineStep } | null>(null) // For removal confirmation
+  const stepRemoveLongPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const [stepRemoveLongPressActive, setStepRemoveLongPressActive] = useState<string | null>(null)
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
@@ -213,6 +216,43 @@ export default function RoutinesPage() {
     loadCompletions()
   }, [fetchRoutines, loadCompletions])
 
+  // Refetch completions when page becomes visible (user returns from minimized browser)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadCompletions()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [loadCompletions])
+
+  // Real-time subscription for completions sync across devices
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('completions-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'routine_completions',
+          filter: `completed_date=eq.${today}`
+        },
+        () => {
+          // Reload completions when any change happens
+          loadCompletions()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, today, loadCompletions])
+
   // Real-time subscription for active routine sync
   useEffect(() => {
     if (!user) return
@@ -379,15 +419,20 @@ export default function RoutinesPage() {
   // Long-press handling for uncheck protection
   const LONG_PRESS_DURATION = 600 // milliseconds
 
-  const handleStepPressStart = (stepId: string, memberId: string) => {
+  const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     const isCompleted = completedSteps.has(key)
 
     if (isCompleted) {
+      // Prevent iOS context menu and text selection on long-press
+      e.preventDefault()
+
       // Already completed - require long-press to uncheck
       setLongPressActive(key)
       const timer = setTimeout(() => {
         // Long press completed - do the uncheck
+        // Vibrate if supported (haptic feedback)
+        if (navigator.vibrate) navigator.vibrate(50)
         toggleStepForMember(stepId, memberId)
         setLongPressActive(null)
         longPressTimers.current.delete(key)
@@ -410,10 +455,69 @@ export default function RoutinesPage() {
     }
   }
 
+  const handleStepPressCancel = (stepId: string, memberId: string) => {
+    // Same as press end - cancel the long-press
+    handleStepPressEnd(stepId, memberId)
+  }
+
+  // Long-press on step emoji to trigger removal
+  const STEP_REMOVE_LONG_PRESS_DURATION = 800 // slightly longer than undo
+
+  const handleStepEmojiPressStart = (e: React.TouchEvent | React.MouseEvent, routineId: string, step: RoutineStep) => {
+    e.preventDefault()
+    const key = step.id
+    setStepRemoveLongPressActive(key)
+
+    const timer = setTimeout(() => {
+      // Long press completed - show removal confirmation
+      if (navigator.vibrate) navigator.vibrate([50, 30, 50])
+      setStepToRemove({ routineId, step })
+      setStepRemoveLongPressActive(null)
+      stepRemoveLongPressTimers.current.delete(key)
+    }, STEP_REMOVE_LONG_PRESS_DURATION)
+    stepRemoveLongPressTimers.current.set(key, timer)
+  }
+
+  const handleStepEmojiPressEnd = (stepId: string) => {
+    const timer = stepRemoveLongPressTimers.current.get(stepId)
+    if (timer) {
+      clearTimeout(timer)
+      stepRemoveLongPressTimers.current.delete(stepId)
+      setStepRemoveLongPressActive(null)
+    }
+  }
+
+  const removeStepFromRoutine = async () => {
+    if (!stepToRemove || !user) return
+
+    try {
+      // Delete the step
+      await supabase
+        .from('routine_steps')
+        .delete()
+        .eq('id', stepToRemove.step.id)
+
+      // Also delete any completions for this step
+      await supabase
+        .from('routine_completions')
+        .delete()
+        .eq('step_id', stepToRemove.step.id)
+
+      // Refresh routines
+      await fetchRoutines()
+      await loadCompletions()
+
+      setStepToRemove(null)
+    } catch (error) {
+      console.error('Error removing step:', error)
+    }
+  }
+
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
       longPressTimers.current.forEach(timer => clearTimeout(timer))
+      stepRemoveLongPressTimers.current.forEach(timer => clearTimeout(timer))
     }
   }, [])
 
@@ -1103,16 +1207,30 @@ export default function RoutinesPage() {
                     } ${isCelebrating ? '!bg-yellow-400 !text-yellow-900 animate-pop' : ''}`}>
                       {isDone ? '✓' : index + 1}
                     </span>
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-all ${
-                      isDone
-                        ? 'bg-green-100 dark:bg-green-900/50'
-                        : 'bg-white dark:bg-slate-700 shadow-sm'
-                    } ${isCelebrating ? '!bg-yellow-100 dark:!bg-yellow-900/50 animate-bounce' : ''}`}>
+                    <div
+                      onMouseDown={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
+                      onMouseUp={() => handleStepEmojiPressEnd(step.id)}
+                      onMouseLeave={() => handleStepEmojiPressEnd(step.id)}
+                      onTouchStart={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
+                      onTouchEnd={() => handleStepEmojiPressEnd(step.id)}
+                      onTouchCancel={() => handleStepEmojiPressEnd(step.id)}
+                      onContextMenu={(e) => e.preventDefault()}
+                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-all cursor-pointer touch-manipulation ${
+                        isDone
+                          ? 'bg-green-100 dark:bg-green-900/50'
+                          : 'bg-white dark:bg-slate-700 shadow-sm hover:shadow-md active:scale-95'
+                      } ${isCelebrating ? '!bg-yellow-100 dark:!bg-yellow-900/50 animate-bounce' : ''} ${
+                        stepRemoveLongPressActive === step.id ? 'ring-4 ring-red-400 scale-95 bg-red-50 dark:bg-red-900/30' : ''
+                      }`}
+                      title="Hold to remove step"
+                    >
                       {isDone ? (
                         <div className="relative">
                           <Check className="w-8 h-8 text-green-500" />
                           <span className="absolute -top-1 -right-1 text-base animate-bounce">✨</span>
                         </div>
+                      ) : stepRemoveLongPressActive === step.id ? (
+                        <Trash2 className="w-7 h-7 text-red-500 animate-pulse" />
                       ) : (
                         <span className={isCelebrating ? 'animate-bounce' : ''}>{step.emoji}</span>
                       )}
@@ -1151,12 +1269,14 @@ export default function RoutinesPage() {
                         return (
                           <button
                             key={member.id}
-                            onMouseDown={() => handleStepPressStart(step.id, member.id)}
+                            onMouseDown={(e) => handleStepPressStart(e, step.id, member.id)}
                             onMouseUp={() => handleStepPressEnd(step.id, member.id)}
                             onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
-                            onTouchStart={() => handleStepPressStart(step.id, member.id)}
+                            onTouchStart={(e) => handleStepPressStart(e, step.id, member.id)}
                             onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
-                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none ${
+                            onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
+                            onContextMenu={(e) => e.preventDefault()}
+                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none touch-manipulation ${
                               isLongPressing
                                 ? 'scale-95 ring-4 ring-red-400 ring-offset-2'
                                 : memberDone
@@ -1466,6 +1586,35 @@ export default function RoutinesPage() {
             </Button>
             <Button onClick={showEditModal ? handleEditRoutine : handleAddRoutine}>
               {showEditModal ? t('common.saveChanges') : t('routines.createRoutine')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Step Removal Confirmation Modal */}
+      <Modal
+        isOpen={!!stepToRemove}
+        onClose={() => setStepToRemove(null)}
+        title={t('routines.removeStep')}
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
+            <span className="text-4xl">{stepToRemove?.step.emoji}</span>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{stepToRemove?.step.title}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">{t('routines.removeStepWarning')}</p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={() => setStepToRemove(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={removeStepFromRoutine}
+              className="!bg-red-500 hover:!bg-red-600"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              {t('routines.removeStep')}
             </Button>
           </div>
         </div>

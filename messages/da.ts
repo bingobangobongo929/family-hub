@@ -392,6 +392,10 @@ export const da: Translations = {
     selectRoutine: 'Vælg en rutine',
     tapToChoose: 'Tryk for at vælge',
     synced: 'Synkroniseret',
+    // Step removal
+    removeStep: 'Fjern trin',
+    removeStepWarning: 'Dette vil permanent fjerne dette trin fra rutinen.',
+    holdToRemove: 'Hold for at fjerne',
   },
 
   // Shopping

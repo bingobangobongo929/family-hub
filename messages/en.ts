@@ -390,6 +390,10 @@ export const en = {
     selectRoutine: 'Select a routine',
     tapToChoose: 'Tap to choose',
     synced: 'Synced',
+    // Step removal
+    removeStep: 'Remove Step',
+    removeStepWarning: 'This will permanently remove this step from the routine.',
+    holdToRemove: 'Hold to remove',
   },
 
   // Shopping
