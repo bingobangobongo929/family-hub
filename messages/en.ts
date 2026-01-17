@@ -394,6 +394,14 @@ export const en = {
     removeStep: 'Remove Step',
     removeStepWarning: 'This will permanently remove this step from the routine.',
     holdToRemove: 'Hold to remove',
+    // Skip step
+    skip: 'Skip',
+    unskip: 'Unskip',
+    skippedToday: 'Skipped today',
+    partiallySkipped: 'Skipped for some',
+    // Sounds
+    soundsOn: 'Sounds on',
+    soundsOff: 'Sounds off',
   },
 
   // Shopping

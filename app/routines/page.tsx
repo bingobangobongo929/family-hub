@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Card from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
+import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown, ChevronRight, Volume2, VolumeX } from 'lucide-react'
 import { AvatarDisplay } from '@/components/PhotoUpload'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
@@ -46,6 +46,14 @@ export default function RoutinesPage() {
   const [stepToRemove, setStepToRemove] = useState<{ routineId: string, step: RoutineStep } | null>(null) // For removal confirmation
   const stepRemoveLongPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const [stepRemoveLongPressActive, setStepRemoveLongPressActive] = useState<string | null>(null)
+  // Drag-to-reorder state
+  const [draggingStepId, setDraggingStepId] = useState<string | null>(null)
+  const [dragOverStepId, setDragOverStepId] = useState<string | null>(null)
+  // Skipped steps state
+  const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set()) // key: `${stepId}:${memberId}`
+  // Sound effects
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
@@ -341,6 +349,7 @@ export default function RoutinesPage() {
       setCelebratingStep(stepId)
       setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
       setConfettiTrigger(t => t + 1)
+      playSound('complete')
       setTimeout(() => setCelebratingStep(null), 600)
 
       await supabase
@@ -393,6 +402,7 @@ export default function RoutinesPage() {
           setTimeout(() => {
             setConfettiConfig({ intensity: 'big', emoji: '⭐' })
             setConfettiTrigger(t => t + 1)
+            playSound('allDone')
           }, 300)
         }
 
@@ -408,6 +418,7 @@ export default function RoutinesPage() {
           setTimeout(() => {
             setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
             setConfettiTrigger(t => t + 1)
+            playSound('epic')
           }, 500)
         }
       }
@@ -511,6 +522,196 @@ export default function RoutinesPage() {
     } catch (error) {
       console.error('Error removing step:', error)
     }
+  }
+
+  // === SOUND EFFECTS ===
+  const playSound = useCallback((type: 'complete' | 'skip' | 'allDone' | 'epic') => {
+    if (!soundEnabled) return
+
+    // Initialize AudioContext on first use (must be after user interaction)
+    if (!audioContextRef.current) {
+      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+    }
+    const ctx = audioContextRef.current
+
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+
+    const now = ctx.currentTime
+    gainNode.gain.setValueAtTime(0.3, now)
+
+    switch (type) {
+      case 'complete':
+        // Pleasant ding
+        oscillator.frequency.setValueAtTime(880, now) // A5
+        oscillator.frequency.setValueAtTime(1108, now + 0.1) // C#6
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.3)
+        oscillator.start(now)
+        oscillator.stop(now + 0.3)
+        break
+      case 'skip':
+        // Soft whoosh down
+        oscillator.frequency.setValueAtTime(400, now)
+        oscillator.frequency.exponentialRampToValueAtTime(200, now + 0.2)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2)
+        oscillator.start(now)
+        oscillator.stop(now + 0.2)
+        break
+      case 'allDone':
+        // Triumphant melody
+        oscillator.frequency.setValueAtTime(523, now) // C5
+        oscillator.frequency.setValueAtTime(659, now + 0.15) // E5
+        oscillator.frequency.setValueAtTime(784, now + 0.3) // G5
+        oscillator.frequency.setValueAtTime(1047, now + 0.45) // C6
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6)
+        oscillator.start(now)
+        oscillator.stop(now + 0.6)
+        break
+      case 'epic':
+        // Fanfare
+        oscillator.frequency.setValueAtTime(392, now) // G4
+        oscillator.frequency.setValueAtTime(523, now + 0.1) // C5
+        oscillator.frequency.setValueAtTime(659, now + 0.2) // E5
+        oscillator.frequency.setValueAtTime(784, now + 0.3) // G5
+        oscillator.frequency.setValueAtTime(1047, now + 0.5) // C6
+        gainNode.gain.setValueAtTime(0.4, now)
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8)
+        oscillator.start(now)
+        oscillator.stop(now + 0.8)
+        break
+    }
+  }, [soundEnabled])
+
+  // Load sound preference from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('routine-sounds-enabled')
+    if (saved !== null) {
+      setSoundEnabled(saved === 'true')
+    }
+  }, [])
+
+  // === DRAG TO REORDER STEPS ===
+  const handleStepDragStart = (e: React.DragEvent, stepId: string) => {
+    setDraggingStepId(stepId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', stepId)
+  }
+
+  const handleStepDragOver = (e: React.DragEvent, stepId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (stepId !== draggingStepId) {
+      setDragOverStepId(stepId)
+    }
+  }
+
+  const handleStepDragLeave = () => {
+    setDragOverStepId(null)
+  }
+
+  const handleStepDrop = async (e: React.DragEvent, targetStepId: string) => {
+    e.preventDefault()
+    setDragOverStepId(null)
+    setDraggingStepId(null)
+
+    if (!selectedRoutine || !draggingStepId || draggingStepId === targetStepId) return
+
+    const visibleSteps = getVisibleSteps(selectedRoutine)
+    const dragIndex = visibleSteps.findIndex(s => s.id === draggingStepId)
+    const dropIndex = visibleSteps.findIndex(s => s.id === targetStepId)
+
+    if (dragIndex === -1 || dropIndex === -1) return
+
+    // Reorder locally first for instant feedback
+    const newSteps = [...visibleSteps]
+    const [removed] = newSteps.splice(dragIndex, 1)
+    newSteps.splice(dropIndex, 0, removed)
+
+    // Update sort_order in database
+    try {
+      await Promise.all(
+        newSteps.map((step, index) =>
+          supabase
+            .from('routine_steps')
+            .update({ sort_order: index })
+            .eq('id', step.id)
+        )
+      )
+      // Refresh to get new order
+      await fetchRoutines()
+    } catch (error) {
+      console.error('Error reordering steps:', error)
+    }
+  }
+
+  const handleStepDragEnd = () => {
+    setDraggingStepId(null)
+    setDragOverStepId(null)
+  }
+
+  // === SKIP STEP FOR TODAY ===
+  const loadSkippedSteps = useCallback(async () => {
+    if (!user) return
+
+    try {
+      const { data } = await supabase
+        .from('routine_completion_log')
+        .select('step_id, member_id')
+        .eq('completed_date', today)
+        .eq('action', 'skipped')
+
+      if (data) {
+        setSkippedSteps(new Set(data.map(s => `${s.step_id}:${s.member_id}`)))
+      }
+    } catch (error) {
+      console.error('Error loading skipped steps:', error)
+    }
+  }, [user, today])
+
+  useEffect(() => {
+    loadSkippedSteps()
+  }, [loadSkippedSteps])
+
+  const toggleSkipStep = async (stepId: string, memberId: string) => {
+    if (!user || !selectedRoutine) return
+
+    const key = `${stepId}:${memberId}`
+    const isSkipped = skippedSteps.has(key)
+    const newSkipped = new Set(skippedSteps)
+
+    if (isSkipped) {
+      // Unskip
+      newSkipped.delete(key)
+      await supabase
+        .from('routine_completion_log')
+        .delete()
+        .eq('step_id', stepId)
+        .eq('member_id', memberId)
+        .eq('completed_date', today)
+        .eq('action', 'skipped')
+    } else {
+      // Skip
+      newSkipped.add(key)
+      playSound('skip')
+      await supabase
+        .from('routine_completion_log')
+        .insert({
+          routine_id: selectedRoutine.id,
+          step_id: stepId,
+          member_id: memberId,
+          completed_date: today,
+          completed_by: user.id,
+          action: 'skipped'
+        })
+    }
+
+    setSkippedSteps(newSkipped)
+  }
+
+  const isStepSkipped = (stepId: string, memberId: string) => {
+    return skippedSteps.has(`${stepId}:${memberId}`)
   }
 
   // Cleanup timers on unmount
@@ -1126,6 +1327,22 @@ export default function RoutinesPage() {
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => {
+                  const newValue = !soundEnabled
+                  setSoundEnabled(newValue)
+                  localStorage.setItem('routine-sounds-enabled', String(newValue))
+                  if (newValue) playSound('complete') // Test sound
+                }}
+                className={`p-2 rounded-lg transition-colors ${
+                  soundEnabled
+                    ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/30 dark:text-teal-400'
+                    : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+                title={soundEnabled ? t('routines.soundsOn') : t('routines.soundsOff')}
+              >
+                {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+              </button>
+              <button
                 onClick={() => openEditModal(selectedRoutine)}
                 className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
               >
@@ -1189,15 +1406,37 @@ export default function RoutinesPage() {
               const isCelebrating = celebratingStep === step.id
               const isPerMemberStep = step.member_ids && step.member_ids.length > 0
 
+              // Check if any member has this step skipped
+              const anyMemberSkipped = hasMembers && stepMembers.some(m => isStepSkipped(step.id, m.id))
+              const allMembersSkipped = hasMembers && stepMembers.every(m => isStepSkipped(step.id, m.id))
+
               return (
                 <div
                   key={step.id}
-                  className={`flex items-center gap-4 p-4 rounded-2xl transition-all duration-300 ${
-                    isDone
+                  draggable
+                  onDragStart={(e) => handleStepDragStart(e, step.id)}
+                  onDragOver={(e) => handleStepDragOver(e, step.id)}
+                  onDragLeave={handleStepDragLeave}
+                  onDrop={(e) => handleStepDrop(e, step.id)}
+                  onDragEnd={handleStepDragEnd}
+                  className={`flex items-center gap-2 p-4 rounded-2xl transition-all duration-300 ${
+                    allMembersSkipped
+                      ? 'bg-slate-100 dark:bg-slate-800/30 opacity-60'
+                      : isDone
                       ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 scale-[0.98]'
                       : 'bg-slate-50 dark:bg-slate-800/50'
-                  } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 scale-105 shadow-lg' : ''}`}
+                  } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 scale-105 shadow-lg' : ''} ${
+                    draggingStepId === step.id ? 'opacity-50 scale-95' : ''
+                  } ${dragOverStepId === step.id ? 'ring-2 ring-teal-400 ring-offset-2' : ''}`}
                 >
+                  {/* Drag handle */}
+                  <div
+                    className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 touch-none"
+                    onTouchStart={(e) => e.stopPropagation()}
+                  >
+                    <GripVertical className="w-5 h-5" />
+                  </div>
+
                   {/* Step number & emoji */}
                   <div className="flex items-center gap-3">
                     <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-all ${
@@ -1238,19 +1477,29 @@ export default function RoutinesPage() {
                   </div>
 
                   {/* Step title */}
-                  <div className="flex-1">
-                    <p className={`font-semibold text-lg transition-all ${
-                      isDone
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-lg transition-all truncate ${
+                      allMembersSkipped
+                        ? 'text-slate-400 dark:text-slate-500 line-through decoration-2'
+                        : isDone
                         ? 'text-green-600 dark:text-green-400 line-through decoration-2'
                         : 'text-slate-800 dark:text-slate-100'
                     }`}>
                       {step.title}
                     </p>
-                    {isDone && (
+                    {allMembersSkipped ? (
+                      <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">
+                        {t('routines.skippedToday')}
+                      </p>
+                    ) : isDone ? (
                       <p className="text-sm text-green-500 dark:text-green-400 font-medium animate-fade-in">
                         Great job! 🌟
                       </p>
-                    )}
+                    ) : anyMemberSkipped ? (
+                      <p className="text-sm text-amber-500 dark:text-amber-400 font-medium">
+                        {t('routines.partiallySkipped')}
+                      </p>
+                    ) : null}
                   </div>
 
                   {/* Member completion buttons - tap to complete, long-press to undo */}
@@ -1264,46 +1513,67 @@ export default function RoutinesPage() {
                       )}
                       {stepMembers.map(member => {
                         const memberDone = isStepCompleteForMember(step.id, member.id)
+                        const memberSkipped = isStepSkipped(step.id, member.id)
                         const pressKey = `${step.id}:${member.id}`
                         const isLongPressing = longPressActive === pressKey
                         return (
-                          <button
-                            key={member.id}
-                            onMouseDown={(e) => handleStepPressStart(e, step.id, member.id)}
-                            onMouseUp={() => handleStepPressEnd(step.id, member.id)}
-                            onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
-                            onTouchStart={(e) => handleStepPressStart(e, step.id, member.id)}
-                            onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
-                            onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
-                            onContextMenu={(e) => e.preventDefault()}
-                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none touch-manipulation ${
-                              isLongPressing
-                                ? 'scale-95 ring-4 ring-red-400 ring-offset-2'
-                                : memberDone
-                                ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 hover:scale-105'
-                                : 'opacity-80 hover:opacity-100 hover:scale-110 active:scale-90'
-                            }`}
-                            title={memberDone ? `${member.name} - hold to undo` : member.name}
-                          >
-                            <AvatarDisplay
-                              photoUrl={member.photo_url}
-                              emoji={member.avatar}
-                              name={member.name}
-                              color={member.color}
-                              size="md"
-                              className="w-full h-full"
-                            />
-                            {memberDone && !isLongPressing && (
-                              <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">✓</span>
-                              </span>
-                            )}
-                            {isLongPressing && (
-                              <span className="absolute inset-0 flex items-center justify-center bg-red-500/50">
-                                <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold animate-pulse">↩</span>
-                              </span>
-                            )}
-                          </button>
+                          <div key={member.id} className="relative group">
+                            <button
+                              onMouseDown={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
+                              onMouseUp={() => handleStepPressEnd(step.id, member.id)}
+                              onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
+                              onTouchStart={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
+                              onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
+                              onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
+                              onContextMenu={(e) => e.preventDefault()}
+                              className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none touch-manipulation ${
+                                memberSkipped
+                                  ? 'opacity-40 grayscale ring-2 ring-slate-300 dark:ring-slate-600'
+                                  : isLongPressing
+                                  ? 'scale-95 ring-4 ring-red-400 ring-offset-2'
+                                  : memberDone
+                                  ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 hover:scale-105'
+                                  : 'opacity-80 hover:opacity-100 hover:scale-110 active:scale-90'
+                              }`}
+                              title={memberSkipped ? `${member.name} - skipped` : memberDone ? `${member.name} - hold to undo` : member.name}
+                            >
+                              <AvatarDisplay
+                                photoUrl={member.photo_url}
+                                emoji={member.avatar}
+                                name={member.name}
+                                color={member.color}
+                                size="md"
+                                className="w-full h-full"
+                              />
+                              {memberSkipped && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-slate-500/50">
+                                  <span className="text-white text-xl">⏭</span>
+                                </span>
+                              )}
+                              {memberDone && !isLongPressing && !memberSkipped && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                  <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">✓</span>
+                                </span>
+                              )}
+                              {isLongPressing && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-red-500/50">
+                                  <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold animate-pulse">↩</span>
+                                </span>
+                              )}
+                            </button>
+                            {/* Skip/Unskip button */}
+                            <button
+                              onClick={() => toggleSkipStep(step.id, member.id)}
+                              className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all ${
+                                memberSkipped
+                                  ? 'bg-amber-500 text-white hover:bg-amber-600'
+                                  : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white opacity-0 group-hover:opacity-100'
+                              }`}
+                              title={memberSkipped ? t('routines.unskip') : t('routines.skip')}
+                            >
+                              {memberSkipped ? '↩' : '⏭'}
+                            </button>
+                          </div>
                         )
                       })}
                     </div>

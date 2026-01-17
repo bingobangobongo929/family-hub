@@ -396,6 +396,14 @@ export const da: Translations = {
     removeStep: 'Fjern trin',
     removeStepWarning: 'Dette vil permanent fjerne dette trin fra rutinen.',
     holdToRemove: 'Hold for at fjerne',
+    // Skip step
+    skip: 'Spring over',
+    unskip: 'Fortryd spring over',
+    skippedToday: 'Sprunget over i dag',
+    partiallySkipped: 'Sprunget over for nogle',
+    // Sounds
+    soundsOn: 'Lyd til',
+    soundsOff: 'Lyd fra',
   },
 
   // Shopping
