@@ -23,6 +23,7 @@ import {
   GooglePhotosWidget,
   F1Widget,
   F1NewsWidget,
+  RoutinesWidget,
   AVAILABLE_WIDGETS,
   DEFAULT_LAYOUT,
 } from '@/components/widgets'
@@ -50,7 +51,7 @@ const WIDGET_COMPONENTS: Record<string, React.ComponentType<any>> = {
   announcements: AnnouncementsWidget,
   quickactions: QuickActionsWidget,
   photo: PhotoWidget,
-  routine: QuickRoutineWidget,
+  routines: RoutinesWidget,
   shopping: ShoppingWidget,
   timer: TimerWidget,
   bindicator: BindicatorWidget,
@@ -609,117 +610,3 @@ function getTimeOfDay() {
   return 'evening'
 }
 
-// Quick Routine Widget (inline for dashboard)
-function QuickRoutineWidget() {
-  const { t } = useTranslation()
-  const [routineTime, setRoutineTime] = useState<'morning' | 'evening'>(() => {
-    const hour = new Date().getHours()
-    return hour < 14 ? 'morning' : 'evening'
-  })
-  const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set())
-
-  // Demo routine steps
-  const steps = routineTime === 'morning'
-    ? [
-        { id: 'ms1', title: 'Get dressed', emoji: '👕' },
-        { id: 'ms2', title: 'Brush teeth', emoji: '🪥' },
-        { id: 'ms3', title: 'Eat breakfast', emoji: '🥣' },
-        { id: 'ms4', title: 'Tidy bedroom', emoji: '🛏️' },
-      ]
-    : [
-        { id: 'es1', title: 'Tidy up', emoji: '🧹' },
-        { id: 'es2', title: 'Bath time', emoji: '🛁' },
-        { id: 'es3', title: 'Pyjamas', emoji: '👚' },
-        { id: 'es4', title: 'Brush teeth', emoji: '🪥' },
-        { id: 'es5', title: 'Story', emoji: '📖' },
-      ]
-
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const saved = localStorage.getItem('routine-completions-' + today)
-    if (saved) {
-      setCompletedSteps(new Set(JSON.parse(saved)))
-    }
-  }, [])
-
-  const toggleStep = (id: string) => {
-    const newCompleted = new Set(completedSteps)
-    if (newCompleted.has(id)) {
-      newCompleted.delete(id)
-    } else {
-      newCompleted.add(id)
-    }
-    setCompletedSteps(newCompleted)
-    const today = new Date().toISOString().split('T')[0]
-    localStorage.setItem('routine-completions-' + today, JSON.stringify([...newCompleted]))
-  }
-
-  const progress = steps.filter(s => completedSteps.has(s.id)).length
-
-  return (
-    <div className="h-full flex flex-col p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {routineTime === 'morning' ? (
-            <Sun className="w-4 h-4 text-amber-500" />
-          ) : (
-            <Moon className="w-4 h-4 text-indigo-500" />
-          )}
-          <h3 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-            {routineTime === 'morning' ? t('routines.morning') : t('routines.evening')} {t('routines.routine')}
-          </h3>
-        </div>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setRoutineTime('morning')}
-            className={`p-1.5 rounded-lg transition-colors ${routineTime === 'morning' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            <Sun className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() => setRoutineTime('evening')}
-            className={`p-1.5 rounded-lg transition-colors ${routineTime === 'evening' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
-          >
-            <Moon className="w-4 h-4" />
-          </button>
-          <span className="ml-2 text-xs font-medium text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30 px-2 py-0.5 rounded-full">{progress}/{steps.length}</span>
-        </div>
-      </div>
-
-      <div className="flex-1 flex items-center">
-        <div className="w-full grid grid-cols-5 gap-2">
-          {steps.slice(0, 5).map((step) => {
-            const isDone = completedSteps.has(step.id)
-            return (
-              <button
-                key={step.id}
-                onClick={() => toggleStep(step.id)}
-                className={`flex flex-col items-center gap-1 p-2 rounded-xl transition-all ${
-                  isDone
-                    ? 'bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 ring-2 ring-teal-500/20'
-                    : 'bg-slate-50 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
-                }`}
-              >
-                <span className="text-xl">{isDone ? '✓' : step.emoji}</span>
-                <span className="text-xs truncate w-full text-center font-medium">{step.title}</span>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {progress === steps.length && (
-        <div className="mt-2 text-center text-sm text-teal-600 dark:text-teal-400 font-medium">
-          {t('routines.allDone')}
-        </div>
-      )}
-
-      <Link
-        href="/routines"
-        className="mt-2 text-center text-xs text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300 font-medium"
-      >
-        {t('routines.viewFull')}
-      </Link>
-    </div>
-  )
-}

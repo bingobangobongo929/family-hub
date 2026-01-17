@@ -17,22 +17,54 @@ interface RoutineWithData extends Routine {
   scenarios?: RoutineScenario[]
 }
 
+type WidgetSize = 'tiny' | 'compact' | 'standard' | 'large' | 'xlarge'
+
 export default function RoutinesWidget() {
   const { user } = useAuth()
   const { getMember, updateMemberPoints } = useFamily()
   const { rewardsEnabled } = useSettings()
   const { t } = useTranslation()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [widgetSize, setWidgetSize] = useState<WidgetSize>('standard')
   const [routines, setRoutines] = useState<RoutineWithData[]>([])
   const [completions, setCompletions] = useState<RoutineCompletion[]>([])
   const [cooldowns, setCooldowns] = useState<Set<string>>(new Set())
   const cooldownTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [confettiConfig, setConfettiConfig] = useState<{ intensity: 'small' | 'medium' | 'big' | 'epic', emoji?: string }>({ intensity: 'small' })
-  const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
+  const [celebratingMember, setCelebratingMember] = useState<string | null>(null)
   const [selectedScenarios, setSelectedScenarios] = useState<Record<string, string[]>>({})
 
   const today = new Date().toISOString().split('T')[0]
   const isWeekend = [0, 6].includes(new Date().getDay())
+
+  // Measure container and determine size class
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect
+        const area = width * height
+
+        // Determine size based on dimensions
+        if (area < 15000 || width < 120 || height < 120) {
+          setWidgetSize('tiny')
+        } else if (area < 30000 || width < 180 || height < 180) {
+          setWidgetSize('compact')
+        } else if (area < 60000 || width < 280) {
+          setWidgetSize('standard')
+        } else if (area < 100000) {
+          setWidgetSize('large')
+        } else {
+          setWidgetSize('xlarge')
+        }
+      }
+    })
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [])
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
@@ -93,7 +125,6 @@ export default function RoutinesWidget() {
           if (dailyState?.selected_scenario_ids?.length) {
             newSelectedScenarios[routine.id] = dailyState.selected_scenario_ids
           } else if (routine.scenarios && routine.scenarios.length > 0) {
-            // Apply smart defaults based on day
             const defaultScenarios = routine.scenarios.filter(s =>
               isWeekend ? s.is_default_weekend : s.is_default_weekday
             )
@@ -117,7 +148,6 @@ export default function RoutinesWidget() {
   useEffect(() => {
     fetchRoutines()
     return () => {
-      // Cleanup timers on unmount
       cooldownTimers.current.forEach(timer => clearTimeout(timer))
     }
   }, [fetchRoutines])
@@ -128,45 +158,43 @@ export default function RoutinesWidget() {
     )
   }
 
-  // Check if a step should be visible based on selected scenarios
   const isStepVisibleForScenarios = (step: RoutineStep, routineId: string): boolean => {
-    if (!step.scenario_ids || step.scenario_ids.length === 0) {
-      return true
-    }
+    if (!step.scenario_ids || step.scenario_ids.length === 0) return true
     const currentScenarios = selectedScenarios[routineId] || []
     return step.scenario_ids.some(id => currentScenarios.includes(id))
   }
 
-  // Check if a step applies to a specific member
   const stepAppliesToMember = (step: RoutineStep, memberId: string): boolean => {
-    if (!step.member_ids || step.member_ids.length === 0) {
-      return true
-    }
+    if (!step.member_ids || step.member_ids.length === 0) return true
     return step.member_ids.includes(memberId)
   }
 
-  // Get visible steps for a routine based on selected scenarios
   const getVisibleSteps = (routine: RoutineWithData): RoutineStep[] => {
     return routine.steps.filter(step => isStepVisibleForScenarios(step, routine.id))
   }
 
-  // Get members that a step applies to
   const getStepMembers = (step: RoutineStep, routineMembers: FamilyMember[]): FamilyMember[] => {
-    if (!step.member_ids || step.member_ids.length === 0) {
-      return routineMembers
-    }
+    if (!step.member_ids || step.member_ids.length === 0) return routineMembers
     return routineMembers.filter(m => step.member_ids!.includes(m.id))
+  }
+
+  // Find the current step = first step where NOT all applicable members have completed
+  const getCurrentStep = (routine: RoutineWithData): RoutineStep | null => {
+    const visibleSteps = getVisibleSteps(routine)
+    for (const step of visibleSteps) {
+      const stepMembers = getStepMembers(step, routine.members)
+      const allDone = stepMembers.every(m => isStepCompletedBy(routine.id, step.id, m.id))
+      if (!allDone) return step
+    }
+    return null // All done!
   }
 
   const toggleStepForMember = async (routine: RoutineWithData, stepId: string, memberId: string) => {
     const cooldownKey = `${stepId}:${memberId}`
-
-    // Check cooldown
     if (cooldowns.has(cooldownKey)) return
 
     const isCompleted = isStepCompletedBy(routine.id, stepId, memberId)
 
-    // Set 5-second cooldown
     setCooldowns(prev => new Set(prev).add(cooldownKey))
     const timer = setTimeout(() => {
       setCooldowns(prev => {
@@ -179,7 +207,6 @@ export default function RoutinesWidget() {
     cooldownTimers.current.set(cooldownKey, timer)
 
     if (isCompleted) {
-      // Remove completion
       setCompletions(prev => prev.filter(
         c => !(c.routine_id === routine.id && c.step_id === stepId && c.member_id === memberId)
       ))
@@ -194,7 +221,6 @@ export default function RoutinesWidget() {
           .eq('completed_date', today)
       }
     } else {
-      // Add completion
       const newCompletion: RoutineCompletion = {
         id: `temp-${Date.now()}`,
         routine_id: routine.id,
@@ -205,14 +231,13 @@ export default function RoutinesWidget() {
       }
       setCompletions(prev => [...prev, newCompletion])
 
-      // Find the step emoji for confetti
       const step = routine.steps.find(s => s.id === stepId)
 
-      // Celebrate! Small burst for individual completion
-      setCelebratingStep(stepId)
+      // Celebrate member completion
+      setCelebratingMember(memberId)
       setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
       setConfettiTrigger(t => t + 1)
-      setTimeout(() => setCelebratingStep(null), 600)
+      setTimeout(() => setCelebratingMember(null), 600)
 
       if (user) {
         await supabase
@@ -225,7 +250,7 @@ export default function RoutinesWidget() {
           })
       }
 
-      // Check if member completed all their applicable steps - award stars
+      // Check if member completed all their steps
       const visibleSteps = getVisibleSteps(routine)
       const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
       const memberNowCompletedAll = memberSteps.every(s =>
@@ -236,14 +261,13 @@ export default function RoutinesWidget() {
         if (member?.stars_enabled) {
           updateMemberPoints(memberId, routine.points_reward)
         }
-        // BIG celebration for completing all steps!
         setTimeout(() => {
           setConfettiConfig({ intensity: 'big', emoji: '⭐' })
           setConfettiTrigger(t => t + 1)
         }, 300)
       }
 
-      // Check if ALL members completed ALL their applicable steps - EPIC celebration!
+      // Check if ALL members completed ALL steps - EPIC!
       const allMembersCompletedAll = visibleSteps.length > 0 && routine.members.every(m => {
         const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, m.id))
         return memberSpecificSteps.every(s =>
@@ -276,7 +300,7 @@ export default function RoutinesWidget() {
 
   if (!activeRoutine) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
+      <div ref={containerRef} className="h-full flex flex-col items-center justify-center p-4 bg-white dark:bg-slate-800 rounded-3xl shadow-widget dark:shadow-widget-dark">
         <ClipboardList className="w-8 h-8 text-slate-300 mb-2" />
         <p className="text-sm text-slate-500">{t('routines.noRoutines')}</p>
       </div>
@@ -284,113 +308,232 @@ export default function RoutinesWidget() {
   }
 
   const complete = isRoutineComplete(activeRoutine)
+  const currentStep = getCurrentStep(activeRoutine)
+  const visibleSteps = getVisibleSteps(activeRoutine)
+  const currentStepMembers = currentStep ? getStepMembers(currentStep, activeRoutine.members) : []
+
+  // Calculate progress
+  const totalStepMemberPairs = visibleSteps.reduce((acc, step) => {
+    return acc + getStepMembers(step, activeRoutine.members).length
+  }, 0)
+  const completedStepMemberPairs = visibleSteps.reduce((acc, step) => {
+    const stepMembers = getStepMembers(step, activeRoutine.members)
+    return acc + stepMembers.filter(m => isStepCompletedBy(activeRoutine.id, step.id, m.id)).length
+  }, 0)
+  const progressPercent = totalStepMemberPairs > 0 ? (completedStepMemberPairs / totalStepMemberPairs) * 100 : 0
+
+  // Get emoji size based on widget size
+  const getEmojiSize = () => {
+    switch (widgetSize) {
+      case 'tiny': return 'text-5xl'
+      case 'compact': return 'text-6xl'
+      case 'standard': return 'text-7xl'
+      case 'large': return 'text-8xl'
+      case 'xlarge': return 'text-9xl'
+    }
+  }
+
+  // Get avatar size based on widget size
+  const getAvatarSize = () => {
+    switch (widgetSize) {
+      case 'tiny': return 'w-8 h-8'
+      case 'compact': return 'w-10 h-10'
+      case 'standard': return 'w-12 h-12'
+      case 'large': return 'w-14 h-14'
+      case 'xlarge': return 'w-16 h-16'
+    }
+  }
+
+  const getAvatarSizeProp = (): 'xs' | 'sm' | 'md' | 'lg' => {
+    switch (widgetSize) {
+      case 'tiny': return 'xs'
+      case 'compact': return 'sm'
+      case 'standard': return 'sm'
+      case 'large': return 'md'
+      case 'xlarge': return 'lg'
+    }
+  }
 
   return (
     <>
       <Confetti trigger={confettiTrigger} {...confettiConfig} />
-      <div className="h-full flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden p-3">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-200">
-            {activeRoutine.type === 'morning' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            <span className="font-semibold text-sm">{activeRoutine.title}</span>
-          </div>
-          {complete ? (
-            <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full font-medium animate-pulse">
-              {t('routines.done')}
-            </span>
-          ) : rewardsEnabled && activeRoutine.points_reward > 0 ? (
-            <div className="flex items-center gap-1 text-amber-500 text-xs">
-              <Star className="w-3 h-3 fill-amber-400" />
-              <span>+{activeRoutine.points_reward}</span>
-            </div>
-          ) : null}
+      <div
+        ref={containerRef}
+        className="h-full flex flex-col bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark overflow-hidden relative"
+      >
+        {/* Subtle routine type indicator */}
+        <div className="absolute top-2 right-2 opacity-50">
+          {activeRoutine.type === 'morning' ? (
+            <Sun className="w-4 h-4 text-amber-500" />
+          ) : (
+            <Moon className="w-4 h-4 text-indigo-500" />
+          )}
         </div>
 
-        {/* Tall vertical cards grid */}
-        <div className="flex-1 grid grid-cols-5 gap-2">
-          {getVisibleSteps(activeRoutine).map((step) => {
-            const stepMembers = getStepMembers(step, activeRoutine.members)
-            const allMembersDone = stepMembers.every(m =>
-              isStepCompletedBy(activeRoutine.id, step.id, m.id)
-            )
-            const someMembersDone = stepMembers.some(m =>
-              isStepCompletedBy(activeRoutine.id, step.id, m.id)
-            )
-            const isCelebrating = celebratingStep === step.id
+        {/* Progress ring around the edge (subtle) */}
+        <div className="absolute inset-0 pointer-events-none">
+          <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+            <rect
+              x="1" y="1" width="98" height="98" rx="24" ry="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-slate-200 dark:text-slate-600"
+            />
+            <rect
+              x="1" y="1" width="98" height="98" rx="24" ry="24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeDasharray={`${progressPercent * 3.92} 392`}
+              className="text-green-500 dark:text-green-400 transition-all duration-500"
+            />
+          </svg>
+        </div>
 
-            return (
-              <div
-                key={step.id}
-                className={`flex flex-col items-center justify-between p-2 rounded-xl border-2 transition-all duration-300 ${
-                  allMembersDone
-                    ? 'bg-green-100 dark:bg-green-900/40 border-green-300 dark:border-green-600 scale-95'
-                    : someMembersDone
-                    ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-600'
-                    : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600'
-                } ${isCelebrating ? 'animate-wiggle scale-110 !border-yellow-400 !bg-yellow-50 dark:!bg-yellow-900/30' : ''}`}
-              >
-                {/* Emoji at top */}
-                <div className={`flex-1 flex items-center justify-center transition-transform duration-300 ${isCelebrating ? 'scale-125' : ''}`}>
-                  {allMembersDone ? (
-                    <div className="relative">
-                      <Check className="w-8 h-8 text-green-500" />
-                      <span className="absolute -top-1 -right-1 text-sm animate-bounce">✨</span>
-                    </div>
-                  ) : (
-                    <span className={`text-3xl ${isCelebrating ? 'animate-bounce' : ''}`}>{step.emoji}</span>
-                  )}
-                </div>
-
-                {/* Member buttons at bottom - only show members this step applies to */}
-                <div className="flex flex-col gap-1 mt-1">
-                  {stepMembers.map(member => {
-                    const done = isStepCompletedBy(activeRoutine.id, step.id, member.id)
-                    const cooldownKey = `${step.id}:${member.id}`
-                    const onCooldown = cooldowns.has(cooldownKey)
-
-                    return (
-                      <button
-                        key={member.id}
-                        onClick={() => toggleStepForMember(activeRoutine, step.id, member.id)}
-                        disabled={onCooldown}
-                        className={`relative w-8 h-8 rounded-lg transition-all duration-200 overflow-hidden ${
-                          onCooldown
-                            ? 'opacity-50 cursor-not-allowed'
-                            : 'hover:scale-110 active:scale-90'
-                        } ${
-                          done ? 'ring-2 ring-green-400 ring-offset-1 shadow-lg' : 'hover:shadow-md'
-                        }`}
-                        title={member.name}
-                      >
-                        <AvatarDisplay
-                          photoUrl={member.photo_url}
-                          emoji={member.avatar}
-                          name={member.name}
-                          color={member.color}
-                          size="xs"
-                          className="w-full h-full"
-                        />
-                        {done && (
-                          <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                            <span className="text-green-500 bg-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">✓</span>
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+        {complete ? (
+          // All done state
+          <div className="flex-1 flex flex-col items-center justify-center p-4 animate-pulse">
+            <span className={`${getEmojiSize()} animate-bounce`}>
+              {activeRoutine.type === 'morning' ? '🌟' : '🌙'}
+            </span>
+            {widgetSize !== 'tiny' && (
+              <div className="flex items-center gap-1 mt-2">
+                {activeRoutine.members.map(m => (
+                  <div key={m.id} className="relative">
+                    <AvatarDisplay
+                      photoUrl={m.photo_url}
+                      emoji={m.avatar}
+                      name={m.name}
+                      color={m.color}
+                      size="xs"
+                    />
+                    <span className="absolute -bottom-1 -right-1 text-xs">✨</span>
+                  </div>
+                ))}
               </div>
-            )
-          })}
-        </div>
+            )}
+          </div>
+        ) : (
+          // Active state - show current step
+          <div className="flex-1 flex flex-col items-center justify-center p-2">
+            {/* HERO: Current Step Emoji */}
+            <div className="flex-1 flex items-center justify-center">
+              <span
+                className={`${getEmojiSize()} transition-transform duration-300 hover:scale-110 ${
+                  celebratingMember ? 'animate-bounce' : ''
+                }`}
+              >
+                {currentStep?.emoji || '📋'}
+              </span>
+            </div>
 
-        {/* Completion message */}
-        {complete && (
-          <div className="text-center pt-2">
-            <span className="text-sm inline-block animate-bounce">
-              {activeRoutine.type === 'evening' ? '🌟 ' + t('routines.sweetDreams') + ' 🌟' : '🌟 ' + t('routines.haveGreatDay') + ' 🌟'}
-            </span>
+            {/* Children avatars as tap targets */}
+            <div className={`flex items-center justify-center gap-2 ${widgetSize === 'tiny' ? 'gap-1' : 'gap-3'} pb-2`}>
+              {currentStepMembers.map(member => {
+                const done = currentStep ? isStepCompletedBy(activeRoutine.id, currentStep.id, member.id) : false
+                const cooldownKey = currentStep ? `${currentStep.id}:${member.id}` : ''
+                const onCooldown = cooldowns.has(cooldownKey)
+                const isCelebrating = celebratingMember === member.id
+
+                return (
+                  <button
+                    key={member.id}
+                    onClick={() => currentStep && toggleStepForMember(activeRoutine, currentStep.id, member.id)}
+                    disabled={onCooldown || !currentStep}
+                    className={`relative ${getAvatarSize()} rounded-full transition-all duration-300 ${
+                      onCooldown ? 'opacity-50 cursor-not-allowed' : 'hover:scale-110 active:scale-95'
+                    } ${isCelebrating ? 'animate-wiggle scale-125' : ''} ${
+                      done ? 'ring-4 ring-green-400 ring-offset-2 ring-offset-indigo-50 dark:ring-offset-slate-700' : ''
+                    }`}
+                    title={member.name}
+                  >
+                    <AvatarDisplay
+                      photoUrl={member.photo_url}
+                      emoji={member.avatar}
+                      name={member.name}
+                      color={member.color}
+                      size={getAvatarSizeProp()}
+                      className="w-full h-full"
+                    />
+                    {done && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-green-500/80 rounded-full">
+                        <Check className="w-1/2 h-1/2 text-white" strokeWidth={3} />
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Step progress dots (larger sizes only) */}
+            {(widgetSize === 'large' || widgetSize === 'xlarge') && (
+              <div className="flex items-center justify-center gap-1.5 pb-2">
+                {visibleSteps.map((step, idx) => {
+                  const stepMembers = getStepMembers(step, activeRoutine.members)
+                  const allDone = stepMembers.every(m => isStepCompletedBy(activeRoutine.id, step.id, m.id))
+                  const someDone = stepMembers.some(m => isStepCompletedBy(activeRoutine.id, step.id, m.id))
+                  const isCurrent = currentStep?.id === step.id
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={`transition-all duration-300 ${
+                        isCurrent ? 'scale-125' : ''
+                      }`}
+                    >
+                      {widgetSize === 'xlarge' ? (
+                        <span
+                          className={`text-lg ${
+                            allDone ? 'opacity-100' : someDone ? 'opacity-60' : 'opacity-30'
+                          } ${isCurrent ? 'text-2xl' : ''}`}
+                        >
+                          {allDone ? '✓' : step.emoji}
+                        </span>
+                      ) : (
+                        <div
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            allDone
+                              ? 'bg-green-500'
+                              : someDone
+                              ? 'bg-amber-400'
+                              : 'bg-slate-300 dark:bg-slate-500'
+                          } ${isCurrent ? 'w-3 h-3 ring-2 ring-indigo-400' : ''}`}
+                        />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Compact progress indicator (smaller sizes) */}
+            {widgetSize === 'standard' && (
+              <div className="flex items-center justify-center gap-1 pb-1">
+                {visibleSteps.slice(0, 7).map((step, idx) => {
+                  const stepMembers = getStepMembers(step, activeRoutine.members)
+                  const allDone = stepMembers.every(m => isStepCompletedBy(activeRoutine.id, step.id, m.id))
+                  const isCurrent = currentStep?.id === step.id
+
+                  return (
+                    <div
+                      key={step.id}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${
+                        allDone ? 'bg-green-500' : isCurrent ? 'bg-indigo-500 w-2 h-2' : 'bg-slate-300 dark:bg-slate-500'
+                      }`}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stars reward indicator (if enabled and visible) */}
+        {rewardsEnabled && activeRoutine.points_reward > 0 && !complete && (widgetSize === 'large' || widgetSize === 'xlarge') && (
+          <div className="absolute bottom-2 right-2 flex items-center gap-0.5 text-amber-500 opacity-60">
+            <Star className="w-3 h-3 fill-amber-400" />
+            <span className="text-xs font-medium">+{activeRoutine.points_reward}</span>
           </div>
         )}
       </div>
