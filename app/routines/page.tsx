@@ -110,13 +110,26 @@ export default function RoutinesPage() {
     steps: [{ title: '', emoji: '✨' }]
   })
 
+  // Create default routines with actual family members (not hardcoded ones)
+  const getDefaultRoutinesWithRealMembers = useCallback(() => {
+    const childMembers = members.filter(m => m.role === 'child')
+    if (childMembers.length === 0) return DEFAULT_ROUTINES
+
+    return DEFAULT_ROUTINES.map(routine => ({
+      ...routine,
+      members: childMembers,
+      member_ids: childMembers.map(m => m.id)
+    }))
+  }, [members])
+
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      setRoutines(DEFAULT_ROUTINES)
+      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+      setRoutines(defaultWithMembers)
       const hour = new Date().getHours()
-      const morning = DEFAULT_ROUTINES.find(r => r.type === 'morning')
-      const evening = DEFAULT_ROUTINES.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || DEFAULT_ROUTINES[0]) : (evening || DEFAULT_ROUTINES[0]))
+      const morning = defaultWithMembers.find(r => r.type === 'morning')
+      const evening = defaultWithMembers.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || defaultWithMembers[0]) : (evening || defaultWithMembers[0]))
       setLoading(false)
       return
     }
@@ -157,7 +170,8 @@ export default function RoutinesPage() {
         })
       )
 
-      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : DEFAULT_ROUTINES
+      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+      const finalRoutines = routinesWithDetails.length > 0 ? routinesWithDetails : defaultWithMembers
       setRoutines(finalRoutines as RoutineWithDetails[])
 
       const hour = new Date().getHours()
@@ -170,14 +184,15 @@ export default function RoutinesPage() {
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
-      setRoutines(DEFAULT_ROUTINES)
+      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+      setRoutines(defaultWithMembers)
       const hour = new Date().getHours()
-      const morning = DEFAULT_ROUTINES.find(r => r.type === 'morning')
-      const evening = DEFAULT_ROUTINES.find(r => r.type === 'evening')
-      setSelectedRoutine(hour < 14 ? (morning || DEFAULT_ROUTINES[0]) : (evening || DEFAULT_ROUTINES[0]))
+      const morning = defaultWithMembers.find(r => r.type === 'morning')
+      const evening = defaultWithMembers.find(r => r.type === 'evening')
+      setSelectedRoutine(hour < 14 ? (morning || defaultWithMembers[0]) : (evening || defaultWithMembers[0]))
     }
     setLoading(false)
-  }, [user])
+  }, [user, getDefaultRoutinesWithRealMembers])
 
   const loadCompletions = useCallback(async () => {
     const today = new Date().toISOString().split('T')[0]

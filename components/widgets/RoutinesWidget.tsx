@@ -59,14 +59,25 @@ export default function RoutinesWidget() {
 
   const today = new Date().toISOString().split('T')[0]
 
+  // Get child members from family context for use in default routines
+  const { members: familyMembers } = useFamily()
+  const childMembers = familyMembers.filter(m => m.role === 'child')
+
+  // Create default routines with actual family members (with their photos)
+  const getDefaultRoutinesWithRealMembers = useCallback(() => {
+    if (childMembers.length === 0) return DEFAULT_ROUTINES
+
+    return DEFAULT_ROUTINES.map(routine => ({
+      ...routine,
+      members: childMembers,
+    }))
+  }, [childMembers])
+
   const fetchRoutines = useCallback(async () => {
     if (!user) {
-      setRoutines(DEFAULT_ROUTINES)
-      setCompletions([
-        { id: 'c1', routine_id: 'demo-bedtime', step_id: 'step-1', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
-        { id: 'c2', routine_id: 'demo-bedtime', step_id: 'step-2', member_id: 'demo-olivia', completed_date: today, completed_at: new Date().toISOString() },
-        { id: 'c3', routine_id: 'demo-bedtime', step_id: 'step-1', member_id: 'demo-ellie', completed_date: today, completed_at: new Date().toISOString() },
-      ])
+      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+      setRoutines(defaultWithMembers)
+      setCompletions([])
       return
     }
 
@@ -107,14 +118,16 @@ export default function RoutinesWidget() {
         setRoutines(routinesWithData)
         setCompletions(completionsData || [])
       } else {
-        setRoutines(DEFAULT_ROUTINES)
+        const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+        setRoutines(defaultWithMembers)
         setCompletions([])
       }
     } catch (error) {
       console.error('Error fetching routines:', error)
-      setRoutines(DEFAULT_ROUTINES)
+      const defaultWithMembers = getDefaultRoutinesWithRealMembers()
+      setRoutines(defaultWithMembers)
     }
-  }, [user, today])
+  }, [user, today, getDefaultRoutinesWithRealMembers])
 
   useEffect(() => {
     fetchRoutines()
