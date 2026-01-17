@@ -78,7 +78,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 pb-20 lg:pb-0 p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 lg:ml-64 pb-20 lg:pb-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
           {children}
         </main>
 

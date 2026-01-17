@@ -25,8 +25,8 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
   const isMoreActive = !MOBILE_NAV_ITEMS.some(item => item.href === pathname)
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-700/80 safe-bottom">
-      <div className="flex items-center justify-around px-1 py-1.5">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg border-t border-slate-200/80 dark:border-slate-700/80" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+      <div className="flex items-center justify-around px-1 py-1">
         {MOBILE_NAV_ITEMS.map(item => {
           const Icon = item.icon
           const isActive = pathname === item.href
@@ -35,16 +35,16 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition-all touch-target min-w-[72px] tap-highlight ${
+              className={`flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[52px] px-2 py-1.5 rounded-2xl transition-all tap-highlight ${
                 isActive
                   ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30'
                   : 'text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800'
               }`}
             >
-              <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
+              <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
                 <Icon className="w-5 h-5" />
               </div>
-              <span className={`text-[10px] font-semibold ${isActive ? 'text-teal-700 dark:text-teal-300' : ''}`}>{t(item.labelKey)}</span>
+              <span className={`text-[11px] font-medium ${isActive ? 'text-teal-700 dark:text-teal-300' : ''}`}>{t(item.labelKey)}</span>
             </Link>
           )
         })}
@@ -52,16 +52,16 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
         {/* Menu button */}
         <button
           onClick={onMoreClick}
-          className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition-all touch-target min-w-[72px] tap-highlight ${
+          className={`flex flex-col items-center justify-center gap-0.5 min-w-[64px] min-h-[52px] px-2 py-1.5 rounded-2xl transition-all tap-highlight ${
             isMoreActive
               ? 'text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/30'
               : 'text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800'
           }`}
         >
-          <div className={`p-1 rounded-xl transition-all ${isMoreActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
+          <div className={`p-1.5 rounded-xl transition-all ${isMoreActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
             <Menu className="w-5 h-5" />
           </div>
-          <span className={`text-[10px] font-semibold ${isMoreActive ? 'text-teal-700 dark:text-teal-300' : ''}`}>{t('nav.menu')}</span>
+          <span className={`text-[11px] font-medium ${isMoreActive ? 'text-teal-700 dark:text-teal-300' : ''}`}>{t('nav.menu')}</span>
         </button>
       </div>
     </nav>

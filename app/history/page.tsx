@@ -546,13 +546,13 @@ export default function HistoryPage() {
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button onClick={prevMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                  <button onClick={prevMonth} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg active:bg-slate-200 dark:active:bg-slate-600">
                     <ChevronLeft className="w-5 h-5" />
                   </button>
                   <span className="font-medium text-slate-700 dark:text-slate-200 min-w-[140px] text-center">
                     {currentMonth.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { month: 'long', year: 'numeric' })}
                   </span>
-                  <button onClick={nextMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
+                  <button onClick={nextMonth} className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg active:bg-slate-200 dark:active:bg-slate-600">
                     <ChevronRight className="w-5 h-5" />
                   </button>
                 </div>

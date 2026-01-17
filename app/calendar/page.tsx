@@ -419,6 +419,22 @@ export default function CalendarPage() {
         }
       }
 
+      // Send notification about new event
+      if (insertedEvent) {
+        try {
+          await fetch('/api/notifications/triggers/event-created', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: { ...insertedEvent, source: 'manual' },
+              member_ids: formData.member_ids,
+            }),
+          })
+        } catch (notifyError) {
+          console.error('Failed to send event notification:', notifyError)
+        }
+      }
+
       await fetchEvents()
       setShowAddModal(false)
     } catch (error) {
@@ -566,6 +582,22 @@ export default function CalendarPage() {
               })
             } catch (gcalError) {
               console.error('Failed to sync to Google Calendar:', gcalError)
+            }
+          }
+
+          // Send notification about new AI event
+          if (insertedEvent) {
+            try {
+              await fetch('/api/notifications/triggers/event-created', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  event: { ...insertedEvent, source: 'ai' },
+                  member_ids: memberIds,
+                }),
+              })
+            } catch (notifyError) {
+              console.error('Failed to send AI event notification:', notifyError)
             }
           }
         } catch (error) {
@@ -1026,13 +1058,13 @@ export default function CalendarPage() {
                         <button
                           key={event.id}
                           onClick={(e) => handleEventClick(event, e)}
-                          className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${
-                            isMobile ? 'px-1.5 py-0.5' : 'px-2 py-0.5'
+                          className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600 transition-colors ${
+                            isMobile ? 'px-2 py-1 min-h-[28px]' : 'px-2 py-0.5'
                           }`}
                           title={event.title}
                         >
-                          {category && <span className={isMobile ? 'text-[9px]' : 'text-[11px]'}>{category.emoji}</span>}
-                          <span className={`text-slate-500 dark:text-slate-400 truncate ${isMobile ? 'text-[9px] max-w-[80px]' : 'text-[11px] max-w-[120px]'}`}>
+                          {category && <span className={isMobile ? 'text-[11px]' : 'text-[11px]'}>{category.emoji}</span>}
+                          <span className={`text-slate-500 dark:text-slate-400 truncate ${isMobile ? 'text-[10px] max-w-[80px]' : 'text-[11px] max-w-[120px]'}`}>
                             {event.title}
                           </span>
                         </button>
@@ -1060,7 +1092,7 @@ export default function CalendarPage() {
                         key={event.id}
                         onClick={(e) => handleEventClick(event, e)}
                         className={`w-full rounded-md text-left transition-all active:scale-[0.98] flex items-center gap-1 tap-highlight ${
-                          isMobile ? 'px-1 py-0.5 min-h-[22px]' : 'px-2 py-1.5 min-h-[34px]'
+                          isMobile ? 'px-1.5 py-1 min-h-[32px]' : 'px-2 py-1.5 min-h-[34px]'
                         }`}
                         style={{ backgroundColor: event.color + '20', borderLeft: `2px solid ${event.color}` }}
                       >
@@ -1263,7 +1295,7 @@ export default function CalendarPage() {
                   key={c.id}
                   type="button"
                   onClick={() => setFormData({ ...formData, color: c.color })}
-                  className={`w-10 h-10 rounded-full transition-transform ${
+                  className={`w-11 h-11 rounded-full transition-transform active:scale-95 ${
                     formData.color === c.color ? 'scale-110 ring-2 ring-offset-2 ring-slate-400' : ''
                   }`}
                   style={{ backgroundColor: c.color }}

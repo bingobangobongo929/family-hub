@@ -1,6 +1,8 @@
 // Bin collection schedule data and helper functions
 
-export type BinType = 'bio' | 'main' | 'paper' | 'plastic'
+// Randers Kommune waste collection types
+// Based on actual containers at Ebbeshøjvej 3, Virring, 8960 Randers SØ
+export type BinType = 'madaffald' | 'restaffald' | 'papir_pap' | 'plast_metal_glas'
 
 export interface BinInfo {
   id: BinType
@@ -11,74 +13,85 @@ export interface BinInfo {
   bgColor: string     // Tailwind background color class
   borderColor: string // Tailwind border color class
   description: string
+  frequency: string   // Collection frequency description
 }
 
 export const BIN_TYPES: BinInfo[] = [
   {
-    id: 'bio',
-    name: 'Bio Bin',
-    shortName: 'Bio',
-    emoji: '🌿',
+    id: 'madaffald',
+    name: 'Madaffald',
+    shortName: 'Mad',
+    emoji: '🍎',
     color: 'text-green-600 dark:text-green-400',
     bgColor: 'bg-green-500',
     borderColor: 'border-green-500',
-    description: 'Garden & Food Waste'
+    description: 'Food waste',
+    frequency: 'Every 14 days'
   },
   {
-    id: 'main',
-    name: 'Main Bin',
-    shortName: 'Main',
+    id: 'restaffald',
+    name: 'Restaffald',
+    shortName: 'Rest',
     emoji: '🗑️',
     color: 'text-slate-600 dark:text-slate-300',
     bgColor: 'bg-slate-700',
     borderColor: 'border-slate-700',
-    description: 'General Waste'
+    description: 'General waste',
+    frequency: 'Every 14 days'
   },
   {
-    id: 'paper',
-    name: 'Paper Recycling',
-    shortName: 'Paper',
+    id: 'papir_pap',
+    name: 'Papir & Pap',
+    shortName: 'Papir',
     emoji: '📦',
     color: 'text-blue-600 dark:text-blue-400',
     bgColor: 'bg-blue-500',
     borderColor: 'border-blue-500',
-    description: 'Paper & Cardboard'
+    description: 'Paper & cardboard',
+    frequency: 'Every 4 weeks'
   },
   {
-    id: 'plastic',
-    name: 'PMG Recycling',
+    id: 'plast_metal_glas',
+    name: 'Plast, Metal & Glas',
     shortName: 'PMG',
     emoji: '♻️',
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-500',
     borderColor: 'border-emerald-500',
-    description: 'Plastic, Metal & Glass'
+    description: 'Plastic, metal & glass',
+    frequency: 'Every 4 weeks'
   },
 ]
 
 // 2026 schedule - dates as DD/MM format
+// NOTE: These are placeholder dates. User should update from AffaldRanders app
+// Randers Kommune uses RenoWeb - actual dates require MitID authentication to retrieve
+// Collection is typically every 14 days for madaffald/restaffald, 4 weeks for papir/PMG
 export const BIN_SCHEDULE_2026: Record<BinType, string[]> = {
-  bio: [
-    '06/01', '20/01', '03/02', '17/02', '03/03', '17/03', '31/03',
-    '14/04', '28/04', '12/05', '26/05', '09/06', '23/06', '07/07',
-    '21/07', '04/08', '18/08', '01/09', '15/09', '29/09', '13/10',
-    '27/10', '09/11', '23/11', '07/12', '21/12'
+  // Madaffald & Restaffald collected together every 14 days (Tuesdays typically)
+  madaffald: [
+    // TODO: Get actual dates from AffaldRanders app or randers.renoweb.dk
+    '07/01', '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
+    '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
+    '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
+    '28/10', '11/11', '25/11', '09/12', '23/12'
   ],
-  main: [
-    '06/01', '20/01', '03/02', '17/02', '03/03', '17/03', '31/03',
-    '14/04', '28/04', '12/05', '26/05', '09/06', '23/06', '07/07',
-    '21/07', '04/08', '18/08', '01/09', '15/09', '29/09', '13/10',
-    '27/10', '09/11', '23/11', '07/12', '21/12'
+  restaffald: [
+    // Same schedule as madaffald (collected together)
+    '07/01', '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
+    '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
+    '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
+    '28/10', '11/11', '25/11', '09/12', '23/12'
   ],
-  paper: [
-    '14/01', '11/02', '10/03', '07/04', '05/05', '02/06', '30/06',
-    '28/07', '25/08', '22/09', '20/10', '17/11', '15/12'
+  // Papir & Pap collected every 4 weeks
+  papir_pap: [
+    '14/01', '11/02', '11/03', '08/04', '06/05', '03/06', '01/07',
+    '29/07', '26/08', '23/09', '21/10', '18/11', '16/12'
   ],
-  plastic: [
-    '08/01', '22/01', '05/02', '19/02', '05/03', '19/03', '02/04',
-    '16/04', '30/04', '14/05', '28/05', '11/06', '25/06', '09/07',
-    '23/07', '06/08', '20/08', '03/09', '17/09', '01/10', '15/10',
-    '29/10', '12/11', '26/11', '10/12'
+  // Plast, Metal & Glas collected every 4 weeks (different week from papir)
+  plast_metal_glas: [
+    '07/01', '04/02', '04/03', '01/04', '29/04', '27/05', '24/06',
+    '22/07', '19/08', '16/09', '14/10', '11/11', '09/12'
   ],
 }
 

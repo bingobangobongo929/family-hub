@@ -1333,7 +1333,7 @@ export default function RoutinesPage() {
                   localStorage.setItem('routine-sounds-enabled', String(newValue))
                   if (newValue) playSound('complete') // Test sound
                 }}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors tap-highlight ${
                   soundEnabled
                     ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/30 dark:text-teal-400'
                     : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
@@ -1344,7 +1344,7 @@ export default function RoutinesPage() {
               </button>
               <button
                 onClick={() => openEditModal(selectedRoutine)}
-                className="p-2 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 tap-highlight"
               >
                 <Edit2 className="w-5 h-5" />
               </button>
@@ -1564,10 +1564,10 @@ export default function RoutinesPage() {
                             {/* Skip/Unskip button */}
                             <button
                               onClick={() => toggleSkipStep(step.id, member.id)}
-                              className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs transition-all ${
+                              className={`absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-sm transition-all shadow-sm ${
                                 memberSkipped
                                   ? 'bg-amber-500 text-white hover:bg-amber-600'
-                                  : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white opacity-0 group-hover:opacity-100'
+                                  : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white sm:opacity-0 sm:group-hover:opacity-100'
                               }`}
                               title={memberSkipped ? t('routines.unskip') : t('routines.skip')}
                             >

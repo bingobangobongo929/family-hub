@@ -504,7 +504,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600 pointer-events-none" />
                     <button
                       onClick={() => removeWidget(widgetId)}
-                      className="absolute -top-2 -right-2 w-10 h-10 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg"
+                      className="absolute -top-2 -right-2 w-11 h-11 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg tap-highlight"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -544,7 +544,7 @@ export default function Dashboard() {
                       <div className="absolute inset-0 bg-slate-500/5 rounded-3xl border-2 border-dashed border-slate-300 dark:border-slate-600" />
                       <button
                         onClick={() => removeWidget(widgetId)}
-                        className="absolute -top-2 -right-2 w-10 h-10 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg"
+                        className="absolute -top-2 -right-2 w-11 h-11 bg-coral-500 text-white rounded-full flex items-center justify-center hover:bg-coral-600 active:scale-95 transition-all z-10 shadow-lg tap-highlight"
                       >
                         <X className="w-5 h-5" />
                       </button>

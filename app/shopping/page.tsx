@@ -404,7 +404,7 @@ export default function ShoppingPage() {
                     >
                       <button
                         onClick={() => toggleItem(item.id)}
-                        className="w-7 h-7 rounded-lg border-2 border-slate-300 dark:border-slate-600 hover:border-teal-500 transition-colors flex items-center justify-center flex-shrink-0 tap-highlight"
+                        className="w-11 h-11 rounded-xl border-2 border-slate-300 dark:border-slate-600 hover:border-teal-500 transition-colors flex items-center justify-center flex-shrink-0 tap-highlight"
                       />
                       <span className="flex-1 text-sm text-slate-700 dark:text-slate-200 truncate">{item.item_name}</span>
                       {item.quantity && (
@@ -415,9 +415,9 @@ export default function ShoppingPage() {
                       )}
                       <button
                         onClick={() => deleteItem(item.id)}
-                        className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
+                        className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   ))}
@@ -455,16 +455,16 @@ export default function ShoppingPage() {
               >
                 <button
                   onClick={() => toggleItem(item.id)}
-                  className="w-7 h-7 rounded-lg bg-green-500 text-white flex items-center justify-center flex-shrink-0 tap-highlight"
+                  className="w-11 h-11 rounded-xl bg-green-500 text-white flex items-center justify-center flex-shrink-0 tap-highlight"
                 >
-                  <Check className="w-4 h-4" />
+                  <Check className="w-5 h-5" />
                 </button>
                 <span className="flex-1 text-sm text-slate-400 line-through truncate">{item.item_name}</span>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
+                  className="w-11 h-11 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl opacity-60 sm:opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 tap-highlight"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             ))}

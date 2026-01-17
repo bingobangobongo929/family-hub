@@ -1,11 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getBinsForDate, getBinInfo } from '@/lib/bin-schedule';
+import { getBinsForDate, getBinInfo, BinType } from '@/lib/bin-schedule';
 
-// This endpoint is called by a cron job to send bin day reminders
-// Should run daily at 7pm: "0 19 * * *"
+// Enhanced Bin Day notification trigger
+// Cron schedule: "0 19 * * *" (7pm daily for evening reminder)
+// Alternative: "0 7 * * *" (7am for morning reminder)
+
+interface NotificationPrefs {
+  user_id: string;
+  bins_enabled: boolean;
+  bin_reminder_evening: boolean;
+  bin_reminder_morning: boolean;
+}
+
+// Check if this is a morning or evening run based on hour
+function isEveningRun(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 17 && hour <= 21; // 5pm - 9pm is evening
+}
+
+// Format bins list for notification
+function formatBinsList(binTypes: BinType[]): { names: string; emojis: string; details: string } {
+  const binInfos = binTypes.map(type => getBinInfo(type));
+
+  const names = binInfos.map(b => b.shortName).join(' & ');
+  const emojis = binInfos.map(b => b.emoji).join(' ');
+
+  // Build detailed list
+  const details = binInfos.map(b => `${b.emoji} ${b.name} (${b.description})`).join('\n');
+
+  return { names, emojis, details };
+}
+
+// Get day name for notification
+function getTomorrowDayName(): string {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  return tomorrow.toLocaleDateString('en-GB', { weekday: 'long' });
+}
+
 export async function GET(request: NextRequest) {
-  // Initialize Supabase at runtime (not build time)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -15,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Verify this is a cron request
+  // Verify cron request in production
   const authHeader = request.headers.get('authorization');
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     if (process.env.NODE_ENV === 'production') {
@@ -24,62 +58,161 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Check what bins are due tomorrow
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const isEvening = isEveningRun();
 
-    const binsDueTomorrow = getBinsForDate(tomorrow);
+    // Determine which date to check
+    let targetDate: Date;
+    let reminderContext: string;
 
-    if (binsDueTomorrow.length === 0) {
-      return NextResponse.json({ message: 'No bins tomorrow', count: 0 });
+    if (isEvening) {
+      // Evening reminder: check tomorrow's bins
+      targetDate = new Date();
+      targetDate.setDate(targetDate.getDate() + 1);
+      targetDate.setHours(0, 0, 0, 0);
+      reminderContext = 'tomorrow';
+    } else {
+      // Morning reminder: check today's bins
+      targetDate = new Date();
+      targetDate.setHours(0, 0, 0, 0);
+      reminderContext = 'today';
     }
 
-    // Get bin details
-    const binDetails = binsDueTomorrow.map(binType => getBinInfo(binType));
-    const binNames = binDetails.map(b => b.name).join(' & ');
-    const binEmojis = binDetails.map(b => b.emoji).join(' ');
+    const binsDue = getBinsForDate(targetDate);
 
-    // Get all users with push tokens (they want notifications)
-    const { data: tokens, error } = await supabase
+    if (binsDue.length === 0) {
+      return NextResponse.json({
+        message: `No bins ${reminderContext}`,
+        count: 0,
+        date: targetDate.toISOString(),
+        isEvening,
+      });
+    }
+
+    // Get users with bin notifications enabled
+    const { data: prefs } = await supabase
+      .from('notification_preferences')
+      .select('user_id, bins_enabled, bin_reminder_evening, bin_reminder_morning')
+      .eq('bins_enabled', true);
+
+    // Filter by the appropriate reminder type
+    const filteredPrefs = (prefs || []).filter(p =>
+      isEvening ? p.bin_reminder_evening : p.bin_reminder_morning
+    );
+
+    // Also get users who have push tokens but no explicit prefs (use defaults)
+    const { data: tokens } = await supabase
       .from('push_tokens')
       .select('user_id')
       .not('user_id', 'is', null);
 
-    if (error || !tokens || tokens.length === 0) {
-      return NextResponse.json({ message: 'No users to notify', count: 0 });
+    // Combine and dedupe user IDs (users with prefs enabled, or users with tokens for defaults)
+    const userIdsWithPrefs = new Set(filteredPrefs.map(p => p.user_id));
+    const allUserIds = tokens?.map(t => t.user_id) || [];
+
+    // For users without explicit prefs, check if they have tokens (use default: evening ON)
+    const usersToNotify = new Set<string>();
+    for (const userId of allUserIds) {
+      if (userIdsWithPrefs.has(userId)) {
+        usersToNotify.add(userId); // Has explicit preference enabled
+      } else if (isEvening) {
+        // Default: evening reminder ON
+        usersToNotify.add(userId);
+      }
+      // Default: morning reminder OFF, so skip
     }
 
-    // Get unique user IDs
-    const userIds = [...new Set(tokens.map(t => t.user_id))];
+    if (usersToNotify.size === 0) {
+      return NextResponse.json({
+        message: 'No users to notify',
+        count: 0,
+        bins: binsDue,
+      });
+    }
 
-    // Send notification to each user
-    const results = await Promise.all(
-      userIds.map(async (userId) => {
+    // Format bin information
+    const { names, emojis, details } = formatBinsList(binsDue);
+    const dayName = isEvening ? getTomorrowDayName() : 'today';
+
+    // Build rich notification
+    let title: string;
+    let body: string;
+
+    if (isEvening) {
+      // Evening reminder - night before
+      if (binsDue.length === 1) {
+        const binInfo = getBinInfo(binsDue[0]);
+        title = `${binInfo.emoji} Put Out The ${binInfo.shortName} Bin Tonight!`;
+        body = `📅 Collection tomorrow (${dayName})\n${binInfo.description}`;
+      } else {
+        title = `${emojis} Bin Day Tomorrow!`;
+        body = `📅 ${dayName} collection:\n${details}`;
+      }
+      body += '\n\n💡 Put them out before bed!';
+    } else {
+      // Morning reminder - same day
+      if (binsDue.length === 1) {
+        const binInfo = getBinInfo(binsDue[0]);
+        title = `${binInfo.emoji} ${binInfo.shortName} Bin Day Today!`;
+        body = `🚛 Collection happening today\n${binInfo.description}`;
+      } else {
+        title = `${emojis} Bin Collection Today!`;
+        body = `🚛 Today's collection:\n${details}`;
+      }
+      body += '\n\n⏰ Make sure they\'re out!';
+    }
+
+    let sentCount = 0;
+    const results: { user_id: string; sent: boolean }[] = [];
+
+    for (const userId of usersToNotify) {
+      try {
         const response = await fetch(new URL('/api/notifications/send', request.url), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: userId,
-            title: `${binEmojis} Bin Day Tomorrow!`,
-            body: `Put out the ${binNames}`,
+            title,
+            body,
             data: {
-              type: 'bin_reminder',
-              bins: binsDueTomorrow,
+              type: isEvening ? 'bin_reminder_evening' : 'bin_reminder_morning',
+              bins: binsDue,
+              collection_date: targetDate.toISOString(),
+              deep_link: '/bindicator',
             },
           }),
         });
 
-        return { user_id: userId, sent: response.ok };
-      })
-    );
+        if (response.ok) {
+          sentCount++;
 
-    const sentCount = results.filter(r => r.sent).length;
+          // Log notification
+          await supabase
+            .from('notification_log')
+            .insert({
+              user_id: userId,
+              category: 'bins',
+              notification_type: isEvening ? 'bin_reminder_evening' : 'bin_reminder_morning',
+              title,
+              body,
+              data: { bins: binsDue, collection_date: targetDate.toISOString() },
+            });
+
+          results.push({ user_id: userId, sent: true });
+        } else {
+          results.push({ user_id: userId, sent: false });
+        }
+      } catch (error) {
+        console.error('Error sending bin notification:', error);
+        results.push({ user_id: userId, sent: false });
+      }
+    }
 
     return NextResponse.json({
-      message: `Sent ${sentCount} bin reminders for ${binNames}`,
+      message: `Sent ${sentCount} bin reminders for ${names}`,
       count: sentCount,
-      bins: binsDueTomorrow,
+      bins: binsDue,
+      reminderType: isEvening ? 'evening' : 'morning',
+      collectionDate: targetDate.toISOString(),
     });
 
   } catch (error) {

@@ -30,6 +30,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate App Icon
+        run: npm run generate-icon
+
       # App loads from Vercel URL, so we just need to sync the native wrapper
       - name: Sync Capacitor iOS
         run: npx cap sync ios

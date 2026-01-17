@@ -308,7 +308,7 @@ export default function TasksPage() {
 
                   <button
                     onClick={() => handleDeleteChore(chore.id)}
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                    className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0 tap-highlight"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>

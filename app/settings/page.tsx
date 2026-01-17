@@ -16,6 +16,7 @@ import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS, CountdownEvent, CountdownEventType, COUNTDOWN_EVENT_TYPES, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
 import PhotoUpload, { AvatarDisplay } from '@/components/PhotoUpload'
+import NotificationPreferences from '@/components/NotificationPreferences'
 
 // Push Notification Settings Component
 function PushNotificationSettings() {
@@ -970,6 +971,9 @@ export default function SettingsPage() {
 
       {/* Push Notifications */}
       <PushNotificationSettings />
+
+      {/* Notification Preferences */}
+      <NotificationPreferences />
 
       {/* Family Context */}
       <Card className="mb-6">

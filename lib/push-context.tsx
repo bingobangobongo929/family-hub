@@ -70,13 +70,30 @@ export function PushProvider({ children }: { children: ReactNode }) {
   const handleAction = useCallback((action: ActionPerformed) => {
     const data = action.notification.data;
 
-    // Navigate based on notification type
-    if (data?.type === 'event_reminder') {
+    // Use deep_link if provided (preferred method)
+    if (data?.deep_link) {
+      router.push(data.deep_link);
+      return;
+    }
+
+    // Fallback: Navigate based on notification type
+    if (data?.type === 'event_reminder' || data?.type === 'event_created') {
       router.push('/calendar');
-    } else if (data?.type === 'bin_reminder') {
+    } else if (data?.type === 'bin_reminder_evening' || data?.type === 'bin_reminder_morning') {
       router.push('/bindicator');
     } else if (data?.type === 'chore_reminder') {
       router.push('/tasks');
+    } else if (data?.type === 'routine_reminder') {
+      router.push('/routines');
+    } else if (data?.type?.startsWith('f1_')) {
+      // All F1 notifications go to F1 page
+      if (data.type.includes('news')) {
+        router.push('/f1?tab=news');
+      } else if (data.type.includes('championship') || data.type.includes('drivers')) {
+        router.push('/f1?tab=drivers');
+      } else {
+        router.push('/f1');
+      }
     }
   }, [router]);
 
