@@ -13,15 +13,8 @@ const config: CapacitorConfig = {
   },
 
   ios: {
-    // Enable push notifications
     contentInset: 'automatic',
     scheme: 'Family Hub',
-  },
-
-  plugins: {
-    PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert'],
-    },
   },
 };
 
