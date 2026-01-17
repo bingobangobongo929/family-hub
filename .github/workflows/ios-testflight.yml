@@ -79,13 +79,30 @@ jobs:
                 build_number: ENV["GITHUB_RUN_NUMBER"]
               )
 
+              # Update code signing settings
+              update_code_signing_settings(
+                use_automatic_signing: false,
+                path: "App.xcodeproj",
+                team_id: ENV["APPLE_TEAM_ID"],
+                bundle_identifier: "app.familyhub.home",
+                profile_name: "Family Hub App Store",
+                code_sign_identity: "Apple Distribution"
+              )
+
               # Build the app (using xcodeproj since project uses SPM, not CocoaPods)
               build_app(
                 project: "App.xcodeproj",
                 scheme: "App",
                 export_method: "app-store",
                 output_directory: "./build",
-                output_name: "FamilyHub.ipa"
+                output_name: "FamilyHub.ipa",
+                export_options: {
+                  signingStyle: "manual",
+                  teamID: ENV["APPLE_TEAM_ID"],
+                  provisioningProfiles: {
+                    "app.familyhub.home" => "Family Hub App Store"
+                  }
+                }
               )
 
               # Upload to TestFlight
