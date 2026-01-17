@@ -28,7 +28,26 @@ interface LogEntryWithDetails extends RoutineCompletionLog {
   member?: FamilyMember
 }
 
+interface ToothbrushingStreak {
+  memberId: string
+  currentStreak: number
+  longestStreak: number
+  lastCompletedDate: string | null
+  todayCount: number
+  requiredDaily: number
+}
+
 type TabType = 'overview' | 'activity'
+
+// Helper to detect toothbrushing steps
+function isToothbrushingStep(step: { title?: string; emoji?: string }): boolean {
+  if (!step) return false
+  const titleMatch = step.title?.toLowerCase().includes('tooth') ||
+                     step.title?.toLowerCase().includes('tand') || // Danish: tand = tooth
+                     step.title?.toLowerCase().includes('tænder') // Danish: tænder = teeth
+  const emojiMatch = step.emoji === '🪥'
+  return titleMatch || emojiMatch
+}
 
 export default function HistoryPage() {
   const { user } = useAuth()
@@ -42,6 +61,7 @@ export default function HistoryPage() {
   const [activityLog, setActivityLog] = useState<LogEntryWithDetails[]>([])
   const [activityLogLoading, setActivityLogLoading] = useState(false)
   const [streaks, setStreaks] = useState<StreakWithRoutine[]>([])
+  const [toothbrushingStreaks, setToothbrushingStreaks] = useState<ToothbrushingStreak[]>([])
   const [pointsHistory, setPointsHistory] = useState<PointsWithDetails[]>([])
   const [routines, setRoutines] = useState<Routine[]>([])
   const [routineSteps, setRoutineSteps] = useState<RoutineStep[]>([])
@@ -150,9 +170,123 @@ export default function HistoryPage() {
     setActivityLogLoading(false)
   }, [user, selectedDate])
 
+  // Calculate toothbrushing streaks - requires 2x daily for each child
+  const calculateToothbrushingStreaks = useCallback(async () => {
+    if (!user || children.length === 0) return
+
+    try {
+      // Fetch last 90 days of completion data with step info
+      const ninetyDaysAgo = new Date()
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+      const startStr = ninetyDaysAgo.toISOString().split('T')[0]
+
+      const { data: completions } = await supabase
+        .from('routine_completion_log')
+        .select(`
+          *,
+          step:routine_steps(id, title, emoji)
+        `)
+        .gte('completed_date', startStr)
+        .eq('action', 'completed')
+        .order('completed_date', { ascending: false })
+
+      if (!completions) return
+
+      // Filter to only toothbrushing completions
+      const toothbrushingCompletions = completions.filter(c =>
+        c.step && isToothbrushingStep(c.step as { title?: string; emoji?: string })
+      )
+
+      // Group by date and member, counting unique step completions
+      // (to handle morning vs evening toothbrushing in different routines)
+      const countsByDateAndMember: Record<string, Record<string, Set<string>>> = {}
+
+      for (const c of toothbrushingCompletions) {
+        if (!countsByDateAndMember[c.completed_date]) {
+          countsByDateAndMember[c.completed_date] = {}
+        }
+        if (!countsByDateAndMember[c.completed_date][c.member_id]) {
+          countsByDateAndMember[c.completed_date][c.member_id] = new Set()
+        }
+        // Use routine_id + step_id as unique key (same step in different routines counts separately)
+        countsByDateAndMember[c.completed_date][c.member_id].add(`${c.routine_id}:${c.step_id}`)
+      }
+
+      const today = new Date().toISOString().split('T')[0]
+      const requiredDaily = 2
+
+      // Calculate streak for each child
+      const streakResults: ToothbrushingStreak[] = children.map(child => {
+        let currentStreak = 0
+        let longestStreak = 0
+        let tempStreak = 0
+        let lastCompletedDate: string | null = null
+        const todayCount = countsByDateAndMember[today]?.[child.id]?.size || 0
+
+        // Go through dates from today backwards
+        const checkDate = new Date()
+        let streakBroken = false
+
+        for (let i = 0; i < 90; i++) {
+          const dateStr = checkDate.toISOString().split('T')[0]
+          const count = countsByDateAndMember[dateStr]?.[child.id]?.size || 0
+
+          if (count >= requiredDaily) {
+            if (!streakBroken) {
+              currentStreak++
+              if (!lastCompletedDate) lastCompletedDate = dateStr
+            }
+            tempStreak++
+            longestStreak = Math.max(longestStreak, tempStreak)
+          } else {
+            // Only break current streak on first miss
+            if (!streakBroken && i > 0) {
+              streakBroken = true
+            }
+            // For today, don't break streak yet if it's early
+            if (i === 0 && !streakBroken) {
+              // Check if yesterday had 2x
+              const yesterday = new Date()
+              yesterday.setDate(yesterday.getDate() - 1)
+              const yesterdayStr = yesterday.toISOString().split('T')[0]
+              const yesterdayCount = countsByDateAndMember[yesterdayStr]?.[child.id]?.size || 0
+              if (yesterdayCount >= requiredDaily) {
+                // Streak continues from yesterday, today just not done yet
+                lastCompletedDate = yesterdayStr
+              } else {
+                streakBroken = true
+              }
+            } else if (i > 0) {
+              tempStreak = 0
+            }
+          }
+
+          checkDate.setDate(checkDate.getDate() - 1)
+        }
+
+        return {
+          memberId: child.id,
+          currentStreak,
+          longestStreak,
+          lastCompletedDate,
+          todayCount,
+          requiredDaily,
+        }
+      })
+
+      setToothbrushingStreaks(streakResults)
+    } catch (error) {
+      console.error('Error calculating toothbrushing streaks:', error)
+    }
+  }, [user, children])
+
   useEffect(() => {
     fetchOverviewData()
   }, [fetchOverviewData])
+
+  useEffect(() => {
+    calculateToothbrushingStreaks()
+  }, [calculateToothbrushingStreaks])
 
   useEffect(() => {
     if (activeTab === 'activity') {
@@ -504,6 +638,95 @@ export default function HistoryPage() {
                     <p className="text-2xl font-bold text-green-600 dark:text-green-400">{daysWithActivity}</p>
                     <p className="text-xs text-green-500 dark:text-green-400">{t('history.activeDays')}</p>
                   </div>
+                </div>
+              </Card>
+
+              {/* Toothbrushing Streak - Special 2x Daily */}
+              <Card className="border-2 border-cyan-200 dark:border-cyan-800 bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-950/30 dark:to-slate-800">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-2xl">🪥</span>
+                  <div>
+                    <h2 className="font-display font-semibold text-slate-800 dark:text-slate-100">
+                      {t('history.toothbrushingStreak')}
+                    </h2>
+                    <p className="text-xs text-cyan-600 dark:text-cyan-400">{t('history.requires2xDaily')}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {toothbrushingStreaks
+                    .filter(s => selectedMember === 'all' || s.memberId === selectedMember)
+                    .map(streak => {
+                      const member = getMember(streak.memberId)
+                      const isOnTrack = streak.todayCount >= streak.requiredDaily
+                      const needsMore = streak.requiredDaily - streak.todayCount
+
+                      return (
+                        <div key={streak.memberId} className="flex items-center gap-3 p-3 rounded-xl bg-white/60 dark:bg-slate-800/60">
+                          {member && (
+                            <AvatarDisplay
+                              photoUrl={member.photo_url}
+                              emoji={member.avatar}
+                              name={member.name}
+                              color={member.color}
+                              size="sm"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{member?.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {/* Today's progress */}
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: streak.requiredDaily }).map((_, i) => (
+                                  <div
+                                    key={i}
+                                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                      i < streak.todayCount
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-slate-200 dark:bg-slate-600 text-slate-400'
+                                    }`}
+                                  >
+                                    {i < streak.todayCount ? '✓' : ''}
+                                  </div>
+                                ))}
+                              </div>
+                              <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {isOnTrack ? t('history.todayComplete') : t('history.todayNeedsMore', { count: needsMore })}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-1 justify-end">
+                              <Flame className={`w-5 h-5 ${
+                                streak.currentStreak >= 7 ? 'text-red-500' : streak.currentStreak > 0 ? 'text-orange-500' : 'text-slate-300'
+                              }`} />
+                              <span className={`text-xl font-bold ${
+                                streak.currentStreak > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400'
+                              }`}>
+                                {streak.currentStreak}
+                              </span>
+                            </div>
+                            {streak.longestStreak > 0 && streak.longestStreak > streak.currentStreak && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                                {t('history.best')}: {streak.longestStreak}
+                              </p>
+                            )}
+                            {streak.currentStreak > 0 && streak.currentStreak >= streak.longestStreak && (
+                              <div className="flex items-center gap-1 justify-end">
+                                <Trophy className="w-3 h-3 text-amber-500" />
+                                <span className="text-xs text-amber-600 dark:text-amber-400">{t('history.personalBest')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                  {toothbrushingStreaks.length === 0 && (
+                    <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-2">
+                      {t('history.noToothbrushingData')}
+                    </p>
+                  )}
                 </div>
               </Card>
 

@@ -1213,6 +1213,14 @@ export const en = {
     minutes: 'minutes',
     hoursShort: 'h',
     minutesShort: 'm',
+    // Toothbrushing streak
+    toothbrushingStreak: 'Toothbrushing Streak',
+    requires2xDaily: 'Requires 2x daily to count',
+    todayComplete: 'Done for today!',
+    todayNeedsMore: '{count} more to go',
+    best: 'Best',
+    personalBest: 'Personal best!',
+    noToothbrushingData: 'No toothbrushing data yet',
   },
 
   // Screensaver

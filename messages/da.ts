@@ -1215,6 +1215,14 @@ export const da: Translations = {
     minutes: 'minutter',
     hoursShort: 't',
     minutesShort: 'm',
+    // Toothbrushing streak
+    toothbrushingStreak: 'Tandbørstnings-streak',
+    requires2xDaily: 'Kræver 2x dagligt for at tælle',
+    todayComplete: 'Færdig for i dag!',
+    todayNeedsMore: '{count} mere mangler',
+    best: 'Bedste',
+    personalBest: 'Personlig rekord!',
+    noToothbrushingData: 'Ingen tandbørstningsdata endnu',
   },
 
   // Screensaver
