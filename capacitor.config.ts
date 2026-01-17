@@ -16,6 +16,12 @@ const config: CapacitorConfig = {
     contentInset: 'automatic',
     scheme: 'Family Hub',
   },
+
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 };
 
 export default config;
