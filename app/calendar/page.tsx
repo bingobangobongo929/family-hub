@@ -87,24 +87,32 @@ export default function CalendarPage() {
   // Calculate cell height based on viewport - fit to screen without scrolling
   useEffect(() => {
     const updateCellHeight = () => {
-      const vh = window.innerHeight
+      // Use visualViewport for more accurate iOS height, fallback to innerHeight
+      const vh = window.visualViewport?.height || window.innerHeight
       const isMobileView = window.innerWidth < 768
-      // Account for: header (~110px), day headers (~44px), mobile nav (~70px on mobile)
-      const headerHeight = isMobileView ? 110 : 120
-      const dayHeaderHeight = 44
-      const mobileNavHeight = isMobileView ? 70 : 0
-      const safeAreaBottom = isMobileView ? 20 : 0 // Extra buffer for notch phones
-      const availableHeight = vh - headerHeight - dayHeaderHeight - mobileNavHeight - safeAreaBottom
+      // Account for: header, day headers, mobile nav, safe areas
+      // iPhone 15 Pro Max has ~59px safe area top, ~34px bottom
+      const headerHeight = isMobileView ? 95 : 110
+      const dayHeaderHeight = 36
+      const mobileNavHeight = isMobileView ? 60 : 0
+      const safeAreaBuffer = isMobileView ? 50 : 0 // Account for notch + home indicator
+      const extraPadding = 8
+      const availableHeight = vh - headerHeight - dayHeaderHeight - mobileNavHeight - safeAreaBuffer - extraPadding
       const rows = viewMode === 'week' ? 1 : viewMode === 'day' ? 1 : monthRows
       const calculatedHeight = Math.floor(availableHeight / rows)
-      // On mobile, allow smaller cells to fit; on desktop keep minimum of 100
-      const minHeight = isMobileView ? 60 : 100
-      setCellHeight(Math.max(minHeight, Math.min(200, calculatedHeight)))
+      // Allow smaller cells on mobile (min 48px) to ensure all 6 rows fit
+      const minHeight = isMobileView ? 48 : 80
+      setCellHeight(Math.max(minHeight, Math.min(160, calculatedHeight)))
     }
 
     updateCellHeight()
     window.addEventListener('resize', updateCellHeight)
-    return () => window.removeEventListener('resize', updateCellHeight)
+    // Also update when visual viewport changes (iOS toolbar, etc.)
+    window.visualViewport?.addEventListener('resize', updateCellHeight)
+    return () => {
+      window.removeEventListener('resize', updateCellHeight)
+      window.visualViewport?.removeEventListener('resize', updateCellHeight)
+    }
   }, [viewMode, monthRows])
 
   // Form state
