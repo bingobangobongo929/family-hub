@@ -51,7 +51,7 @@ jobs:
 
           # Create Appfile
           cat > ios/App/fastlane/Appfile << 'EOF'
-          app_identifier("com.familyhub.app")
+          app_identifier("app.familyhub.home")
           apple_id(ENV["APPLE_ID"])
           team_id(ENV["APPLE_TEAM_ID"])
           itc_team_id(ENV["APPLE_TEAM_ID"])
@@ -75,7 +75,7 @@ jobs:
 
               # Get latest provisioning profiles
               get_provisioning_profile(
-                app_identifier: "com.familyhub.app",
+                app_identifier: "app.familyhub.home",
                 readonly: false,
                 force: true
               )
