@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { SignJWT, importPKCS8 } from 'jose';
-
-// Initialize Supabase with service role for server-side operations
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 interface NotificationPayload {
   user_id?: string; // Send to specific user
@@ -20,6 +14,16 @@ interface NotificationPayload {
 let cachedJwt: { token: string; expiry: number } | null = null;
 
 export async function POST(request: NextRequest) {
+  // Initialize Supabase at runtime (not build time)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return NextResponse.json({ error: 'Missing Supabase config' }, { status: 500 });
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
   try {
     const payload: NotificationPayload = await request.json();
 
