@@ -310,6 +310,8 @@ export function getChoreCategoryConfig(categoryId: string) {
 // ============================================
 // ROUTINES
 // ============================================
+export type ScheduleType = 'daily' | 'weekdays' | 'weekends' | 'custom'
+
 export interface Routine {
   id: string
   user_id: string
@@ -320,6 +322,8 @@ export interface Routine {
   points_reward: number          // Stars awarded when all steps completed
   is_active: boolean
   sort_order: number
+  schedule_type: ScheduleType    // When routine applies: daily, weekdays, weekends, custom
+  schedule_days: number[] | null // For custom schedules: [0,1,2,3,4,5,6] where 0=Sun
   created_at: string
   updated_at: string
   // Legacy field - use routine_members junction table for multi-member support
@@ -328,6 +332,13 @@ export interface Routine {
   steps?: RoutineStep[]
   members?: FamilyMember[]       // Multiple members can be assigned
 }
+
+export const SCHEDULE_TYPES = [
+  { id: 'daily' as const, label: 'Every Day', emoji: '📅' },
+  { id: 'weekdays' as const, label: 'Weekdays (Mon-Fri)', emoji: '💼' },
+  { id: 'weekends' as const, label: 'Weekends (Sat-Sun)', emoji: '🌅' },
+  { id: 'custom' as const, label: 'Custom Days', emoji: '⚙️' },
+]
 
 export type InsertRoutine = Omit<Routine, 'id' | 'created_at' | 'updated_at' | 'steps' | 'members'>
 export type UpdateRoutine = Partial<InsertRoutine>
@@ -481,6 +492,7 @@ export const WIDGET_TYPES = [
   { id: 'shopping', name: 'Shopping', icon: '🛒', description: 'Shopping list preview', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
   { id: 'timer', name: 'Timer', icon: '⏱️', description: 'Fun countdown timers with sounds', minW: 2, minH: 2, defaultW: 2, defaultH: 3 },
   { id: 'countdown', name: 'Countdown', icon: '🎂', description: 'Days until birthdays & events', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
+  { id: 'streaks', name: 'Streaks', icon: '🔥', description: 'Routine completion streaks', minW: 2, minH: 2, defaultW: 2, defaultH: 2 },
 ]
 
 export function getWidgetType(id: string) {
@@ -596,6 +608,95 @@ export function getCategoryConfig(category: string | null) {
   const key = (category || 'other').toLowerCase()
   return CATEGORY_CONFIG[key] || CATEGORY_CONFIG.other
 }
+
+// ============================================
+// USER PREFERENCES (synced per-user settings)
+// ============================================
+export type ThemePreference = 'light' | 'dark' | 'system'
+export type LocalePreference = 'en' | 'da'
+
+export interface UserPreferences {
+  id: string
+  user_id: string
+  theme: ThemePreference
+  locale: LocalePreference
+  created_at: string
+  updated_at: string
+}
+
+export type InsertUserPreferences = Omit<UserPreferences, 'id' | 'created_at' | 'updated_at'>
+export type UpdateUserPreferences = Partial<InsertUserPreferences>
+
+// ============================================
+// ROUTINE COMPLETION LOG (immutable audit trail)
+// ============================================
+export type CompletionAction = 'completed' | 'uncompleted' | 'skipped'
+
+export interface RoutineCompletionLog {
+  id: string
+  routine_id: string
+  step_id: string
+  member_id: string
+  completed_date: string        // Date string YYYY-MM-DD
+  completed_at: string          // Timestamp
+  completed_by: string | null   // User who marked it (parent tracking for child)
+  action: CompletionAction
+  notes: string | null          // Optional context: "sick day", "forgot", etc.
+  // Joined data
+  routine?: Routine
+  step?: RoutineStep
+  member?: FamilyMember
+}
+
+export type InsertRoutineCompletionLog = Omit<RoutineCompletionLog, 'id' | 'routine' | 'step' | 'member'>
+
+// ============================================
+// MEMBER STREAKS (cached streak calculations)
+// ============================================
+export interface MemberStreak {
+  id: string
+  member_id: string
+  routine_id: string
+  current_streak: number
+  longest_streak: number
+  last_completed_date: string | null
+  streak_started_date: string | null
+  updated_at: string
+  // Joined data
+  member?: FamilyMember
+  routine?: Routine
+}
+
+export type InsertMemberStreak = Omit<MemberStreak, 'id' | 'updated_at' | 'member' | 'routine'>
+export type UpdateMemberStreak = Partial<InsertMemberStreak>
+
+// ============================================
+// POINTS HISTORY (audit trail for all point changes)
+// ============================================
+export type PointsReason =
+  | 'routine_completed'
+  | 'chore_completed'
+  | 'reward_redeemed'
+  | 'manual_adjustment'
+  | 'streak_bonus'
+
+export type PointsReferenceType = 'routine' | 'chore' | 'reward' | null
+
+export interface PointsHistory {
+  id: string
+  member_id: string
+  points_change: number         // Positive or negative
+  reason: PointsReason
+  reference_id: string | null   // routine_id, chore_id, reward_id, or null
+  reference_type: PointsReferenceType
+  notes: string | null          // Optional description
+  created_at: string
+  created_by: string | null     // User who made the change
+  // Joined data
+  member?: FamilyMember
+}
+
+export type InsertPointsHistory = Omit<PointsHistory, 'id' | 'created_at' | 'member'>
 
 // ============================================
 // MEMBER COLORS (for assignment)

@@ -23,7 +23,8 @@ import {
   ChevronUp,
   ChevronDown,
   X,
-  Edit3
+  Edit3,
+  History
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -40,6 +41,7 @@ import { FamilyMember } from '@/lib/database.types'
 const DEFAULT_NAV_ITEMS = [
   { href: '/', labelKey: 'nav.dashboard', icon: Home },
   { href: '/routines', labelKey: 'nav.routines', icon: Sun },
+  { href: '/history', labelKey: 'nav.history', icon: History },
   { href: '/calendar', labelKey: 'nav.calendar', icon: Calendar },
   { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
   { href: '/rewards', labelKey: 'nav.rewards', icon: Gift, requiresRewards: true },

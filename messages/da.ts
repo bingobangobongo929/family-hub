@@ -98,6 +98,7 @@ export const da: Translations = {
     rewards: 'Belønninger',
     shopping: 'Indkøb',
     gallery: 'Galleri',
+    history: 'Historik',
     bindicator: 'Affaldskalender',
     f1: 'Formel 1',
     notes: 'Noter',

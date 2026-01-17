@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
-import { Routine, RoutineStep, FamilyMember } from '@/lib/database.types'
+import { Routine, RoutineStep, FamilyMember, ScheduleType, SCHEDULE_TYPES } from '@/lib/database.types'
 import Confetti from '@/components/Confetti'
 
 // Extended routine type with steps and members
@@ -42,11 +42,32 @@ export default function RoutinesPage() {
     title: '',
     emoji: '📋',
     type: 'morning' as 'morning' | 'evening' | 'custom',
+    schedule_type: 'daily' as ScheduleType,
+    schedule_days: [] as number[],
     member_ids: [] as string[],
     scheduled_time: '',
     points_reward: 1,
     steps: [{ title: '', emoji: '✨' }]
   })
+
+  // Helper to check if a routine applies today
+  const routineAppliesToday = (routine: Routine): boolean => {
+    const today = new Date().getDay() // 0 = Sunday, 6 = Saturday
+    const scheduleType = routine.schedule_type || 'daily'
+
+    switch (scheduleType) {
+      case 'daily':
+        return true
+      case 'weekdays':
+        return today >= 1 && today <= 5 // Mon-Fri
+      case 'weekends':
+        return today === 0 || today === 6 // Sat-Sun
+      case 'custom':
+        return routine.schedule_days?.includes(today) ?? true
+      default:
+        return true
+    }
+  }
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
@@ -94,13 +115,15 @@ export default function RoutinesPage() {
 
       setRoutines(routinesWithDetails as RoutineWithDetails[])
 
+      // Filter to routines that apply today
+      const todayRoutines = routinesWithDetails.filter(routineAppliesToday)
       const hour = new Date().getHours()
-      const morning = routinesWithDetails.find(r => r.type === 'morning')
-      const evening = routinesWithDetails.find(r => r.type === 'evening')
+      const morning = todayRoutines.find(r => r.type === 'morning')
+      const evening = todayRoutines.find(r => r.type === 'evening')
       setSelectedRoutine(
         hour < 14
-          ? (morning || routinesWithDetails[0] || null)
-          : (evening || routinesWithDetails[0] || null)
+          ? (morning || todayRoutines[0] || null)
+          : (evening || todayRoutines[0] || null)
       )
     } catch (error) {
       console.error('Error fetching routines:', error)
@@ -152,6 +175,16 @@ export default function RoutinesPage() {
         .eq('step_id', stepId)
         .eq('member_id', memberId)
         .eq('completed_date', today)
+
+      // Log uncomplete action to history
+      await supabase.from('routine_completion_log').insert({
+        routine_id: selectedRoutine?.id,
+        step_id: stepId,
+        member_id: memberId,
+        completed_date: today,
+        completed_by: user.id,
+        action: 'uncompleted'
+      })
     } else {
       newCompleted.add(key)
 
@@ -173,6 +206,16 @@ export default function RoutinesPage() {
           completed_date: today
         })
 
+      // Log complete action to history
+      await supabase.from('routine_completion_log').insert({
+        routine_id: selectedRoutine?.id,
+        step_id: stepId,
+        member_id: memberId,
+        completed_date: today,
+        completed_by: user.id,
+        action: 'completed'
+      })
+
       if (selectedRoutine) {
         const memberCompletedAll = selectedRoutine.steps.every(
           s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
@@ -181,7 +224,21 @@ export default function RoutinesPage() {
           const member = getMember(memberId)
           if (member?.stars_enabled) {
             updateMemberPoints(memberId, selectedRoutine.points_reward)
+
+            // Log points to history
+            await supabase.from('points_history').insert({
+              member_id: memberId,
+              points_change: selectedRoutine.points_reward,
+              reason: 'routine_completed',
+              reference_id: selectedRoutine.id,
+              reference_type: 'routine',
+              created_by: user.id
+            })
           }
+
+          // Update streak
+          await updateStreak(memberId, selectedRoutine.id, today)
+
           // BIG celebration for completing all steps!
           setTimeout(() => {
             setConfettiConfig({ intensity: 'big', emoji: '⭐' })
@@ -206,6 +263,55 @@ export default function RoutinesPage() {
     }
 
     setCompletedSteps(newCompleted)
+  }
+
+  // Update streak for a member completing a routine
+  const updateStreak = async (memberId: string, routineId: string, completedDate: string) => {
+    try {
+      const { data: streak } = await supabase
+        .from('member_streaks')
+        .select('*')
+        .eq('member_id', memberId)
+        .eq('routine_id', routineId)
+        .single()
+
+      if (!streak) {
+        // First time - create streak record
+        await supabase.from('member_streaks').insert({
+          member_id: memberId,
+          routine_id: routineId,
+          current_streak: 1,
+          longest_streak: 1,
+          last_completed_date: completedDate,
+          streak_started_date: completedDate
+        })
+        return
+      }
+
+      const lastDate = new Date(streak.last_completed_date)
+      const newDate = new Date(completedDate)
+      const diffDays = Math.floor((newDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+
+      if (diffDays === 1) {
+        // Consecutive day - extend streak
+        const newStreak = streak.current_streak + 1
+        await supabase.from('member_streaks').update({
+          current_streak: newStreak,
+          longest_streak: Math.max(newStreak, streak.longest_streak),
+          last_completed_date: completedDate
+        }).eq('id', streak.id)
+      } else if (diffDays > 1) {
+        // Missed days - reset streak (but preserve longest_streak record)
+        await supabase.from('member_streaks').update({
+          current_streak: 1,
+          streak_started_date: completedDate,
+          last_completed_date: completedDate
+        }).eq('id', streak.id)
+      }
+      // diffDays === 0 means same day - no change needed
+    } catch (error) {
+      console.error('Error updating streak:', error)
+    }
   }
 
   const toggleStep = async (stepId: string) => {
@@ -247,6 +353,8 @@ export default function RoutinesPage() {
           title: formData.title,
           emoji: formData.emoji,
           type: formData.type,
+          schedule_type: formData.schedule_type,
+          schedule_days: formData.schedule_type === 'custom' ? formData.schedule_days : null,
           points_reward: formData.points_reward,
           scheduled_time: formData.scheduled_time || null,
           sort_order: routines.length
@@ -303,6 +411,8 @@ export default function RoutinesPage() {
           title: formData.title,
           emoji: formData.emoji,
           type: formData.type,
+          schedule_type: formData.schedule_type,
+          schedule_days: formData.schedule_type === 'custom' ? formData.schedule_days : null,
           points_reward: formData.points_reward,
           scheduled_time: formData.scheduled_time || null
         })
@@ -370,6 +480,8 @@ export default function RoutinesPage() {
       title: routine.title,
       emoji: routine.emoji,
       type: routine.type,
+      schedule_type: routine.schedule_type || 'daily',
+      schedule_days: routine.schedule_days || [],
       member_ids: routine.member_ids || [],
       scheduled_time: routine.scheduled_time || '',
       points_reward: routine.points_reward,
@@ -386,6 +498,8 @@ export default function RoutinesPage() {
       title: '',
       emoji: '📋',
       type: 'morning',
+      schedule_type: 'daily',
+      schedule_days: [],
       member_ids: [],
       scheduled_time: '',
       points_reward: 1,
@@ -533,6 +647,8 @@ export default function RoutinesPage() {
             const isComplete = progress.completed === progress.total
             const isSelected = selectedRoutine?.id === routine.id
             const isDragging = draggingRoutine === routine.id
+            const appliesToday = routineAppliesToday(routine)
+            const scheduleInfo = SCHEDULE_TYPES.find(s => s.id === (routine.schedule_type || 'daily'))
 
             return (
               <div
@@ -547,7 +663,7 @@ export default function RoutinesPage() {
                 <Card
                   className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-sage-400 dark:ring-sage-500' : ''} ${
                     isComplete ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' : ''
-                  }`}
+                  } ${!appliesToday ? 'opacity-50' : ''}`}
                   onClick={() => setSelectedRoutine(routine)}
                 >
                   <div className="flex items-center gap-3">
@@ -581,8 +697,16 @@ export default function RoutinesPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{routine.title}</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">{progress.completed}/{progress.total} {t('routines.done')}</p>
+                      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                        <span>{progress.completed}/{progress.total} {t('routines.done')}</span>
+                        {scheduleInfo && scheduleInfo.id !== 'daily' && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+                            {scheduleInfo.emoji} {scheduleInfo.id === 'weekdays' ? 'M-F' : scheduleInfo.id === 'weekends' ? 'S-S' : ''}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {!appliesToday && <span className="text-xs text-slate-400" title="Not scheduled today">📅</span>}
                     {isComplete && <span className="text-2xl animate-bounce">🎉</span>}
                   </div>
                   <div className="mt-3 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
@@ -858,6 +982,61 @@ export default function RoutinesPage() {
                 <Star className="w-5 h-5 text-amber-500" />
               </div>
             </div>
+          </div>
+
+          {/* Schedule Type */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              {t('routines.scheduleType') || 'Schedule'}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SCHEDULE_TYPES.map(scheduleType => {
+                const isSelected = formData.schedule_type === scheduleType.id
+                return (
+                  <button
+                    key={scheduleType.id}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, schedule_type: scheduleType.id })}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl border-2 transition-all ${
+                      isSelected
+                        ? 'border-sage-500 bg-sage-50 dark:bg-sage-900/30'
+                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <span>{scheduleType.emoji}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{scheduleType.label}</span>
+                    {isSelected && <Check className="w-4 h-4 text-sage-600" />}
+                  </button>
+                )
+              })}
+            </div>
+            {formData.schedule_type === 'custom' && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => {
+                  const isSelected = formData.schedule_days.includes(index)
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        if (isSelected) {
+                          setFormData({ ...formData, schedule_days: formData.schedule_days.filter(d => d !== index) })
+                        } else {
+                          setFormData({ ...formData, schedule_days: [...formData.schedule_days, index].sort() })
+                        }
+                      }}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                        isSelected
+                          ? 'bg-sage-500 text-white'
+                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {day.charAt(0)}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
           {/* Participants */}

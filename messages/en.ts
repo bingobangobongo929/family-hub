@@ -96,6 +96,7 @@ export const en = {
     rewards: 'Rewards',
     shopping: 'Shopping',
     gallery: 'Gallery',
+    history: 'History',
     bindicator: 'Bindicator',
     f1: 'Formula 1',
     notes: 'Notes',

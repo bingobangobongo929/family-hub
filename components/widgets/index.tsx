@@ -16,6 +16,7 @@ export { default as GooglePhotosWidget } from './GooglePhotosWidget'
 export { default as F1Widget } from './F1Widget'
 export { default as F1NewsWidget } from './F1NewsWidget'
 export { default as RoutinesWidget } from './RoutinesWidget'
+export { default as StreaksWidget } from './StreaksWidget'
 
 // Widget type definitions for the dashboard
 export const AVAILABLE_WIDGETS = [
@@ -37,6 +38,7 @@ export const AVAILABLE_WIDGETS = [
   { id: 'googlephotos', name: 'Google Photos', icon: '📸', component: 'GooglePhotosWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'f1', name: 'Formula 1', icon: '🏎️', component: 'F1Widget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
   { id: 'f1news', name: 'F1 News', icon: '📰', component: 'F1NewsWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
+  { id: 'streaks', name: 'Streaks', icon: '🔥', component: 'StreaksWidget', defaultSize: { w: 2, h: 2 }, minSize: { w: 1, h: 1 } },
 ]
 
 // Default layout for new users
