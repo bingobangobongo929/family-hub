@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Card from '@/components/Card'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
-import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown } from 'lucide-react'
+import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react'
 import { AvatarDisplay } from '@/components/PhotoUpload'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
@@ -37,9 +37,12 @@ export default function RoutinesPage() {
   const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
   const [draggingRoutine, setDraggingRoutine] = useState<string | null>(null)
   const [selectedScenarios, setSelectedScenarios] = useState<Record<string, string[]>>({}) // routineId -> scenarioIds
+  const [selectorExpanded, setSelectorExpanded] = useState(false) // Collapsed by default
+  const [syncedRoutineId, setSyncedRoutineId] = useState<string | null>(null) // The active routine synced across devices
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
+  const today = new Date().toISOString().split('T')[0]
 
   const [formData, setFormData] = useState({
     title: '',
@@ -147,23 +150,37 @@ export default function RoutinesPage() {
       }
       setSelectedScenarios(newSelectedScenarios)
 
-      // Filter to routines that apply today
-      const todayRoutines = routinesWithDetails.filter(routineAppliesToday)
-      const hour = new Date().getHours()
-      const morning = todayRoutines.find(r => r.type === 'morning')
-      const evening = todayRoutines.find(r => r.type === 'evening')
-      setSelectedRoutine(
-        hour < 14
+      // Load the active routine from synced state
+      const { data: activeState } = await supabase
+        .from('active_routine_state')
+        .select('routine_id')
+        .eq('date', today)
+        .single()
+
+      if (activeState?.routine_id) {
+        // Use the synced active routine
+        const activeRoutine = routinesWithDetails.find(r => r.id === activeState.routine_id)
+        setSyncedRoutineId(activeState.routine_id)
+        setSelectedRoutine(activeRoutine || null)
+      } else {
+        // No active routine yet - auto-select based on time of day
+        const todayRoutines = routinesWithDetails.filter(routineAppliesToday)
+        const hour = new Date().getHours()
+        const morning = todayRoutines.find(r => r.type === 'morning')
+        const evening = todayRoutines.find(r => r.type === 'evening')
+        const defaultRoutine = hour < 14
           ? (morning || todayRoutines[0] || null)
           : (evening || todayRoutines[0] || null)
-      )
+        setSelectedRoutine(defaultRoutine)
+        setSyncedRoutineId(null)
+      }
     } catch (error) {
       console.error('Error fetching routines:', error)
       setRoutines([])
       setSelectedRoutine(null)
     }
     setLoading(false)
-  }, [user, isWeekend])
+  }, [user, isWeekend, today])
 
   const loadCompletions = useCallback(async () => {
     if (!user) {
@@ -191,6 +208,59 @@ export default function RoutinesPage() {
     fetchRoutines()
     loadCompletions()
   }, [fetchRoutines, loadCompletions])
+
+  // Real-time subscription for active routine sync
+  useEffect(() => {
+    if (!user) return
+
+    const channel = supabase
+      .channel('active-routine-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'active_routine_state',
+          filter: `date=eq.${today}`
+        },
+        (payload) => {
+          // Another device changed the active routine
+          const newRoutineId = (payload.new as { routine_id?: string })?.routine_id
+          if (newRoutineId && newRoutineId !== syncedRoutineId) {
+            setSyncedRoutineId(newRoutineId)
+            const routine = routines.find(r => r.id === newRoutineId)
+            if (routine) {
+              setSelectedRoutine(routine)
+              setSelectorExpanded(false) // Collapse when another user selects
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [user, today, syncedRoutineId, routines])
+
+  // Select a routine and sync across devices
+  const selectRoutineAndSync = async (routine: RoutineWithDetails) => {
+    if (!user) return
+
+    setSelectedRoutine(routine)
+    setSyncedRoutineId(routine.id)
+    setSelectorExpanded(false) // Collapse after selection
+
+    // Save to database for sync
+    await supabase
+      .from('active_routine_state')
+      .upsert({
+        user_id: user.id,
+        routine_id: routine.id,
+        date: today,
+        started_by: user.id
+      }, { onConflict: 'user_id,date' })
+  }
 
   const toggleStepForMember = async (stepId: string, memberId: string) => {
     if (!user) return
@@ -736,85 +806,132 @@ export default function RoutinesPage() {
           </Button>
         </div>
 
-        {/* Routine Selector with Drag & Drop */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
-          {routines.map((routine, index) => {
-            const progress = getProgress(routine)
-            const isComplete = progress.completed === progress.total
-            const isSelected = selectedRoutine?.id === routine.id
-            const isDragging = draggingRoutine === routine.id
-            const appliesToday = routineAppliesToday(routine)
-            const scheduleInfo = SCHEDULE_TYPES.find(s => s.id === (routine.schedule_type || 'daily'))
-
-            return (
-              <div
-                key={routine.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, routine.id)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleDrop(e, routine.id)}
-                onDragEnd={() => setDraggingRoutine(null)}
-                className={`transition-all duration-200 ${isDragging ? 'opacity-50 scale-95' : ''}`}
-              >
-                <Card
-                  className={`cursor-pointer transition-all ${isSelected ? 'ring-2 ring-sage-400 dark:ring-sage-500' : ''} ${
-                    isComplete ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' : ''
-                  } ${!appliesToday ? 'opacity-50' : ''}`}
-                  onClick={() => setSelectedRoutine(routine)}
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Drag handle & reorder buttons */}
-                    <div className="flex flex-col items-center gap-0.5 -ml-1">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'up') }}
-                        className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
-                        disabled={index === 0}
-                      >
-                        <ChevronUp className="w-4 h-4 text-slate-400" />
-                      </button>
-                      <GripVertical className="w-4 h-4 text-slate-300 cursor-grab active:cursor-grabbing" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'down') }}
-                        className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === routines.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
-                        disabled={index === routines.length - 1}
-                      >
-                        <ChevronDown className="w-4 h-4 text-slate-400" />
-                      </button>
-                    </div>
-
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-transform ${isComplete ? 'animate-celebrate' : ''} ${
-                      routine.type === 'morning'
+        {/* Collapsible Routine Selector - Synced across devices */}
+        <div className="mb-6">
+          {/* Current routine header / tap to expand */}
+          <button
+            onClick={() => setSelectorExpanded(!selectorExpanded)}
+            className="w-full"
+          >
+            <Card className={`transition-all ${selectorExpanded ? 'ring-2 ring-sage-400 dark:ring-sage-500' : ''}`}>
+              <div className="flex items-center gap-3">
+                {selectedRoutine ? (
+                  <>
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
+                      selectedRoutine.type === 'morning'
                         ? 'bg-gradient-to-br from-amber-400 to-orange-500'
-                        : routine.type === 'evening'
+                        : selectedRoutine.type === 'evening'
                         ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
                         : 'bg-gradient-to-br from-sage-400 to-sage-600'
                     }`}>
-                      {routine.emoji}
+                      {selectedRoutine.emoji}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{routine.title}</p>
-                      <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                        <span>{progress.completed}/{progress.total} {t('routines.done')}</span>
-                        {scheduleInfo && scheduleInfo.id !== 'daily' && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
-                            {scheduleInfo.emoji} {scheduleInfo.id === 'weekdays' ? 'M-F' : scheduleInfo.id === 'weekends' ? 'S-S' : ''}
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {getProgress(selectedRoutine).completed}/{getProgress(selectedRoutine).total} {t('routines.done')}
+                        {syncedRoutineId && <span className="ml-2 text-sage-600 dark:text-sage-400">• Synced</span>}
+                      </p>
                     </div>
-                    {!appliesToday && <span className="text-xs text-slate-400" title="Not scheduled today">📅</span>}
-                    {isComplete && <span className="text-2xl animate-bounce">🎉</span>}
-                  </div>
-                  <div className="mt-3 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-sage-500'}`}
-                      style={{ width: `${(progress.completed / progress.total) * 100}%` }}
-                    />
-                  </div>
-                </Card>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-2xl">
+                      📋
+                    </div>
+                    <div className="flex-1 text-left">
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{t('routines.selectRoutine') || 'Select a routine'}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{t('routines.tapToChoose') || 'Tap to choose'}</p>
+                    </div>
+                  </>
+                )}
+                <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform ${selectorExpanded ? 'rotate-90' : ''}`} />
               </div>
-            )
-          })}
+            </Card>
+          </button>
+
+          {/* Expanded routine list */}
+          {selectorExpanded && (
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 animate-fade-in">
+              {routines.map((routine, index) => {
+                const progress = getProgress(routine)
+                const isComplete = progress.completed === progress.total && progress.total > 0
+                const isSelected = selectedRoutine?.id === routine.id
+                const isDragging = draggingRoutine === routine.id
+                const appliesToday = routineAppliesToday(routine)
+                const scheduleInfo = SCHEDULE_TYPES.find(s => s.id === (routine.schedule_type || 'daily'))
+
+                return (
+                  <div
+                    key={routine.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, routine.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, routine.id)}
+                    onDragEnd={() => setDraggingRoutine(null)}
+                    className={`transition-all duration-200 ${isDragging ? 'opacity-50 scale-95' : ''}`}
+                  >
+                    <Card
+                      className={`cursor-pointer transition-all hover:shadow-md ${isSelected ? 'ring-2 ring-sage-400 dark:ring-sage-500 bg-sage-50 dark:bg-sage-900/20' : ''} ${
+                        isComplete ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20' : ''
+                      } ${!appliesToday ? 'opacity-50' : ''}`}
+                      onClick={() => selectRoutineAndSync(routine)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Drag handle & reorder buttons */}
+                        <div className="flex flex-col items-center gap-0.5 -ml-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'up') }}
+                            className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                            disabled={index === 0}
+                          >
+                            <ChevronUp className="w-4 h-4 text-slate-400" />
+                          </button>
+                          <GripVertical className="w-4 h-4 text-slate-300 cursor-grab active:cursor-grabbing" />
+                          <button
+                            onClick={(e) => { e.stopPropagation(); moveRoutine(routine.id, 'down') }}
+                            className={`p-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors ${index === routines.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}`}
+                            disabled={index === routines.length - 1}
+                          >
+                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                          </button>
+                        </div>
+
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-transform ${isComplete ? 'animate-celebrate' : ''} ${
+                          routine.type === 'morning'
+                            ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+                            : routine.type === 'evening'
+                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600'
+                            : 'bg-gradient-to-br from-sage-400 to-sage-600'
+                        }`}>
+                          {routine.emoji}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-slate-800 dark:text-slate-100 truncate text-sm">{routine.title}</p>
+                          <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span>{progress.completed}/{progress.total}</span>
+                            {scheduleInfo && scheduleInfo.id !== 'daily' && (
+                              <span className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-700">
+                                {scheduleInfo.emoji}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {isSelected && <Check className="w-5 h-5 text-sage-600 dark:text-sage-400" />}
+                        {isComplete && !isSelected && <span className="text-lg">🎉</span>}
+                      </div>
+                      <div className="mt-2 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-500 ${isComplete ? 'bg-gradient-to-r from-green-400 to-emerald-500' : 'bg-sage-500'}`}
+                          style={{ width: progress.total > 0 ? `${(progress.completed / progress.total) * 100}%` : '0%' }}
+                        />
+                      </div>
+                    </Card>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
       {/* Selected Routine - Simple Checklist */}

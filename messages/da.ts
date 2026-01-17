@@ -389,6 +389,9 @@ export const da: Translations = {
     alwaysShow: 'Vis altid',
     onlyFor: 'kun',
     scheduleType: 'Tidsplan',
+    selectRoutine: 'Vælg en rutine',
+    tapToChoose: 'Tryk for at vælge',
+    synced: 'Synkroniseret',
   },
 
   // Shopping

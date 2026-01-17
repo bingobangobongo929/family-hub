@@ -402,6 +402,22 @@ export interface RoutineDailyState {
 
 export type InsertRoutineDailyState = Omit<RoutineDailyState, 'id' | 'created_at' | 'updated_at'>
 
+// ============================================
+// ACTIVE ROUTINE STATE
+// Which routine is currently being worked on (synced across devices)
+// ============================================
+export interface ActiveRoutineState {
+  id: string
+  user_id: string
+  routine_id: string | null
+  date: string                  // YYYY-MM-DD
+  started_at: string
+  started_by: string | null     // User who selected this routine
+  updated_at: string
+}
+
+export type InsertActiveRoutineState = Omit<ActiveRoutineState, 'id' | 'started_at' | 'updated_at'>
+
 // Track per-member, per-step, per-day completions
 export interface RoutineCompletion {
   id: string

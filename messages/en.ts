@@ -387,6 +387,9 @@ export const en = {
     alwaysShow: 'Always show',
     onlyFor: 'only',
     scheduleType: 'Schedule',
+    selectRoutine: 'Select a routine',
+    tapToChoose: 'Tap to choose',
+    synced: 'Synced',
   },
 
   // Shopping
