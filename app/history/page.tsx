@@ -25,7 +25,7 @@ interface PointsWithDetails extends PointsHistory {
 export default function HistoryPage() {
   const { user } = useAuth()
   const { members } = useFamily()
-  const { t } = useTranslation()
+  const { t, locale } = useTranslation()
   const [loading, setLoading] = useState(true)
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [completionsByDate, setCompletionsByDate] = useState<Record<string, RoutineCompletionLog[]>>({})
@@ -174,8 +174,8 @@ export default function HistoryPage() {
     <div className="page-container">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="page-header">{t('history.title') || 'History'}</h1>
-          <p className="page-subtitle">{t('history.subtitle') || 'Track routines, streaks, and progress'}</p>
+          <h1 className="page-header">{t('history.title')}</h1>
+          <p className="page-subtitle">{t('history.subtitle')}</p>
         </div>
 
         {/* Member Filter */}
@@ -188,7 +188,7 @@ export default function HistoryPage() {
                 : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
             }`}
           >
-            All
+            {t('common.all')}
           </button>
           {children.map(child => (
             <button
@@ -220,7 +220,7 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-sage-500" />
               <h2 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-                {t('history.calendar') || 'Routine Calendar'}
+                {t('history.calendar')}
               </h2>
             </div>
             <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function HistoryPage() {
                 <ChevronLeft className="w-5 h-5" />
               </button>
               <span className="font-medium text-slate-700 dark:text-slate-200 min-w-[140px] text-center">
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                {currentMonth.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', { month: 'long', year: 'numeric' })}
               </span>
               <button onClick={nextMonth} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded">
                 <ChevronRight className="w-5 h-5" />
@@ -238,7 +238,7 @@ export default function HistoryPage() {
 
           {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            {[t('days.sun'), t('days.mon'), t('days.tue'), t('days.wed'), t('days.thu'), t('days.fri'), t('days.sat')].map(day => (
               <div key={day} className="text-center text-xs font-medium text-slate-500 dark:text-slate-400 py-2">
                 {day}
               </div>
@@ -278,15 +278,15 @@ export default function HistoryPage() {
           <div className="flex items-center justify-center gap-6 mt-4 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-green-500" />
-              <span>All done</span>
+              <span>{t('history.allDone')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-amber-400" />
-              <span>Partial</span>
+              <span>{t('history.partial')}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <div className="w-3 h-3 rounded bg-slate-200 dark:bg-slate-600" />
-              <span>No activity</span>
+              <span>{t('history.noActivity')}</span>
             </div>
           </div>
         </Card>
@@ -298,18 +298,18 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-5 h-5 text-indigo-500" />
               <h2 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-                {t('history.stats') || 'This Month'}
+                {t('history.stats')}
               </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-center">
                 <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{totalCompletionsThisMonth}</p>
-                <p className="text-xs text-indigo-500 dark:text-indigo-400">Steps Completed</p>
+                <p className="text-xs text-indigo-500 dark:text-indigo-400">{t('history.stepsCompleted')}</p>
               </div>
               <div className="p-3 rounded-xl bg-green-50 dark:bg-green-900/30 text-center">
                 <p className="text-2xl font-bold text-green-600 dark:text-green-400">{daysWithActivity}</p>
-                <p className="text-xs text-green-500 dark:text-green-400">Active Days</p>
+                <p className="text-xs text-green-500 dark:text-green-400">{t('history.activeDays')}</p>
               </div>
             </div>
           </Card>
@@ -319,7 +319,7 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2 mb-4">
               <Flame className="w-5 h-5 text-orange-500" />
               <h2 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-                {t('history.streaks') || 'Current Streaks'}
+                {t('history.streaks')}
               </h2>
             </div>
 
@@ -358,7 +358,7 @@ export default function HistoryPage() {
 
               {filteredStreaks.filter(s => s.current_streak > 0).length === 0 && (
                 <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
-                  No active streaks. Complete routines daily to build streaks!
+                  {t('history.noActiveStreaks')}
                 </p>
               )}
             </div>
@@ -371,7 +371,7 @@ export default function HistoryPage() {
         <div className="flex items-center gap-2 mb-4">
           <Star className="w-5 h-5 text-amber-500" />
           <h2 className="font-display font-semibold text-slate-800 dark:text-slate-100">
-            {t('history.points') || 'Points History'}
+            {t('history.points')}
           </h2>
         </div>
 
@@ -411,7 +411,7 @@ export default function HistoryPage() {
 
           {pointsHistory.filter(p => selectedMember === 'all' || p.member_id === selectedMember).length === 0 && (
             <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
-              No points history this month.
+              {t('history.noPointsHistory')}
             </p>
           )}
         </div>

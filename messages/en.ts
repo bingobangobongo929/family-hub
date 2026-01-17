@@ -1179,6 +1179,23 @@ export const en = {
     yearsOld: 'years old',
   },
 
+  // History page
+  history: {
+    title: 'History',
+    subtitle: 'Track routines, streaks, and progress',
+    calendar: 'Routine Calendar',
+    stats: 'This Month',
+    streaks: 'Current Streaks',
+    points: 'Points History',
+    stepsCompleted: 'Steps Completed',
+    activeDays: 'Active Days',
+    allDone: 'All done',
+    partial: 'Partial',
+    noActivity: 'No activity',
+    noActiveStreaks: 'No active streaks. Complete routines daily to build streaks!',
+    noPointsHistory: 'No points history this month.',
+  },
+
   // Screensaver
   screensaver: {
     tapToWake: 'Tap anywhere to wake',

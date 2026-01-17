@@ -1181,6 +1181,23 @@ export const da: Translations = {
     yearsOld: 'år gammel',
   },
 
+  // History page
+  history: {
+    title: 'Historik',
+    subtitle: 'Følg rutiner, streaks og fremskridt',
+    calendar: 'Rutinekalender',
+    stats: 'Denne måned',
+    streaks: 'Aktuelle streaks',
+    points: 'Pointhistorik',
+    stepsCompleted: 'Trin gennemført',
+    activeDays: 'Aktive dage',
+    allDone: 'Alt færdigt',
+    partial: 'Delvist',
+    noActivity: 'Ingen aktivitet',
+    noActiveStreaks: 'Ingen aktive streaks. Gennemfør rutiner dagligt for at bygge streaks!',
+    noPointsHistory: 'Ingen pointhistorik denne måned.',
+  },
+
   // Screensaver
   screensaver: {
     tapToWake: 'Tryk hvor som helst for at vække',
