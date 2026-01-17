@@ -73,13 +73,6 @@ jobs:
                 in_house: false
               )
 
-              # Get latest provisioning profiles
-              get_provisioning_profile(
-                app_identifier: "app.familyhub.home",
-                readonly: false,
-                force: true
-              )
-
               # Increment build number
               increment_build_number(
                 xcodeproj: "App.xcodeproj",
@@ -97,17 +90,7 @@ jobs:
 
               # Upload to TestFlight
               upload_to_testflight(
-                skip_waiting_for_build_processing: true,
-                apple_id: "APP_APPLE_ID_PLACEHOLDER"
-              )
-            end
-
-            desc "Register device for development"
-            lane :register_device do
-              register_devices(
-                devices: {
-                  "Ed's iPhone" => ENV["DEVICE_UDID"]
-                }
+                skip_waiting_for_build_processing: true
               )
             end
           end
