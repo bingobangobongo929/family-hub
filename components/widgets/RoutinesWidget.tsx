@@ -7,13 +7,14 @@ import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useTranslation } from '@/lib/i18n-context'
-import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
+import { Routine, RoutineStep, RoutineCompletion, FamilyMember, RoutineScenario } from '@/lib/database.types'
 import Confetti from '@/components/Confetti'
 import { AvatarDisplay } from '@/components/PhotoUpload'
 
 interface RoutineWithData extends Routine {
   steps: RoutineStep[]
   members: FamilyMember[]
+  scenarios?: RoutineScenario[]
 }
 
 export default function RoutinesWidget() {
@@ -28,8 +29,10 @@ export default function RoutinesWidget() {
   const [confettiTrigger, setConfettiTrigger] = useState(0)
   const [confettiConfig, setConfettiConfig] = useState<{ intensity: 'small' | 'medium' | 'big' | 'epic', emoji?: string }>({ intensity: 'small' })
   const [celebratingStep, setCelebratingStep] = useState<string | null>(null)
+  const [selectedScenarios, setSelectedScenarios] = useState<Record<string, string[]>>({})
 
   const today = new Date().toISOString().split('T')[0]
+  const isWeekend = [0, 6].includes(new Date().getDay())
 
   const fetchRoutines = useCallback(async () => {
     if (!user) {
@@ -46,34 +49,61 @@ export default function RoutinesWidget() {
         .order('sort_order', { ascending: true })
 
       if (routinesData && routinesData.length > 0) {
-        const { data: stepsData } = await supabase
-          .from('routine_steps')
-          .select('*')
-          .in('routine_id', routinesData.map(r => r.id))
-          .order('sort_order', { ascending: true })
-
-        const { data: membersData } = await supabase
-          .from('routine_members')
-          .select('*, member:family_members(*)')
-          .in('routine_id', routinesData.map(r => r.id))
-
-        const { data: completionsData } = await supabase
-          .from('routine_completions')
-          .select('*')
-          .in('routine_id', routinesData.map(r => r.id))
-          .eq('completed_date', today)
+        const [stepsResult, membersResult, scenariosResult, completionsResult, dailyStateResult] = await Promise.all([
+          supabase
+            .from('routine_steps')
+            .select('*')
+            .in('routine_id', routinesData.map(r => r.id))
+            .order('sort_order', { ascending: true }),
+          supabase
+            .from('routine_members')
+            .select('*, member:family_members(*)')
+            .in('routine_id', routinesData.map(r => r.id)),
+          supabase
+            .from('routine_scenarios')
+            .select('*')
+            .in('routine_id', routinesData.map(r => r.id))
+            .order('sort_order', { ascending: true }),
+          supabase
+            .from('routine_completions')
+            .select('*')
+            .in('routine_id', routinesData.map(r => r.id))
+            .eq('completed_date', today),
+          supabase
+            .from('routine_daily_state')
+            .select('*')
+            .in('routine_id', routinesData.map(r => r.id))
+            .eq('date', today)
+        ])
 
         const routinesWithData: RoutineWithData[] = routinesData.map(routine => ({
           ...routine,
-          steps: (stepsData || []).filter(s => s.routine_id === routine.id),
-          members: (membersData || [])
+          steps: (stepsResult.data || []).filter(s => s.routine_id === routine.id),
+          members: (membersResult.data || [])
             .filter(m => m.routine_id === routine.id)
             .map(m => m.member)
             .filter(Boolean) as FamilyMember[],
+          scenarios: (scenariosResult.data || []).filter(s => s.routine_id === routine.id),
         }))
 
+        // Set up selected scenarios from daily state or defaults
+        const newSelectedScenarios: Record<string, string[]> = {}
+        for (const routine of routinesWithData) {
+          const dailyState = dailyStateResult.data?.find(ds => ds.routine_id === routine.id)
+          if (dailyState?.selected_scenario_ids?.length) {
+            newSelectedScenarios[routine.id] = dailyState.selected_scenario_ids
+          } else if (routine.scenarios && routine.scenarios.length > 0) {
+            // Apply smart defaults based on day
+            const defaultScenarios = routine.scenarios.filter(s =>
+              isWeekend ? s.is_default_weekend : s.is_default_weekday
+            )
+            newSelectedScenarios[routine.id] = defaultScenarios.map(s => s.id)
+          }
+        }
+        setSelectedScenarios(newSelectedScenarios)
+
         setRoutines(routinesWithData)
-        setCompletions(completionsData || [])
+        setCompletions(completionsResult.data || [])
       } else {
         setRoutines([])
         setCompletions([])
@@ -82,7 +112,7 @@ export default function RoutinesWidget() {
       console.error('Error fetching routines:', error)
       setRoutines([])
     }
-  }, [user, today])
+  }, [user, today, isWeekend])
 
   useEffect(() => {
     fetchRoutines()
@@ -96,6 +126,36 @@ export default function RoutinesWidget() {
     return completions.some(
       c => c.routine_id === routineId && c.step_id === stepId && c.member_id === memberId
     )
+  }
+
+  // Check if a step should be visible based on selected scenarios
+  const isStepVisibleForScenarios = (step: RoutineStep, routineId: string): boolean => {
+    if (!step.scenario_ids || step.scenario_ids.length === 0) {
+      return true
+    }
+    const currentScenarios = selectedScenarios[routineId] || []
+    return step.scenario_ids.some(id => currentScenarios.includes(id))
+  }
+
+  // Check if a step applies to a specific member
+  const stepAppliesToMember = (step: RoutineStep, memberId: string): boolean => {
+    if (!step.member_ids || step.member_ids.length === 0) {
+      return true
+    }
+    return step.member_ids.includes(memberId)
+  }
+
+  // Get visible steps for a routine based on selected scenarios
+  const getVisibleSteps = (routine: RoutineWithData): RoutineStep[] => {
+    return routine.steps.filter(step => isStepVisibleForScenarios(step, routine.id))
+  }
+
+  // Get members that a step applies to
+  const getStepMembers = (step: RoutineStep, routineMembers: FamilyMember[]): FamilyMember[] => {
+    if (!step.member_ids || step.member_ids.length === 0) {
+      return routineMembers
+    }
+    return routineMembers.filter(m => step.member_ids!.includes(m.id))
   }
 
   const toggleStepForMember = async (routine: RoutineWithData, stepId: string, memberId: string) => {
@@ -165,11 +225,13 @@ export default function RoutinesWidget() {
           })
       }
 
-      // Check if member completed all steps - award stars
-      const memberNowCompletedAll = routine.steps.every(s =>
+      // Check if member completed all their applicable steps - award stars
+      const visibleSteps = getVisibleSteps(routine)
+      const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
+      const memberNowCompletedAll = memberSteps.every(s =>
         s.id === stepId || isStepCompletedBy(routine.id, s.id, memberId)
       )
-      if (memberNowCompletedAll && routine.points_reward > 0 && rewardsEnabled) {
+      if (memberNowCompletedAll && memberSteps.length > 0 && routine.points_reward > 0 && rewardsEnabled) {
         const member = getMember(memberId)
         if (member?.stars_enabled) {
           updateMemberPoints(memberId, routine.points_reward)
@@ -181,12 +243,13 @@ export default function RoutinesWidget() {
         }, 300)
       }
 
-      // Check if ALL members completed ALL steps - EPIC celebration!
-      const allMembersCompletedAll = routine.members.every(m =>
-        routine.steps.every(s =>
+      // Check if ALL members completed ALL their applicable steps - EPIC celebration!
+      const allMembersCompletedAll = visibleSteps.length > 0 && routine.members.every(m => {
+        const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, m.id))
+        return memberSpecificSteps.every(s =>
           (s.id === stepId && m.id === memberId) || isStepCompletedBy(routine.id, s.id, m.id)
         )
-      )
+      })
       if (allMembersCompletedAll) {
         setTimeout(() => {
           setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
@@ -197,12 +260,12 @@ export default function RoutinesWidget() {
   }
 
   const isRoutineComplete = (routine: RoutineWithData) => {
-    if (routine.steps.length === 0 || routine.members.length === 0) return false
-    return routine.steps.every(step =>
-      routine.members.every(member =>
-        isStepCompletedBy(routine.id, step.id, member.id)
-      )
-    )
+    const visibleSteps = getVisibleSteps(routine)
+    if (visibleSteps.length === 0 || routine.members.length === 0) return false
+    return routine.members.every(member => {
+      const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, member.id))
+      return memberSteps.every(step => isStepCompletedBy(routine.id, step.id, member.id))
+    })
   }
 
   // Select the appropriate routine based on time of day
@@ -246,11 +309,12 @@ export default function RoutinesWidget() {
 
         {/* Tall vertical cards grid */}
         <div className="flex-1 grid grid-cols-5 gap-2">
-          {activeRoutine.steps.map((step) => {
-            const allMembersDone = activeRoutine.members.every(m =>
+          {getVisibleSteps(activeRoutine).map((step) => {
+            const stepMembers = getStepMembers(step, activeRoutine.members)
+            const allMembersDone = stepMembers.every(m =>
               isStepCompletedBy(activeRoutine.id, step.id, m.id)
             )
-            const someMembersDone = activeRoutine.members.some(m =>
+            const someMembersDone = stepMembers.some(m =>
               isStepCompletedBy(activeRoutine.id, step.id, m.id)
             )
             const isCelebrating = celebratingStep === step.id
@@ -278,9 +342,9 @@ export default function RoutinesWidget() {
                   )}
                 </div>
 
-                {/* Member buttons at bottom */}
+                {/* Member buttons at bottom - only show members this step applies to */}
                 <div className="flex flex-col gap-1 mt-1">
-                  {activeRoutine.members.map(member => {
+                  {stepMembers.map(member => {
                     const done = isStepCompletedBy(activeRoutine.id, step.id, member.id)
                     const cooldownKey = `${step.id}:${member.id}`
                     const onCooldown = cooldowns.has(cooldownKey)

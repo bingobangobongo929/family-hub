@@ -370,6 +370,23 @@ export const en = {
     noRoutinesDescription: 'Create morning and evening routines for the family',
     viewFull: 'View Full Routine',
     routine: 'Routine',
+    // Scenario support
+    todaysScenario: "Today's plan:",
+    selectScenarioHint: 'Select one or more to customize steps',
+    scenarios: 'Scenarios',
+    addScenario: 'Add Scenario',
+    scenarioName: 'Scenario Name',
+    scenarioNamePlaceholder: 'e.g., Daycare, Swimming',
+    isGoingOut: 'Going out',
+    defaultWeekday: 'Default on weekdays',
+    defaultWeekend: 'Default on weekends',
+    stepAppliesTo: 'Applies to',
+    allMembers: 'All members',
+    specificMembers: 'Specific members',
+    showForScenarios: 'Show for scenarios',
+    alwaysShow: 'Always show',
+    onlyFor: 'only',
+    scheduleType: 'Schedule',
   },
 
   // Shopping

@@ -372,6 +372,23 @@ export const da: Translations = {
     noRoutinesDescription: 'Opret morgen- og aftenrutiner for familien',
     viewFull: 'Se fuld rutine',
     routine: 'Rutine',
+    // Scenario support
+    todaysScenario: 'Dagens plan:',
+    selectScenarioHint: 'Vælg en eller flere for at tilpasse trin',
+    scenarios: 'Scenarier',
+    addScenario: 'Tilføj scenarie',
+    scenarioName: 'Scenarienavn',
+    scenarioNamePlaceholder: 'f.eks. Dagpleje, Svømning',
+    isGoingOut: 'Går ud',
+    defaultWeekday: 'Standard på hverdage',
+    defaultWeekend: 'Standard i weekenden',
+    stepAppliesTo: 'Gælder for',
+    allMembers: 'Alle medlemmer',
+    specificMembers: 'Specifikke medlemmer',
+    showForScenarios: 'Vis for scenarier',
+    alwaysShow: 'Vis altid',
+    onlyFor: 'kun',
+    scheduleType: 'Tidsplan',
   },
 
   // Shopping

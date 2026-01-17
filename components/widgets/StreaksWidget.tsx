@@ -130,7 +130,9 @@ export default function StreaksWidget() {
                     </span>
                   </div>
                   {streak.current_streak >= streak.longest_streak && streak.current_streak > 1 && (
-                    <Trophy className="w-3.5 h-3.5 text-amber-500" title="Personal best!" />
+                    <span title="Personal best!">
+                      <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                    </span>
                   )}
                 </div>
               ))}

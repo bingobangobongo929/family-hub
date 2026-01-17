@@ -331,6 +331,7 @@ export interface Routine {
   // Joined data
   steps?: RoutineStep[]
   members?: FamilyMember[]       // Multiple members can be assigned
+  scenarios?: RoutineScenario[]  // Available scenarios for this routine
 }
 
 export const SCHEDULE_TYPES = [
@@ -362,10 +363,44 @@ export interface RoutineStep {
   emoji: string
   duration_minutes: number       // Optional timer per step (0 = no timer)
   sort_order: number
+  scenario_ids: string[] | null  // NULL = always show, array = only for these scenarios
+  member_ids: string[] | null    // NULL = all members, array = only for these members
   created_at: string
 }
 
 export type InsertRoutineStep = Omit<RoutineStep, 'id' | 'created_at'>
+
+// ============================================
+// ROUTINE SCENARIOS
+// ============================================
+export interface RoutineScenario {
+  id: string
+  routine_id: string
+  name: string
+  emoji: string
+  is_going_out: boolean         // Used for outdoor-related steps
+  is_default_weekday: boolean   // Auto-select on Mon-Fri
+  is_default_weekend: boolean   // Auto-select on Sat-Sun
+  sort_order: number
+  created_at: string
+}
+
+export type InsertRoutineScenario = Omit<RoutineScenario, 'id' | 'created_at'>
+
+// ============================================
+// ROUTINE DAILY STATE
+// Remembers selected scenarios for each day
+// ============================================
+export interface RoutineDailyState {
+  id: string
+  routine_id: string
+  date: string                  // YYYY-MM-DD
+  selected_scenario_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
+export type InsertRoutineDailyState = Omit<RoutineDailyState, 'id' | 'created_at' | 'updated_at'>
 
 // Track per-member, per-step, per-day completions
 export interface RoutineCompletion {
