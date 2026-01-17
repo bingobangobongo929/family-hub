@@ -39,6 +39,8 @@ export default function RoutinesPage() {
   const [selectedScenarios, setSelectedScenarios] = useState<Record<string, string[]>>({}) // routineId -> scenarioIds
   const [selectorExpanded, setSelectorExpanded] = useState(false) // Collapsed by default
   const [syncedRoutineId, setSyncedRoutineId] = useState<string | null>(null) // The active routine synced across devices
+  const longPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const [longPressActive, setLongPressActive] = useState<string | null>(null) // Shows visual feedback during long-press
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
@@ -371,6 +373,47 @@ export default function RoutinesPage() {
 
     setCompletedSteps(newCompleted)
   }
+
+  // Long-press handling for uncheck protection
+  const LONG_PRESS_DURATION = 600 // milliseconds
+
+  const handleStepPressStart = (stepId: string, memberId: string) => {
+    const key = `${stepId}:${memberId}`
+    const isCompleted = completedSteps.has(key)
+
+    if (isCompleted) {
+      // Already completed - require long-press to uncheck
+      setLongPressActive(key)
+      const timer = setTimeout(() => {
+        // Long press completed - do the uncheck
+        toggleStepForMember(stepId, memberId)
+        setLongPressActive(null)
+        longPressTimers.current.delete(key)
+      }, LONG_PRESS_DURATION)
+      longPressTimers.current.set(key, timer)
+    } else {
+      // Not completed - instant check
+      toggleStepForMember(stepId, memberId)
+    }
+  }
+
+  const handleStepPressEnd = (stepId: string, memberId: string) => {
+    const key = `${stepId}:${memberId}`
+    // Cancel long-press if released early
+    const timer = longPressTimers.current.get(key)
+    if (timer) {
+      clearTimeout(timer)
+      longPressTimers.current.delete(key)
+      setLongPressActive(null)
+    }
+  }
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      longPressTimers.current.forEach(timer => clearTimeout(timer))
+    }
+  }, [])
 
   // Update streak for a member completing a routine
   const updateStreak = async (memberId: string, routineId: string, completedDate: string) => {
@@ -1090,7 +1133,7 @@ export default function RoutinesPage() {
                     )}
                   </div>
 
-                  {/* Member completion buttons - bigger and more fun */}
+                  {/* Member completion buttons - tap to complete, long-press to undo */}
                   {hasMembers ? (
                     <div className="flex items-center gap-3">
                       {/* Show indicator if this is a per-member step */}
@@ -1101,16 +1144,24 @@ export default function RoutinesPage() {
                       )}
                       {stepMembers.map(member => {
                         const memberDone = isStepCompleteForMember(step.id, member.id)
+                        const pressKey = `${step.id}:${member.id}`
+                        const isLongPressing = longPressActive === pressKey
                         return (
                           <button
                             key={member.id}
-                            onClick={() => toggleStepForMember(step.id, member.id)}
-                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 hover:scale-110 active:scale-90 shadow-md hover:shadow-lg overflow-hidden ${
-                              memberDone
-                                ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200'
-                                : 'opacity-80 hover:opacity-100'
+                            onMouseDown={() => handleStepPressStart(step.id, member.id)}
+                            onMouseUp={() => handleStepPressEnd(step.id, member.id)}
+                            onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
+                            onTouchStart={() => handleStepPressStart(step.id, member.id)}
+                            onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
+                            className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none ${
+                              isLongPressing
+                                ? 'scale-95 ring-4 ring-red-400 ring-offset-2'
+                                : memberDone
+                                ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 hover:scale-105'
+                                : 'opacity-80 hover:opacity-100 hover:scale-110 active:scale-90'
                             }`}
-                            title={member.name}
+                            title={memberDone ? `${member.name} - hold to undo` : member.name}
                           >
                             <AvatarDisplay
                               photoUrl={member.photo_url}
@@ -1120,9 +1171,14 @@ export default function RoutinesPage() {
                               size="md"
                               className="w-full h-full"
                             />
-                            {memberDone && (
+                            {memberDone && !isLongPressing && (
                               <span className="absolute inset-0 flex items-center justify-center bg-black/30">
                                 <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">✓</span>
+                              </span>
+                            )}
+                            {isLongPressing && (
+                              <span className="absolute inset-0 flex items-center justify-center bg-red-500/50">
+                                <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold animate-pulse">↩</span>
                               </span>
                             )}
                           </button>
