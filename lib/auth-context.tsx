@@ -58,10 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default auth state for SSR - returns loading state
+const defaultAuthState: AuthContextType = {
+  user: null,
+  session: null,
+  loading: true,
+  signIn: async () => ({ error: new Error('Auth not initialized') }),
+  signOut: async () => {},
+}
+
 export function useAuth() {
   const context = useContext(AuthContext)
+  // Return default state during SSR/prerendering when no provider exists
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    return defaultAuthState
   }
   return context
 }

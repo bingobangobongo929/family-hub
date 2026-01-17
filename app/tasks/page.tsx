@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useCallback } from 'react'
 import { format } from 'date-fns'
 import { CheckSquare, Plus, Star, Trash2, RotateCcw } from 'lucide-react'

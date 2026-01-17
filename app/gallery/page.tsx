@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Image, Settings, Loader2, RefreshCw, ChevronLeft } from 'lucide-react'

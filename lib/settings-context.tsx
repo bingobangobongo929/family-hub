@@ -141,10 +141,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultSettingsState: SettingsContextType = {
+  settings: DEFAULT_SETTINGS,
+  updateSetting: async () => {},
+  rewardsEnabled: false,
+  aiModel: 'gemini-2.0-flash',
+  googleCalendarAutoPush: false,
+  showBirthdaysOnCalendar: true,
+  countdownRelationshipGroups: [],
+  googlePhotosAlbumId: null,
+  googlePhotosAlbumTitle: null,
+  googlePhotosRotationInterval: 30,
+  sidebarNavOrder: null,
+  f1SpoilerFreeEnabled: false,
+  f1SpoilerFreeAutoWeekend: false,
+  f1SpoilerFreeManualOverride: null,
+}
+
 export function useSettings() {
   const context = useContext(SettingsContext)
+  // Return default state during SSR/prerendering
   if (!context) {
-    throw new Error('useSettings must be used within a SettingsProvider')
+    return defaultSettingsState
   }
   return context
 }

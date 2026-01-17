@@ -184,10 +184,23 @@ export function FamilyProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultFamilyState: FamilyContextType = {
+  members: [],
+  loading: true,
+  getMember: () => undefined,
+  refreshMembers: async () => {},
+  updateMemberPoints: async () => {},
+  updateMemberPhoto: async () => {},
+  updateMemberEmoji: async () => {},
+  reorderMembers: async () => {},
+}
+
 export function useFamily() {
   const context = useContext(FamilyContext)
+  // Return default state during SSR/prerendering
   if (context === undefined) {
-    throw new Error('useFamily must be used within a FamilyProvider')
+    return defaultFamilyState
   }
   return context
 }

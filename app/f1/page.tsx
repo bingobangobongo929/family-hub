@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+export const dynamic = 'force-dynamic'
+
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
@@ -83,7 +85,25 @@ interface NewsData {
 
 type TabType = 'calendar' | 'drivers' | 'constructors' | 'news'
 
+// Wrapper component with Suspense for useSearchParams
 export default function F1Page() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen bg-slate-100 dark:bg-slate-900">
+        <Sidebar />
+        <main className="flex-1 overflow-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+          </div>
+        </main>
+      </div>
+    }>
+      <F1PageContent />
+    </Suspense>
+  )
+}
+
+function F1PageContent() {
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
   const { aiModel, f1SpoilerFreeAutoWeekend, f1SpoilerFreeManualOverride, updateSetting } = useSettings()

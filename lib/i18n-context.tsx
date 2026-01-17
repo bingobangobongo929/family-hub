@@ -187,10 +187,19 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultI18nState: I18nContextType = {
+  locale: 'en',
+  setLocale: () => {},
+  t: (key: string) => key, // Return the key as fallback
+  isLoading: true,
+}
+
 export function useTranslation() {
   const context = useContext(I18nContext)
+  // Return default state during SSR/prerendering
   if (context === undefined) {
-    throw new Error('useTranslation must be used within an I18nProvider')
+    return defaultI18nState
   }
   return context
 }

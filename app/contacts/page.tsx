@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
 import { Plus, Trash2, Edit2, Cake, X } from 'lucide-react'

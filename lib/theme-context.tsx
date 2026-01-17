@@ -167,10 +167,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultThemeState: ThemeContextType = {
+  theme: 'system',
+  toggleTheme: () => {},
+  setTheme: () => {},
+  isLoading: true,
+}
+
 export function useTheme() {
   const context = useContext(ThemeContext)
+  // Return default state during SSR/prerendering
   if (context === undefined) {
-    throw new Error('useTheme must be used within a ThemeProvider')
+    return defaultThemeState
   }
   return context
 }

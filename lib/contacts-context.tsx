@@ -309,10 +309,27 @@ export function ContactsProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultContactsState: ContactsContextType = {
+  contacts: [],
+  loading: true,
+  refreshContacts: async () => {},
+  addContact: async () => null,
+  updateContact: async () => {},
+  deleteContact: async () => {},
+  getContactsByGroup: () => [],
+  getUpcomingBirthdays: () => [],
+  linkContactToMember: async () => {},
+  unlinkContactFromMember: async () => {},
+  getContactsForMember: () => [],
+  getContactLinks: () => [],
+}
+
 export function useContacts() {
   const context = useContext(ContactsContext)
+  // Return default state during SSR/prerendering
   if (context === undefined) {
-    throw new Error('useContacts must be used within a ContactsProvider')
+    return defaultContactsState
   }
   return context
 }

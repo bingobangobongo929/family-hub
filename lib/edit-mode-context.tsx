@@ -22,10 +22,18 @@ export function EditModeProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultEditModeState: EditModeContextType = {
+  isEditMode: false,
+  setIsEditMode: () => {},
+  toggleEditMode: () => {},
+}
+
 export function useEditMode() {
   const context = useContext(EditModeContext)
+  // Return default state during SSR/prerendering
   if (!context) {
-    throw new Error('useEditMode must be used within an EditModeProvider')
+    return defaultEditModeState
   }
   return context
 }

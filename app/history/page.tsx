@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect, useCallback } from 'react'
 import { Calendar, Flame, Trophy, Star, ChevronLeft, ChevronRight, BarChart3 } from 'lucide-react'
 import Card from '@/components/Card'

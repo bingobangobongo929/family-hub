@@ -1,5 +1,7 @@
 'use client'
 
+export const dynamic = 'force-dynamic'
+
 import { useState, useEffect } from 'react'
 import Card, { CardHeader } from '@/components/Card'
 import { ShoppingCart, Plus, Trash2, Check, RefreshCw, ChefHat, ExternalLink } from 'lucide-react'

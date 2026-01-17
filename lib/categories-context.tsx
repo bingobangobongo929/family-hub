@@ -242,10 +242,24 @@ export function CategoriesProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Default state for SSR
+const defaultCategoriesState: CategoriesContextType = {
+  categories: [],
+  loading: true,
+  getCategory: () => undefined,
+  getCategoryByName: () => undefined,
+  refreshCategories: async () => {},
+  addCategory: async () => null,
+  updateCategory: async () => {},
+  archiveCategory: async () => {},
+  reorderCategories: async () => {},
+}
+
 export function useCategories() {
   const context = useContext(CategoriesContext)
+  // Return default state during SSR/prerendering
   if (context === undefined) {
-    throw new Error('useCategories must be used within a CategoriesProvider')
+    return defaultCategoriesState
   }
   return context
 }
