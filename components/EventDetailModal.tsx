@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { format, parseISO } from 'date-fns'
-import { Clock, MapPin, Trash2, Users, Repeat, Pencil, X, UserPlus, Calendar } from 'lucide-react'
+import { Clock, MapPin, Trash2, Users, Repeat, Pencil, X, UserPlus, Calendar, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
@@ -16,6 +16,14 @@ import MemberAvatarStack from '@/components/MemberAvatarStack'
 import MemberMultiSelect from '@/components/MemberMultiSelect'
 import RecurrenceSelector from '@/components/RecurrenceSelector'
 import { patternToRRule, rruleToPattern, describeRecurrence } from '@/lib/rrule'
+
+// Generate maps URL for navigation - works on iOS, Android, and web
+function getMapsUrl(location: string): string {
+  const encoded = encodeURIComponent(location)
+  // Use maps.apple.com for best iOS experience (opens in Apple Maps)
+  // Falls back to web on other platforms
+  return `https://maps.apple.com/?q=${encoded}`
+}
 
 interface EventDetailModalProps {
   event: CalendarEvent | null
@@ -424,10 +432,16 @@ export default function EventDetailModal({
             )}
 
             {event.location && (
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+              <a
+                href={getMapsUrl(event.location)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors group"
+              >
                 <MapPin className="w-4 h-4" />
-                <span>{event.location}</span>
-              </div>
+                <span className="group-hover:underline">{event.location}</span>
+                <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
             )}
 
             {eventMembers.length > 0 && (
