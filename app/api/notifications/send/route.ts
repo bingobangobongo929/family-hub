@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { SignJWT, importPKCS8 } from 'jose';
+import * as http2 from 'http2';
 
 interface NotificationPayload {
   user_id?: string; // Send to specific user
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Send notification via Apple Push Notification service
+// Send notification via Apple Push Notification service using HTTP/2
 async function sendAPNsNotification(
   deviceToken: string,
   payload: NotificationPayload
@@ -119,52 +120,100 @@ async function sendAPNsNotification(
     console.log(`Sending APNs notification to ${apnsHost}:`, {
       token: deviceToken.substring(0, 10) + '...',
       title: payload.title,
+      bundleId,
+      isProduction,
     });
 
-    const response = await fetch(
-      `https://${apnsHost}/3/device/${deviceToken}`,
-      {
-        method: 'POST',
-        headers: {
-          'authorization': `bearer ${jwt}`,
-          'apns-topic': bundleId,
-          'apns-push-type': 'alert',
-          'apns-priority': '10',
-          'apns-expiration': '0',
-        },
-        body: JSON.stringify({
-          aps: {
-            alert: {
-              title: payload.title,
-              body: payload.body,
-            },
-            sound: 'default',
-            badge: 1,
-          },
-          ...payload.data,
-        }),
-      }
-    );
+    // Use HTTP/2 for APNs (required by Apple)
+    const result = await sendHttp2Request(apnsHost, deviceToken, jwt, bundleId, payload);
+    return result;
 
-    if (response.ok) {
-      console.log('APNs notification sent successfully');
-      return { success: true };
-    } else {
-      const errorText = await response.text();
-      let errorReason = 'unknown';
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorReason = errorJson.reason || 'unknown';
-      } catch {
-        errorReason = errorText || response.statusText;
-      }
-      console.error('APNs error:', response.status, errorReason);
-      return { success: false, reason: errorReason };
-    }
   } catch (error) {
     console.error('APNs request failed:', error);
     return { success: false, reason: 'request_failed' };
   }
+}
+
+// HTTP/2 request to APNs
+function sendHttp2Request(
+  apnsHost: string,
+  deviceToken: string,
+  jwt: string,
+  bundleId: string,
+  payload: NotificationPayload
+): Promise<{ success: boolean; reason?: string }> {
+  return new Promise((resolve) => {
+    const client = http2.connect(`https://${apnsHost}`);
+
+    client.on('error', (err) => {
+      console.error('HTTP/2 connection error:', err);
+      client.close();
+      resolve({ success: false, reason: 'connection_error' });
+    });
+
+    const body = JSON.stringify({
+      aps: {
+        alert: {
+          title: payload.title,
+          body: payload.body,
+        },
+        sound: 'default',
+        badge: 1,
+      },
+      ...payload.data,
+    });
+
+    const req = client.request({
+      ':method': 'POST',
+      ':path': `/3/device/${deviceToken}`,
+      'authorization': `bearer ${jwt}`,
+      'apns-topic': bundleId,
+      'apns-push-type': 'alert',
+      'apns-priority': '10',
+      'apns-expiration': '0',
+      'content-type': 'application/json',
+      'content-length': Buffer.byteLength(body),
+    });
+
+    let responseData = '';
+    let statusCode = 0;
+
+    req.on('response', (headers) => {
+      statusCode = headers[':status'] as number;
+    });
+
+    req.on('data', (chunk) => {
+      responseData += chunk;
+    });
+
+    req.on('end', () => {
+      client.close();
+
+      if (statusCode === 200) {
+        console.log('APNs notification sent successfully');
+        resolve({ success: true });
+      } else {
+        let errorReason = 'unknown';
+        try {
+          const errorJson = JSON.parse(responseData);
+          errorReason = errorJson.reason || 'unknown';
+        } catch {
+          errorReason = responseData || `status_${statusCode}`;
+        }
+        console.error('APNs error:', statusCode, errorReason);
+        resolve({ success: false, reason: errorReason });
+      }
+    });
+
+    req.on('error', (err) => {
+      console.error('HTTP/2 request error:', err);
+      client.close();
+      resolve({ success: false, reason: 'request_error' });
+    });
+
+    req.write(body);
+    req.end();
+  });
 }
 
 // Get or create JWT for APNs authentication
