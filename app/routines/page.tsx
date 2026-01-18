@@ -52,11 +52,22 @@ export default function RoutinesPage() {
   // Drag-to-reorder state
   const [draggingStepId, setDraggingStepId] = useState<string | null>(null)
   const [dragOverStepId, setDragOverStepId] = useState<string | null>(null)
-  // Skipped steps state
-  const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set()) // key: `${stepId}:${memberId}`
+  // Skipped steps state (now per-step, not per-member)
+  const [skippedSteps, setSkippedSteps] = useState<Set<string>>(new Set()) // key: stepId only
   // Sound effects
   const [soundEnabled, setSoundEnabled] = useState(true)
   const audioContextRef = useRef<AudioContext | null>(null)
+  // Swipe-to-skip state
+  const [swipingStepId, setSwipingStepId] = useState<string | null>(null)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const swipeStartX = useRef<number>(0)
+  const SWIPE_THRESHOLD = 100 // pixels to trigger skip
+  // Confirmation modals
+  const [skipConfirmStep, setSkipConfirmStep] = useState<RoutineStep | null>(null)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  // Long-press progress for visual feedback
+  const [longPressProgress, setLongPressProgress] = useState<number>(0)
+  const longPressInterval = useRef<NodeJS.Timeout | null>(null)
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
@@ -434,11 +445,6 @@ export default function RoutinesPage() {
     toggleStepForMember(stepId, memberId)
   }
 
-  // Long-press progress state for visual feedback
-  const [longPressProgress, setLongPressProgress] = useState<string | null>(null)
-  const longPressStartTime = useRef<number>(0)
-  const longPressAnimationFrame = useRef<number | null>(null)
-
   const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     const isCompleted = completedSteps.has(key)
@@ -446,38 +452,44 @@ export default function RoutinesPage() {
     // Only handle long-press for completed steps (to undo)
     if (isCompleted) {
       e.preventDefault()
-      longPressStartTime.current = Date.now()
       setLongPressActive(key)
-      setLongPressProgress(key)
+      setLongPressProgress(0)
 
-      const timer = setTimeout(() => {
-        // Long press completed (3 seconds) - do the undo
-        if (navigator.vibrate) navigator.vibrate([50, 50, 50])
-        toggleStepForMember(stepId, memberId)
-        setLongPressActive(null)
-        setLongPressProgress(null)
-        longPressTimers.current.delete(key)
-        if (longPressAnimationFrame.current) {
-          cancelAnimationFrame(longPressAnimationFrame.current)
+      // Start progress animation
+      const startTime = Date.now()
+      longPressInterval.current = setInterval(() => {
+        const elapsed = Date.now() - startTime
+        const progress = Math.min(elapsed / LONG_PRESS_DURATION, 1)
+        setLongPressProgress(progress)
+
+        if (progress >= 1) {
+          // Long press completed (3 seconds) - do the undo
+          if (navigator.vibrate) navigator.vibrate([50, 50, 50])
+          toggleStepForMember(stepId, memberId)
+          setLongPressActive(null)
+          setLongPressProgress(0)
+          if (longPressInterval.current) clearInterval(longPressInterval.current)
         }
-      }, LONG_PRESS_DURATION)
-      longPressTimers.current.set(key, timer)
+      }, 50)
+
+      longPressTimers.current.set(key, longPressInterval.current as unknown as NodeJS.Timeout)
     }
   }
 
   const handleStepPressEnd = (stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     // Cancel long-press if released early
+    if (longPressInterval.current) {
+      clearInterval(longPressInterval.current)
+      longPressInterval.current = null
+    }
     const timer = longPressTimers.current.get(key)
     if (timer) {
-      clearTimeout(timer)
+      clearInterval(timer as unknown as NodeJS.Timeout)
       longPressTimers.current.delete(key)
-      setLongPressActive(null)
-      setLongPressProgress(null)
-      if (longPressAnimationFrame.current) {
-        cancelAnimationFrame(longPressAnimationFrame.current)
-      }
     }
+    setLongPressActive(null)
+    setLongPressProgress(0)
   }
 
   const handleStepPressCancel = (stepId: string, memberId: string) => {
@@ -665,19 +677,20 @@ export default function RoutinesPage() {
     setDragOverStepId(null)
   }
 
-  // === SKIP STEP FOR TODAY ===
+  // === SKIP STEP FOR TODAY (whole step, all members) ===
   const loadSkippedSteps = useCallback(async () => {
     if (!user) return
 
     try {
       const { data } = await supabase
         .from('routine_completion_log')
-        .select('step_id, member_id')
+        .select('step_id')
         .eq('completed_date', today)
         .eq('action', 'skipped')
 
       if (data) {
-        setSkippedSteps(new Set(data.map(s => `${s.step_id}:${s.member_id}`)))
+        // Get unique step IDs (step is skipped for everyone)
+        setSkippedSteps(new Set(data.map(s => s.step_id)))
       }
     } catch (error) {
       console.error('Error loading skipped steps:', error)
@@ -688,44 +701,74 @@ export default function RoutinesPage() {
     loadSkippedSteps()
   }, [loadSkippedSteps])
 
-  const toggleSkipStep = async (stepId: string, memberId: string) => {
+  // Skip entire step for today (all members)
+  const skipStepForToday = async (step: RoutineStep) => {
     if (!user || !selectedRoutine) return
 
-    const key = `${stepId}:${memberId}`
-    const isSkipped = skippedSteps.has(key)
     const newSkipped = new Set(skippedSteps)
-
-    if (isSkipped) {
-      // Unskip
-      newSkipped.delete(key)
-      await supabase
-        .from('routine_completion_log')
-        .delete()
-        .eq('step_id', stepId)
-        .eq('member_id', memberId)
-        .eq('completed_date', today)
-        .eq('action', 'skipped')
-    } else {
-      // Skip
-      newSkipped.add(key)
-      playSound('skip')
-      await supabase
-        .from('routine_completion_log')
-        .insert({
-          routine_id: selectedRoutine.id,
-          step_id: stepId,
-          member_id: memberId,
-          completed_date: today,
-          completed_by: user.id,
-          action: 'skipped'
-        })
-    }
-
+    newSkipped.add(step.id)
     setSkippedSteps(newSkipped)
+    playSound('skip')
+    hapticMedium()
+
+    // Save to DB - one record per step (not per member)
+    await supabase
+      .from('routine_completion_log')
+      .insert({
+        routine_id: selectedRoutine.id,
+        step_id: step.id,
+        member_id: selectedRoutine.member_ids?.[0] || user.id, // Use first member or user as reference
+        completed_date: today,
+        completed_by: user.id,
+        action: 'skipped',
+        notes: 'Skipped for all members'
+      })
+
+    setSkipConfirmStep(null)
   }
 
-  const isStepSkipped = (stepId: string, memberId: string) => {
-    return skippedSteps.has(`${stepId}:${memberId}`)
+  // Unskip step (restore it)
+  const unskipStep = async (stepId: string) => {
+    if (!user) return
+
+    const newSkipped = new Set(skippedSteps)
+    newSkipped.delete(stepId)
+    setSkippedSteps(newSkipped)
+
+    await supabase
+      .from('routine_completion_log')
+      .delete()
+      .eq('step_id', stepId)
+      .eq('completed_date', today)
+      .eq('action', 'skipped')
+  }
+
+  const isStepSkipped = (stepId: string) => {
+    return skippedSteps.has(stepId)
+  }
+
+  // === SWIPE TO SKIP HANDLERS ===
+  const handleSwipeStart = (e: React.TouchEvent, stepId: string) => {
+    swipeStartX.current = e.touches[0].clientX
+    setSwipingStepId(stepId)
+  }
+
+  const handleSwipeMove = (e: React.TouchEvent) => {
+    if (!swipingStepId) return
+    const currentX = e.touches[0].clientX
+    const diff = swipeStartX.current - currentX // Positive = swiping left
+    if (diff > 0) {
+      setSwipeOffset(Math.min(diff, SWIPE_THRESHOLD + 50))
+    }
+  }
+
+  const handleSwipeEnd = (step: RoutineStep) => {
+    if (swipeOffset >= SWIPE_THRESHOLD) {
+      // Trigger skip confirmation
+      setSkipConfirmStep(step)
+    }
+    setSwipeOffset(0)
+    setSwipingStepId(null)
   }
 
   // Cleanup timers on unmount
@@ -1364,7 +1407,7 @@ export default function RoutinesPage() {
                 <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
-                onClick={resetRoutine}
+                onClick={() => setShowResetConfirm(true)}
                 className="w-9 h-9 sm:w-auto sm:h-auto flex items-center justify-center sm:gap-2 sm:px-3 sm:py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1409,217 +1452,219 @@ export default function RoutinesPage() {
             </div>
           )}
 
-          {/* Fun Step Checklist */}
-          <div className="space-y-2 sm:space-y-3">
-            {getVisibleSteps(selectedRoutine).map((step, index) => {
+          {/* Fun Step Checklist - New 2-row card design */}
+          <div className="space-y-3">
+            {getVisibleSteps(selectedRoutine)
+              .filter(step => !isStepSkipped(step.id)) // Hide skipped steps
+              .map((step) => {
               const routineMembers = selectedRoutine.members || []
-              // Get only the members this step applies to
               const stepMembers = getStepMembers(step, routineMembers)
               const stepMemberIds = stepMembers.map(m => m.id)
               const hasMembers = stepMembers.length > 0
               const isDone = isStepComplete(step.id, stepMemberIds)
               const isCelebrating = celebratingStep === step.id
-              const isPerMemberStep = step.member_ids && step.member_ids.length > 0
-
-              // Check if any member has this step skipped
-              const anyMemberSkipped = hasMembers && stepMembers.some(m => isStepSkipped(step.id, m.id))
-              const allMembersSkipped = hasMembers && stepMembers.every(m => isStepSkipped(step.id, m.id))
+              const isSwiping = swipingStepId === step.id
 
               return (
                 <div
                   key={step.id}
-                  draggable
-                  onDragStart={(e) => handleStepDragStart(e, step.id)}
-                  onDragOver={(e) => handleStepDragOver(e, step.id)}
-                  onDragLeave={handleStepDragLeave}
-                  onDrop={(e) => handleStepDrop(e, step.id)}
-                  onDragEnd={handleStepDragEnd}
-                  className={`flex items-center gap-2 sm:gap-2 p-3 sm:p-4 rounded-2xl transition-all duration-300 ${
-                    allMembersSkipped
-                      ? 'bg-slate-100 dark:bg-slate-800/30 opacity-60'
-                      : isDone
-                      ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30 scale-[0.98]'
-                      : 'bg-slate-50 dark:bg-slate-800/50'
-                  } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 scale-105 shadow-lg' : ''} ${
-                    draggingStepId === step.id ? 'opacity-50 scale-95' : ''
-                  } ${dragOverStepId === step.id ? 'ring-2 ring-teal-400 ring-offset-2' : ''}`}
+                  className="relative overflow-hidden rounded-2xl"
+                  onTouchStart={(e) => handleSwipeStart(e, step.id)}
+                  onTouchMove={handleSwipeMove}
+                  onTouchEnd={() => handleSwipeEnd(step)}
                 >
-                  {/* Drag handle - hidden on mobile */}
+                  {/* Swipe reveal background */}
+                  <div className="absolute inset-y-0 right-0 w-32 bg-amber-500 flex items-center justify-end pr-4">
+                    <span className="text-white font-medium">Skip</span>
+                  </div>
+
+                  {/* Main card content */}
                   <div
-                    className="hidden sm:flex cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 touch-none"
-                    onTouchStart={(e) => e.stopPropagation()}
-                  >
-                    <GripVertical className="w-5 h-5" />
-                  </div>
-
-                  {/* Step number & emoji */}
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    {/* Step number - hidden on mobile */}
-                    <span className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center font-bold transition-all ${
+                    style={{ transform: isSwiping ? `translateX(-${swipeOffset}px)` : 'translateX(0)' }}
+                    className={`relative p-3 rounded-2xl transition-all duration-200 ${
                       isDone
-                        ? 'bg-green-500 text-white'
-                        : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
-                    } ${isCelebrating ? '!bg-yellow-400 !text-yellow-900 animate-pop' : ''}`}>
-                      {isDone ? '✓' : index + 1}
-                    </span>
-                    <div
-                      onMouseDown={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
-                      onMouseUp={() => handleStepEmojiPressEnd(step.id)}
-                      onMouseLeave={() => handleStepEmojiPressEnd(step.id)}
-                      onTouchStart={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
-                      onTouchEnd={() => handleStepEmojiPressEnd(step.id)}
-                      onTouchCancel={() => handleStepEmojiPressEnd(step.id)}
-                      onContextMenu={(e) => e.preventDefault()}
-                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl transition-all cursor-pointer touch-manipulation ${
-                        isDone
-                          ? 'bg-green-100 dark:bg-green-900/50'
-                          : 'bg-white dark:bg-slate-700 shadow-sm hover:shadow-md active:scale-95'
-                      } ${isCelebrating ? '!bg-yellow-100 dark:!bg-yellow-900/50 animate-bounce' : ''} ${
-                        stepRemoveLongPressActive === step.id ? 'ring-4 ring-red-400 scale-95 bg-red-50 dark:bg-red-900/30' : ''
-                      }`}
-                      title="Hold to remove step"
-                    >
-                      {isDone ? (
-                        <div className="relative">
-                          <Check className="w-8 h-8 text-green-500" />
-                          <span className="absolute -top-1 -right-1 text-base animate-bounce">✨</span>
-                        </div>
-                      ) : stepRemoveLongPressActive === step.id ? (
-                        <Trash2 className="w-7 h-7 text-red-500 animate-pulse" />
-                      ) : (
-                        <span className={isCelebrating ? 'animate-bounce' : ''}>{step.emoji}</span>
-                      )}
-                    </div>
-                  </div>
+                        ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30'
+                        : 'bg-slate-50 dark:bg-slate-800/50'
+                    } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 shadow-lg scale-[1.02]' : ''}`}
+                  >
+                    {/* Row 1: Emoji + Title */}
+                    <div className="flex items-center gap-3 mb-3">
+                      {/* Large emoji - long press to delete */}
+                      <div
+                        onMouseDown={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
+                        onMouseUp={() => handleStepEmojiPressEnd(step.id)}
+                        onMouseLeave={() => handleStepEmojiPressEnd(step.id)}
+                        onTouchStart={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
+                        onTouchEnd={() => handleStepEmojiPressEnd(step.id)}
+                        onTouchCancel={() => handleStepEmojiPressEnd(step.id)}
+                        onContextMenu={(e) => e.preventDefault()}
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all select-none touch-manipulation ${
+                          isDone
+                            ? 'bg-green-100 dark:bg-green-800/50'
+                            : 'bg-white dark:bg-slate-700 shadow-sm'
+                        } ${isCelebrating ? '!bg-yellow-100 animate-bounce' : ''} ${
+                          stepRemoveLongPressActive === step.id ? 'ring-4 ring-red-400 scale-95 bg-red-50' : ''
+                        }`}
+                      >
+                        {stepRemoveLongPressActive === step.id ? (
+                          <Trash2 className="w-6 h-6 text-red-500 animate-pulse" />
+                        ) : isDone ? (
+                          <Check className="w-6 h-6 text-green-500" />
+                        ) : (
+                          <span>{step.emoji}</span>
+                        )}
+                      </div>
 
-                  {/* Step title - hidden on mobile, show only emoji */}
-                  <div className="hidden sm:block flex-1 min-w-0">
-                    <p className={`font-semibold text-lg transition-all truncate ${
-                      allMembersSkipped
-                        ? 'text-slate-400 dark:text-slate-500 line-through decoration-2'
-                        : isDone
-                        ? 'text-green-600 dark:text-green-400 line-through decoration-2'
-                        : 'text-slate-800 dark:text-slate-100'
-                    }`}>
-                      {step.title}
-                    </p>
-                    {allMembersSkipped ? (
-                      <p className="text-sm text-slate-400 dark:text-slate-500 font-medium">
-                        {t('routines.skippedToday')}
-                      </p>
-                    ) : isDone ? (
-                      <p className="text-sm text-green-500 dark:text-green-400 font-medium animate-fade-in">
-                        Great job! 🌟
-                      </p>
-                    ) : anyMemberSkipped ? (
-                      <p className="text-sm text-amber-500 dark:text-amber-400 font-medium">
-                        {t('routines.partiallySkipped')}
-                      </p>
-                    ) : null}
-                  </div>
-                  {/* Spacer on mobile to push buttons to right */}
-                  <div className="flex-1 sm:hidden" />
+                      {/* Step title - ALWAYS visible */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`font-semibold text-base transition-all truncate ${
+                          isDone
+                            ? 'text-green-600 dark:text-green-400'
+                            : 'text-slate-800 dark:text-slate-100'
+                        }`}>
+                          {step.title}
+                        </p>
+                        {isDone && (
+                          <p className="text-xs text-green-500 dark:text-green-400 font-medium">
+                            Great job! 🌟
+                          </p>
+                        )}
+                      </div>
 
-                  {/* Member completion buttons - tap to complete, long-press to undo */}
-                  {hasMembers ? (
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      {/* Show indicator if this is a per-member step - hidden on mobile */}
-                      {isPerMemberStep && stepMembers.length < routineMembers.length && (
-                        <span className="hidden sm:inline text-xs text-slate-400 dark:text-slate-500 mr-1" title="This step is for specific members only">
-                          {stepMembers.map(m => m.name.charAt(0)).join(', ')} only
-                        </span>
-                      )}
-                      {stepMembers.map(member => {
-                        const memberDone = isStepCompleteForMember(step.id, member.id)
-                        const memberSkipped = isStepSkipped(step.id, member.id)
-                        const pressKey = `${step.id}:${member.id}`
-                        const isLongPressing = longPressActive === pressKey
-                        return (
-                          <div key={member.id} className="relative group">
-                            <button
-                              onClick={() => !memberSkipped && handleMemberClick(step.id, member.id)}
-                              onTouchStart={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
-                              onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
-                              onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
-                              onMouseDown={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
-                              onMouseUp={() => handleStepPressEnd(step.id, member.id)}
-                              onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
-                              onContextMenu={(e) => e.preventDefault()}
-                              className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none touch-manipulation ${
-                                memberSkipped
-                                  ? 'opacity-40 grayscale ring-2 ring-slate-300 dark:ring-slate-600'
-                                  : isLongPressing
-                                  ? 'scale-95 ring-4 ring-red-400 ring-offset-2'
-                                  : memberDone
-                                  ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 hover:scale-105'
-                                  : 'opacity-80 hover:opacity-100 hover:scale-110 active:scale-90'
-                              }`}
-                              title={memberSkipped ? `${member.name} - skipped` : memberDone ? `${member.name} - hold to undo` : member.name}
-                            >
-                              <AvatarDisplay
-                                photoUrl={member.photo_url}
-                                emoji={member.avatar}
-                                name={member.name}
-                                color={member.color}
-                                size="md"
-                                className="w-full h-full"
-                              />
-                              {memberSkipped && (
-                                <span className="absolute inset-0 flex items-center justify-center bg-slate-500/50">
-                                  <span className="text-white text-xl">⏭</span>
-                                </span>
-                              )}
-                              {memberDone && !isLongPressing && !memberSkipped && (
-                                <span className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                  <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold">✓</span>
-                                </span>
-                              )}
-                              {isLongPressing && (
-                                <span className="absolute inset-0 flex items-center justify-center bg-red-500/50">
-                                  <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold animate-pulse">↩</span>
-                                </span>
-                              )}
-                            </button>
-                            {/* Skip/Unskip button - On mobile: only visible when already skipped (to unskip) */}
-                            <button
-                              onClick={() => toggleSkipStep(step.id, member.id)}
-                              className={`absolute -bottom-2 -right-2 w-7 h-7 rounded-full items-center justify-center text-sm transition-all shadow-sm ${
-                                memberSkipped
-                                  ? 'flex bg-amber-500 text-white hover:bg-amber-600'
-                                  : 'hidden sm:flex bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white opacity-0 group-hover:opacity-100'
-                              }`}
-                              title={memberSkipped ? t('routines.unskip') : t('routines.skip')}
-                            >
-                              {memberSkipped ? '↩' : '⏭'}
-                            </button>
-                          </div>
-                        )
-                      })}
+                      {/* Drag handle - desktop only */}
+                      <div className="hidden sm:flex text-slate-300 dark:text-slate-600 cursor-grab">
+                        <GripVertical className="w-5 h-5" />
+                      </div>
                     </div>
-                  ) : (
-                    <button
-                      onClick={() => toggleStep(step.id)}
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center text-lg font-bold transition-all duration-200 hover:scale-110 active:scale-90 ${
-                        isDone
-                          ? 'bg-green-500 text-white shadow-lg shadow-green-200'
-                          : 'bg-slate-200 dark:bg-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-300'
-                      }`}
-                    >
-                      {isDone ? '✓' : '○'}
-                    </button>
-                  )}
+
+                    {/* Row 2: Child avatars with names */}
+                    {hasMembers && (
+                      <div className="flex justify-center gap-4 sm:gap-6">
+                        {stepMembers.map(member => {
+                          const memberDone = isStepCompleteForMember(step.id, member.id)
+                          const pressKey = `${step.id}:${member.id}`
+                          const isLongPressing = longPressActive === pressKey
+                          const showName = stepMembers.length <= 3 // Show names if 3 or fewer kids
+
+                          return (
+                            <div key={member.id} className="flex flex-col items-center">
+                              {/* Avatar button */}
+                              <button
+                                onClick={() => handleMemberClick(step.id, member.id)}
+                                onTouchStart={(e) => handleStepPressStart(e, step.id, member.id)}
+                                onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
+                                onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
+                                onMouseDown={(e) => handleStepPressStart(e, step.id, member.id)}
+                                onMouseUp={() => handleStepPressEnd(step.id, member.id)}
+                                onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
+                                onContextMenu={(e) => e.preventDefault()}
+                                className={`relative w-14 h-14 rounded-2xl transition-all duration-300 shadow-md overflow-hidden select-none touch-manipulation ${
+                                  isLongPressing
+                                    ? 'scale-90'
+                                    : memberDone
+                                    ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 scale-105 animate-success-pulse'
+                                    : 'hover:scale-110 active:scale-95'
+                                }`}
+                              >
+                                <AvatarDisplay
+                                  photoUrl={member.photo_url}
+                                  emoji={member.avatar}
+                                  name={member.name}
+                                  color={member.color}
+                                  size="lg"
+                                  className="w-full h-full"
+                                />
+
+                                {/* Completion overlay */}
+                                {memberDone && !isLongPressing && (
+                                  <span className="absolute inset-0 flex items-center justify-center bg-green-500/40">
+                                    <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg">✓</span>
+                                  </span>
+                                )}
+
+                                {/* Long-press progress ring */}
+                                {isLongPressing && (
+                                  <span className="absolute inset-0 flex items-center justify-center">
+                                    <svg className="w-full h-full absolute" viewBox="0 0 56 56">
+                                      <circle
+                                        cx="28"
+                                        cy="28"
+                                        r="26"
+                                        fill="rgba(239, 68, 68, 0.3)"
+                                        stroke="#ef4444"
+                                        strokeWidth="4"
+                                        strokeDasharray={`${longPressProgress * 163.36} 163.36`}
+                                        strokeLinecap="round"
+                                        transform="rotate(-90 28 28)"
+                                      />
+                                    </svg>
+                                    <span className="bg-white text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold z-10">
+                                      {Math.ceil(3 - longPressProgress * 3)}
+                                    </span>
+                                  </span>
+                                )}
+                              </button>
+
+                              {/* Name label */}
+                              {showName && (
+                                <span className={`mt-1 text-xs font-medium truncate max-w-[60px] ${
+                                  memberDone ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'
+                                }`}>
+                                  {member.name}
+                                </span>
+                              )}
+
+                              {/* Status indicator */}
+                              <span className={`text-lg ${memberDone ? 'animate-bounce' : 'opacity-30'}`}>
+                                {memberDone ? '✓' : '○'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
+                    {/* No members fallback */}
+                    {!hasMembers && (
+                      <button
+                        onClick={() => toggleStep(step.id)}
+                        className={`w-full py-3 rounded-xl font-medium transition-all ${
+                          isDone
+                            ? 'bg-green-500 text-white'
+                            : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-300'
+                        }`}
+                      >
+                        {isDone ? '✓ Done!' : 'Mark Complete'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
 
           {getProgress(selectedRoutine).completed === getVisibleSteps(selectedRoutine).length && getVisibleSteps(selectedRoutine).length > 0 && (
-            <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-center">
-              <div className="text-4xl mb-2">🎉</div>
+            <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-center animate-scale-in">
+              <div className="text-5xl mb-3 animate-tada">🎉</div>
               <p className="text-xl font-bold text-green-700 dark:text-green-300 mb-1">{t('routines.allDoneGreat')}</p>
               <p className="text-green-600 dark:text-green-400">
                 {selectedRoutine.type === 'morning' ? t('routines.haveGreatDay') : selectedRoutine.type === 'evening' ? t('routines.sweetDreams') : t('routines.wellDone')}
               </p>
+              <div className="mt-3 flex justify-center gap-2">
+                {selectedRoutine.members?.map(m => (
+                  <div key={m.id} className="flex flex-col items-center">
+                    <AvatarDisplay
+                      photoUrl={m.photo_url}
+                      emoji={m.avatar}
+                      name={m.name}
+                      color={m.color}
+                      size="sm"
+                      className="ring-2 ring-green-400 ring-offset-2"
+                    />
+                    <span className="text-xs text-green-600 dark:text-green-400 mt-1">⭐</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </Card>
@@ -1904,6 +1949,77 @@ export default function RoutinesPage() {
             >
               <Trash2 className="w-4 h-4 mr-2" />
               {t('routines.removeStep')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Skip Step Confirmation Modal */}
+      <Modal
+        isOpen={!!skipConfirmStep}
+        onClose={() => setSkipConfirmStep(null)}
+        title="Skip Step?"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+            <span className="text-4xl">{skipConfirmStep?.emoji}</span>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{skipConfirmStep?.title}</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                Skip this step for everyone today?
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            This will hide the step for the rest of today. It will return tomorrow.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={() => setSkipConfirmStep(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => skipConfirmStep && skipStepForToday(skipConfirmStep)}
+              className="!bg-amber-500 hover:!bg-amber-600"
+            >
+              <span className="mr-2">⏭️</span>
+              Skip for Today
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Reset Routine Confirmation Modal */}
+      <Modal
+        isOpen={showResetConfirm}
+        onClose={() => setShowResetConfirm(false)}
+        title="Reset Routine?"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <span className="text-4xl">{selectedRoutine?.emoji}</span>
+            <div>
+              <p className="font-semibold text-slate-800 dark:text-slate-100">{selectedRoutine?.title}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Uncheck all steps for today?
+              </p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            All progress for today will be cleared. This cannot be undone.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={() => setShowResetConfirm(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={() => {
+                resetRoutine()
+                setShowResetConfirm(false)
+              }}
+              className="!bg-slate-600 hover:!bg-slate-700"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Reset Routine
             </Button>
           </div>
         </div>
