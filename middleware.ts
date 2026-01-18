@@ -92,7 +92,18 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // Try cookie-based auth first (web browser)
+  let user = (await supabase.auth.getUser()).data.user
+
+  // If no cookie auth, try Bearer token (mobile apps / Capacitor)
+  if (!user) {
+    const authHeader = req.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const { data } = await supabase.auth.getUser(token)
+      user = data.user
+    }
+  }
 
   // OAuth auth initiation and protected API routes need user session
   if (!user) {

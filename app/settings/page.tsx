@@ -35,9 +35,16 @@ function PushNotificationSettings() {
     setTestSending(true)
     setTestResult(null)
     try {
+      // Get current session for auth
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`
+      }
+
       const response = await fetch('/api/notifications/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           title: '🎉 Test Notification',
           body: 'Push notifications are working!',
