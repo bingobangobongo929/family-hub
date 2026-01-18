@@ -237,6 +237,7 @@ export default function RoutinesPage() {
   }, [loadCompletions])
 
   // Real-time subscription for completions sync across devices
+  // Instead of reloading all completions, merge the specific change to avoid race conditions
   useEffect(() => {
     if (!user) return
 
@@ -245,14 +246,41 @@ export default function RoutinesPage() {
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'routine_completions',
           filter: `completed_date=eq.${today}`
         },
-        () => {
-          // Reload completions when any change happens
-          loadCompletions()
+        (payload) => {
+          // Another device completed a step - ADD to our local state
+          const { step_id, member_id } = payload.new as { step_id: string; member_id: string }
+          const key = `${step_id}:${member_id}`
+          setCompletedSteps(prev => {
+            if (prev.has(key)) return prev // Already have it
+            const newSet = new Set(prev)
+            newSet.add(key)
+            return newSet
+          })
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'routine_completions',
+          filter: `completed_date=eq.${today}`
+        },
+        (payload) => {
+          // Another device uncompleted a step - REMOVE from our local state
+          const { step_id, member_id } = payload.old as { step_id: string; member_id: string }
+          const key = `${step_id}:${member_id}`
+          setCompletedSteps(prev => {
+            if (!prev.has(key)) return prev // Already removed
+            const newSet = new Set(prev)
+            newSet.delete(key)
+            return newSet
+          })
         }
       )
       .subscribe()
@@ -260,7 +288,7 @@ export default function RoutinesPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [user, today, loadCompletions])
+  }, [user, today])
 
   // Real-time subscription for active routine sync
   useEffect(() => {
