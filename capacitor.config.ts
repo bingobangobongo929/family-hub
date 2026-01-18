@@ -15,7 +15,7 @@ const config: CapacitorConfig = {
   ios: {
     contentInset: 'automatic',
     scheme: 'Family Hub',
-    backgroundColor: '#f8fafc', // Match light mode background (slate-50)
+    backgroundColor: '#0f172a', // Match dark mode background (slate-900)
   },
 
   plugins: {
