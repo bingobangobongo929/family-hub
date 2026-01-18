@@ -55,6 +55,7 @@ export default function NotificationsPage() {
         .from('notification_log')
         .select('*')
         .eq('user_id', user.id)
+        .neq('status', 'dismissed') // Don't show dismissed notifications
         .order('sent_at', { ascending: false })
         .limit(50)
 

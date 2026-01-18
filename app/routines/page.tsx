@@ -320,20 +320,46 @@ export default function RoutinesPage() {
 
     const today = new Date().toISOString().split('T')[0]
     const key = `${stepId}:${memberId}`
-    const newCompleted = new Set(completedSteps)
+    const wasCompleted = completedSteps.has(key)
 
-    if (newCompleted.has(key)) {
+    // IMMEDIATELY update UI (optimistic)
+    const newCompleted = new Set(completedSteps)
+    if (wasCompleted) {
       newCompleted.delete(key)
-      hapticLight() // Light haptic for uncomplete
-      await supabase
+      hapticLight()
+    } else {
+      newCompleted.add(key)
+      hapticSuccess()
+
+      // Find the step emoji for confetti
+      const step = selectedRoutine?.steps.find(s => s.id === stepId)
+      setCelebratingStep(stepId)
+      setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
+      setConfettiTrigger(t => t + 1)
+      playSound('complete')
+      setTimeout(() => setCelebratingStep(null), 600)
+    }
+    setCompletedSteps(newCompleted) // UPDATE UI IMMEDIATELY
+
+    // Now do database operations in background (don't await blocking UI)
+    if (wasCompleted) {
+      // Uncomplete
+      supabase
         .from('routine_completions')
         .delete()
         .eq('step_id', stepId)
         .eq('member_id', memberId)
         .eq('completed_date', today)
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error deleting completion:', error)
+            // Revert on error
+            setCompletedSteps(prev => new Set([...prev, key]))
+          }
+        })
 
-      // Log uncomplete action to history
-      await supabase.from('routine_completion_log').insert({
+      // Log uncomplete action
+      supabase.from('routine_completion_log').insert({
         routine_id: selectedRoutine?.id,
         step_id: stepId,
         member_id: memberId,
@@ -342,20 +368,8 @@ export default function RoutinesPage() {
         action: 'uncompleted'
       })
     } else {
-      newCompleted.add(key)
-      hapticSuccess() // Success haptic for completing step
-
-      // Find the step emoji for confetti
-      const step = selectedRoutine?.steps.find(s => s.id === stepId)
-
-      // Celebrate! Small burst for individual completion
-      setCelebratingStep(stepId)
-      setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
-      setConfettiTrigger(t => t + 1)
-      playSound('complete')
-      setTimeout(() => setCelebratingStep(null), 600)
-
-      const { error: insertError } = await supabase
+      // Complete
+      supabase
         .from('routine_completions')
         .upsert({
           routine_id: selectedRoutine?.id,
@@ -363,17 +377,20 @@ export default function RoutinesPage() {
           member_id: memberId,
           completed_date: today
         }, { onConflict: 'routine_id,step_id,member_id,completed_date' })
+        .then(({ error }) => {
+          if (error) {
+            console.error('Error saving completion:', error)
+            // Revert on error
+            setCompletedSteps(prev => {
+              const reverted = new Set(prev)
+              reverted.delete(key)
+              return reverted
+            })
+          }
+        })
 
-      if (insertError) {
-        console.error('Error saving completion:', insertError)
-        // Revert optimistic update
-        newCompleted.delete(key)
-        setCompletedSteps(newCompleted)
-        return
-      }
-
-      // Log complete action to history
-      await supabase.from('routine_completion_log').insert({
+      // Log complete action
+      supabase.from('routine_completion_log').insert({
         routine_id: selectedRoutine?.id,
         step_id: stepId,
         member_id: memberId,
@@ -388,7 +405,7 @@ export default function RoutinesPage() {
         const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
 
         const memberCompletedAll = memberSteps.every(
-          s => newCompleted.has(`${s.id}:${memberId}`) || s.id === stepId
+          s => newCompleted.has(`${s.id}:${memberId}`)
         )
         if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
           const member = getMember(memberId)
@@ -396,7 +413,7 @@ export default function RoutinesPage() {
             updateMemberPoints(memberId, selectedRoutine.points_reward)
 
             // Log points to history
-            await supabase.from('points_history').insert({
+            supabase.from('points_history').insert({
               member_id: memberId,
               points_change: selectedRoutine.points_reward,
               reason: 'routine_completed',
@@ -407,7 +424,7 @@ export default function RoutinesPage() {
           }
 
           // Update streak
-          await updateStreak(memberId, selectedRoutine.id, today)
+          updateStreak(memberId, selectedRoutine.id, today)
 
           // BIG celebration for completing all steps!
           setTimeout(() => {
@@ -421,9 +438,7 @@ export default function RoutinesPage() {
         const routineMembers = selectedRoutine.member_ids || []
         const allMembersCompletedAll = routineMembers.length > 0 && visibleSteps.length > 0 && routineMembers.every(mid => {
           const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, mid))
-          return memberSpecificSteps.every(s =>
-            newCompleted.has(`${s.id}:${mid}`) || (s.id === stepId && mid === memberId)
-          )
+          return memberSpecificSteps.every(s => newCompleted.has(`${s.id}:${mid}`))
         })
         if (allMembersCompletedAll) {
           setTimeout(() => {
@@ -434,8 +449,6 @@ export default function RoutinesPage() {
         }
       }
     }
-
-    setCompletedSteps(newCompleted)
   }
 
   // Long-press handling for uncheck protection
