@@ -10,6 +10,11 @@ const PUBLIC_API_ROUTES = [
   '/api/f1/news',
 ]
 
+// Routes that use service role key internally (bypass middleware auth)
+const SERVICE_ROLE_ROUTES = [
+  '/api/routines/completion',
+]
+
 // Routes that use CRON_SECRET instead of user auth (cron jobs only)
 const CRON_ROUTES = [
   '/api/notifications/triggers/bins',
@@ -46,6 +51,11 @@ export async function middleware(req: NextRequest) {
 
   // Skip public F1 routes (public data)
   if (PUBLIC_API_ROUTES.some(route => pathname.startsWith(route))) {
+    return res
+  }
+
+  // Skip service role routes (they handle their own auth via service key)
+  if (SERVICE_ROLE_ROUTES.some(route => pathname.startsWith(route))) {
     return res
   }
 
