@@ -43,6 +43,8 @@ export default function RoutinesPage() {
   const [selectorExpanded, setSelectorExpanded] = useState(false) // Collapsed by default
   const [syncedRoutineId, setSyncedRoutineId] = useState<string | null>(null) // The active routine synced across devices
   const longPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
+  const lastTouchTime = useRef<number>(0) // Track last touch to prevent double-events
+  const pendingToggle = useRef<Set<string>>(new Set()) // Track in-flight toggles to prevent race conditions
   const [longPressActive, setLongPressActive] = useState<string | null>(null) // Shows visual feedback during long-press
   const [stepToRemove, setStepToRemove] = useState<{ routineId: string, step: RoutineStep } | null>(null) // For removal confirmation
   const stepRemoveLongPressTimers = useRef<Map<string, NodeJS.Timeout>>(new Map())
@@ -349,7 +351,15 @@ export default function RoutinesPage() {
     const key = `${stepId}:${memberId}`
     const routineId = selectedRoutine.id
 
-    // Check current state ONCE
+    // CRITICAL: Prevent double-toggle - check and set lock atomically
+    if (pendingToggle.current.has(key)) {
+      console.log('[TOGGLE] BLOCKED - already in progress:', key)
+      return
+    }
+    pendingToggle.current.add(key)
+    console.log('[TOGGLE] Lock acquired:', key)
+
+    // Check current state ONCE (after acquiring lock)
     const isCurrentlyCompleted = completedSteps.has(key)
 
     console.log('[TOGGLE] Start:', { key, isCurrentlyCompleted, stateSize: completedSteps.size })
@@ -384,6 +394,10 @@ export default function RoutinesPage() {
       } catch (error) {
         console.error('[TOGGLE] API delete error:', error)
         setCompletedSteps(prev => new Set([...prev, key])) // Revert
+      } finally {
+        // Release lock
+        pendingToggle.current.delete(key)
+        console.log('[TOGGLE] Lock released:', key)
       }
     } else {
       // === COMPLETE ===
@@ -450,14 +464,16 @@ export default function RoutinesPage() {
           next.delete(key)
           return next
         }) // Revert
+      } finally {
+        // Release lock
+        pendingToggle.current.delete(key)
+        console.log('[TOGGLE] Lock released:', key)
       }
     }
   }
 
   // Long-press handling for uncheck protection
   const LONG_PRESS_DURATION = 600 // milliseconds
-  const lastTouchTime = useRef<number>(0)
-  const pendingToggle = useRef<Set<string>>(new Set()) // Track in-flight toggles
 
   const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
