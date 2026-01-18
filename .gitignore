@@ -43,3 +43,4 @@ ios/App/DerivedData/
 # Android (if added later)
 android/app/build/
 android/.gradle/
+supabase/.temp/
