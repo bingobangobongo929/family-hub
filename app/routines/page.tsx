@@ -238,58 +238,9 @@ export default function RoutinesPage() {
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [loadCompletions])
 
-  // Real-time subscription for completions sync across devices
-  useEffect(() => {
-    if (!user) return
-
-    const channel = supabase
-      .channel('completions-sync')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'routine_completions',
-          filter: `completed_date=eq.${today}`
-        },
-        (payload) => {
-          const { step_id, member_id } = payload.new as { step_id: string; member_id: string }
-          const key = `${step_id}:${member_id}`
-          // Only add if not already present (avoids conflicts with optimistic updates)
-          setCompletedSteps(prev => {
-            if (prev.has(key)) return prev
-            const newSet = new Set(prev)
-            newSet.add(key)
-            return newSet
-          })
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'routine_completions',
-          filter: `completed_date=eq.${today}`
-        },
-        (payload) => {
-          const { step_id, member_id } = payload.old as { step_id: string; member_id: string }
-          const key = `${step_id}:${member_id}`
-          // Only remove if present (avoids conflicts with optimistic updates)
-          setCompletedSteps(prev => {
-            if (!prev.has(key)) return prev
-            const newSet = new Set(prev)
-            newSet.delete(key)
-            return newSet
-          })
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, today])
+  // DISABLED: Real-time subscription was interfering with optimistic updates
+  // Cross-device sync will use polling instead (on visibility change)
+  // TODO: Re-enable with proper conflict resolution once core completion works
 
   // Real-time subscription for active routine sync
   useEffect(() => {
@@ -430,32 +381,15 @@ export default function RoutinesPage() {
         if (!response.ok) {
           const error = await response.json()
           console.error('[TOGGLE] API upsert error:', error)
+          // Revert optimistic update
           setCompletedSteps(prev => {
             const next = new Set(prev)
             next.delete(key)
             return next
-          }) // Revert
-        } else {
-          console.log('[TOGGLE] API upsert success')
-
-          // Check for routine completion
-          const visibleSteps = getVisibleSteps(selectedRoutine)
-          const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
-
-          setCompletedSteps(current => {
-            const memberCompletedAll = memberSteps.every(s => current.has(`${s.id}:${memberId}`))
-            if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
-              const member = getMember(memberId)
-              if (member?.stars_enabled) {
-                updateMemberPoints(memberId, selectedRoutine.points_reward)
-              }
-              updateStreak(memberId, routineId, todayStr)
-              setConfettiConfig({ intensity: 'big', emoji: '⭐' })
-              setConfettiTrigger(t => t + 1)
-              playSound('allDone')
-            }
-            return current // Don't modify
           })
+        } else {
+          console.log('[TOGGLE] API upsert success - completion persisted')
+          // Note: Routine completion rewards handled separately to avoid state conflicts
         }
       } catch (error) {
         console.error('[TOGGLE] API upsert error:', error)
