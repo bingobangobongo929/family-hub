@@ -406,36 +406,38 @@ export default function RoutinesPage() {
     }
   }
 
-  // Long-press handling for uncheck protection
-  const LONG_PRESS_DURATION = 600 // milliseconds
-  const lastClickTime = useRef<Map<string, number>>(new Map()) // Debounce per button
-  const DEBOUNCE_MS = 1000 // 1 second debounce - very aggressive
+  // Long-press handling for undo protection (kid-friendly: 3 seconds to undo)
+  const LONG_PRESS_DURATION = 3000 // 3 seconds - prevents accidental undos by kids
+  const lastClickTime = useRef<Map<string, number>>(new Map())
+  const DEBOUNCE_MS = 300 // 300ms debounce - just prevent double-taps
 
-  // Simple click handler with aggressive debouncing
+  // Simple tap handler: tap to complete, does nothing if already done
   const handleMemberClick = (stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     const now = Date.now()
     const lastClick = lastClickTime.current.get(key) || 0
 
-    // Aggressive debounce - ignore clicks within 1 second
+    // Debounce to prevent accidental double-taps
     if (now - lastClick < DEBOUNCE_MS) {
-      console.log('[CLICK] DEBOUNCED - too fast:', key, now - lastClick, 'ms since last')
       return
     }
     lastClickTime.current.set(key, now)
 
     const isCompleted = completedSteps.has(key)
-    console.log('[CLICK] Accepted:', { key, isCompleted, timeSinceLast: now - lastClick })
 
     if (isCompleted) {
-      // Already completed - don't do anything on tap (require long-press)
-      console.log('[CLICK] Already complete - tap ignored, use long-press to undo')
+      // Already done - tap does nothing, must long-press 3s to undo
       return
     }
 
-    // Not completed - complete it
+    // Not completed - mark as done!
     toggleStepForMember(stepId, memberId)
   }
+
+  // Long-press progress state for visual feedback
+  const [longPressProgress, setLongPressProgress] = useState<string | null>(null)
+  const longPressStartTime = useRef<number>(0)
+  const longPressAnimationFrame = useRef<number | null>(null)
 
   const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
@@ -444,14 +446,20 @@ export default function RoutinesPage() {
     // Only handle long-press for completed steps (to undo)
     if (isCompleted) {
       e.preventDefault()
+      longPressStartTime.current = Date.now()
       setLongPressActive(key)
+      setLongPressProgress(key)
+
       const timer = setTimeout(() => {
-        // Long press completed - do the uncheck
-        if (navigator.vibrate) navigator.vibrate(50)
-        console.log('[LONG-PRESS] Undo triggered:', key)
+        // Long press completed (3 seconds) - do the undo
+        if (navigator.vibrate) navigator.vibrate([50, 50, 50])
         toggleStepForMember(stepId, memberId)
         setLongPressActive(null)
+        setLongPressProgress(null)
         longPressTimers.current.delete(key)
+        if (longPressAnimationFrame.current) {
+          cancelAnimationFrame(longPressAnimationFrame.current)
+        }
       }, LONG_PRESS_DURATION)
       longPressTimers.current.set(key, timer)
     }
@@ -465,6 +473,10 @@ export default function RoutinesPage() {
       clearTimeout(timer)
       longPressTimers.current.delete(key)
       setLongPressActive(null)
+      setLongPressProgress(null)
+      if (longPressAnimationFrame.current) {
+        cancelAnimationFrame(longPressAnimationFrame.current)
+      }
     }
   }
 
@@ -473,8 +485,8 @@ export default function RoutinesPage() {
     handleStepPressEnd(stepId, memberId)
   }
 
-  // Long-press on step emoji to trigger removal
-  const STEP_REMOVE_LONG_PRESS_DURATION = 800 // slightly longer than undo
+  // Long-press on step emoji to trigger removal (kid-friendly: 3 seconds)
+  const STEP_REMOVE_LONG_PRESS_DURATION = 3000 // 3 seconds - prevents accidental deletions
 
   const handleStepEmojiPressStart = (e: React.TouchEvent | React.MouseEvent, routineId: string, step: RoutineStep) => {
     e.preventDefault()
@@ -1568,13 +1580,13 @@ export default function RoutinesPage() {
                                 </span>
                               )}
                             </button>
-                            {/* Skip/Unskip button */}
+                            {/* Skip/Unskip button - On mobile: only visible when already skipped (to unskip) */}
                             <button
                               onClick={() => toggleSkipStep(step.id, member.id)}
-                              className={`absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm transition-all shadow-sm ${
+                              className={`absolute -bottom-2 -right-2 w-7 h-7 rounded-full items-center justify-center text-sm transition-all shadow-sm ${
                                 memberSkipped
-                                  ? 'bg-amber-500 text-white hover:bg-amber-600'
-                                  : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white sm:opacity-0 sm:group-hover:opacity-100'
+                                  ? 'flex bg-amber-500 text-white hover:bg-amber-600'
+                                  : 'hidden sm:flex bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white opacity-0 group-hover:opacity-100'
                               }`}
                               title={memberSkipped ? t('routines.unskip') : t('routines.skip')}
                             >
