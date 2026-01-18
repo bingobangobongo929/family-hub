@@ -344,32 +344,43 @@ export default function RoutinesPage() {
   }
 
   const toggleStepForMember = async (stepId: string, memberId: string) => {
-    if (!user) return
+    if (!user || !selectedRoutine) return
 
-    const today = new Date().toISOString().split('T')[0]
+    const todayStr = new Date().toISOString().split('T')[0]
     const key = `${stepId}:${memberId}`
-    const wasCompleted = completedSteps.has(key)
 
-    // IMMEDIATELY update UI (optimistic)
-    const newCompleted = new Set(completedSteps)
+    // Mark as pending to prevent double-toggle
+    pendingToggle.current.add(key)
+
+    // Use functional setState to get CURRENT state, not stale closure
+    let wasCompleted = false
+    setCompletedSteps(prev => {
+      wasCompleted = prev.has(key)
+      const newSet = new Set(prev)
+      if (wasCompleted) {
+        newSet.delete(key)
+      } else {
+        newSet.add(key)
+      }
+      return newSet
+    })
+
+    // Haptics and celebration AFTER determining wasCompleted
     if (wasCompleted) {
-      newCompleted.delete(key)
       hapticLight()
     } else {
-      newCompleted.add(key)
       hapticSuccess()
-
-      // Find the step emoji for confetti
-      const step = selectedRoutine?.steps.find(s => s.id === stepId)
+      const step = selectedRoutine.steps.find(s => s.id === stepId)
       setCelebratingStep(stepId)
       setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
       setConfettiTrigger(t => t + 1)
       playSound('complete')
       setTimeout(() => setCelebratingStep(null), 600)
     }
-    setCompletedSteps(newCompleted) // UPDATE UI IMMEDIATELY
 
-    // Now do database operations in background (don't await blocking UI)
+    // Database operations in background
+    const routineId = selectedRoutine.id
+
     if (wasCompleted) {
       // Uncomplete
       supabase
@@ -377,8 +388,9 @@ export default function RoutinesPage() {
         .delete()
         .eq('step_id', stepId)
         .eq('member_id', memberId)
-        .eq('completed_date', today)
+        .eq('completed_date', todayStr)
         .then(({ error }) => {
+          pendingToggle.current.delete(key)
           if (error) {
             console.error('Error deleting completion:', error)
             // Revert on error
@@ -388,10 +400,10 @@ export default function RoutinesPage() {
 
       // Log uncomplete action
       supabase.from('routine_completion_log').insert({
-        routine_id: selectedRoutine?.id,
+        routine_id: routineId,
         step_id: stepId,
         member_id: memberId,
-        completed_date: today,
+        completed_date: todayStr,
         completed_by: user.id,
         action: 'uncompleted'
       })
@@ -400,12 +412,13 @@ export default function RoutinesPage() {
       supabase
         .from('routine_completions')
         .upsert({
-          routine_id: selectedRoutine?.id,
+          routine_id: routineId,
           step_id: stepId,
           member_id: memberId,
-          completed_date: today
+          completed_date: todayStr
         }, { onConflict: 'routine_id,step_id,member_id,completed_date' })
         .then(({ error }) => {
+          pendingToggle.current.delete(key)
           if (error) {
             console.error('Error saving completion:', error)
             // Revert on error
@@ -419,82 +432,95 @@ export default function RoutinesPage() {
 
       // Log complete action
       supabase.from('routine_completion_log').insert({
-        routine_id: selectedRoutine?.id,
+        routine_id: routineId,
         step_id: stepId,
         member_id: memberId,
-        completed_date: today,
+        completed_date: todayStr,
         completed_by: user.id,
         action: 'completed'
       })
 
-      if (selectedRoutine) {
-        // Check completion using visible steps and per-member assignments
-        const visibleSteps = getVisibleSteps(selectedRoutine)
-        const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
+      // Check completion using visible steps and per-member assignments
+      const visibleSteps = getVisibleSteps(selectedRoutine)
+      const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
 
-        const memberCompletedAll = memberSteps.every(
-          s => newCompleted.has(`${s.id}:${memberId}`)
-        )
-        if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
-          const member = getMember(memberId)
-          if (member?.stars_enabled) {
-            updateMemberPoints(memberId, selectedRoutine.points_reward)
-
-            // Log points to history
-            supabase.from('points_history').insert({
-              member_id: memberId,
-              points_change: selectedRoutine.points_reward,
-              reason: 'routine_completed',
-              reference_id: selectedRoutine.id,
-              reference_type: 'routine',
-              created_by: user.id
-            })
-          }
-
-          // Update streak
-          updateStreak(memberId, selectedRoutine.id, today)
-
-          // BIG celebration for completing all steps!
-          setTimeout(() => {
+      // Need to check with updated state - use a small timeout to let state settle
+      setTimeout(() => {
+        setCompletedSteps(currentCompleted => {
+          const memberCompletedAll = memberSteps.every(
+            s => currentCompleted.has(`${s.id}:${memberId}`)
+          )
+          if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
+            const member = getMember(memberId)
+            if (member?.stars_enabled) {
+              updateMemberPoints(memberId, selectedRoutine.points_reward)
+              supabase.from('points_history').insert({
+                member_id: memberId,
+                points_change: selectedRoutine.points_reward,
+                reason: 'routine_completed',
+                reference_id: routineId,
+                reference_type: 'routine',
+                created_by: user.id
+              })
+            }
+            updateStreak(memberId, routineId, todayStr)
             setConfettiConfig({ intensity: 'big', emoji: '⭐' })
             setConfettiTrigger(t => t + 1)
             playSound('allDone')
-          }, 300)
-        }
+          }
 
-        // Check if ALL members completed ALL their applicable steps
-        const routineMembers = selectedRoutine.member_ids || []
-        const allMembersCompletedAll = routineMembers.length > 0 && visibleSteps.length > 0 && routineMembers.every(mid => {
-          const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, mid))
-          return memberSpecificSteps.every(s => newCompleted.has(`${s.id}:${mid}`))
+          // Check if ALL members completed ALL their applicable steps
+          const routineMembers = selectedRoutine.member_ids || []
+          const allMembersCompletedAll = routineMembers.length > 0 && visibleSteps.length > 0 && routineMembers.every(mid => {
+            const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, mid))
+            return memberSpecificSteps.every(s => currentCompleted.has(`${s.id}:${mid}`))
+          })
+          if (allMembersCompletedAll) {
+            setTimeout(() => {
+              setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
+              setConfettiTrigger(t => t + 1)
+              playSound('epic')
+            }, 200)
+          }
+
+          return currentCompleted // Don't change state, just read it
         })
-        if (allMembersCompletedAll) {
-          setTimeout(() => {
-            setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
-            setConfettiTrigger(t => t + 1)
-            playSound('epic')
-          }, 500)
-        }
-      }
+      }, 50)
     }
   }
 
   // Long-press handling for uncheck protection
   const LONG_PRESS_DURATION = 600 // milliseconds
+  const lastTouchTime = useRef<number>(0)
+  const pendingToggle = useRef<Set<string>>(new Set()) // Track in-flight toggles
 
   const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
+
+    // CRITICAL: Prevent double-firing on mobile (touchstart + mousedown both fire)
+    if (e.type === 'mousedown') {
+      // If we just had a touch event, ignore this mouse event
+      if (Date.now() - lastTouchTime.current < 500) {
+        return
+      }
+    }
+    if (e.type === 'touchstart') {
+      lastTouchTime.current = Date.now()
+      e.preventDefault() // Prevent simulated mouse events
+    }
+
+    // Prevent double-toggle while one is in progress
+    if (pendingToggle.current.has(key)) {
+      return
+    }
+
     const isCompleted = completedSteps.has(key)
 
     if (isCompleted) {
-      // Prevent iOS context menu and text selection on long-press
-      e.preventDefault()
-
       // Already completed - require long-press to uncheck
       setLongPressActive(key)
       const timer = setTimeout(() => {
         // Long press completed - do the uncheck
-        // Vibrate if supported (haptic feedback)
         if (navigator.vibrate) navigator.vibrate(50)
         toggleStepForMember(stepId, memberId)
         setLongPressActive(null)
