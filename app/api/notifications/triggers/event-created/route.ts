@@ -145,13 +145,13 @@ export async function POST(request: NextRequest) {
     let sentCount = 0;
     const results: { user_id: string; sent: boolean; reason?: string }[] = [];
 
-    // Send to each user (except the creator - they know they made the event)
+    // Send to each user
     for (const userId of userIds) {
-      // Skip the user who created the event
-      if (userId === event.user_id) {
-        results.push({ user_id: userId, sent: false, reason: 'creator' });
-        continue;
-      }
+      // TODO: Re-enable after testing - skip the user who created the event
+      // if (userId === event.user_id) {
+      //   results.push({ user_id: userId, sent: false, reason: 'creator' });
+      //   continue;
+      // }
 
       // Check user's notification preferences
       const { data: prefs } = await supabase

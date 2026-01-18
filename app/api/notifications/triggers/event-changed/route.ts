@@ -129,8 +129,8 @@ export async function POST(request: NextRequest) {
     let sentCount = 0;
 
     for (const userId of userIds) {
-      // Skip the user who made the change
-      if (userId === updated_by) continue;
+      // TODO: Re-enable after testing - skip the user who made the change
+      // if (userId === updated_by) continue;
 
       // Check user's notification preferences
       const { data: prefs } = await supabase
