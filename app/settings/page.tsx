@@ -20,7 +20,7 @@ import NotificationPreferences from '@/components/NotificationPreferences'
 
 // Push Notification Settings Component
 function PushNotificationSettings() {
-  const { isNative, isEnabled, permissionStatus, token, requestPermission, refreshToken } = usePush()
+  const { isNative, isEnabled, permissionStatus, token, error, debugLog, requestPermission, refreshToken } = usePush()
   const [isRequesting, setIsRequesting] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [testSending, setTestSending] = useState(false)
@@ -211,14 +211,25 @@ function PushNotificationSettings() {
           </div>
         )}
 
-        {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && token && (
-          <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-            <p className="text-xs text-slate-400 font-mono break-all">
-              Token: {token.substring(0, 20)}...
-            </p>
+        {/* Debug info - always show for troubleshooting */}
+        <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">Debug Info</p>
+          <div className="text-xs font-mono text-slate-400 space-y-1 bg-slate-100 dark:bg-slate-900 p-3 rounded-lg">
+            <p>isNative: {isNative ? 'true' : 'false'}</p>
+            <p>permissionStatus: {permissionStatus}</p>
+            <p>isEnabled: {isEnabled ? 'true' : 'false'}</p>
+            <p>token: {token ? token.substring(0, 20) + '...' : 'null'}</p>
+            {error && <p className="text-red-500">error: {error}</p>}
           </div>
-        )}
+          {debugLog.length > 0 && (
+            <div className="mt-2 text-xs font-mono text-slate-400 bg-slate-100 dark:bg-slate-900 p-3 rounded-lg max-h-40 overflow-y-auto">
+              <p className="font-medium mb-1">Log:</p>
+              {debugLog.map((line, i) => (
+                <p key={i} className="text-slate-500">{line}</p>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </Card>
   )

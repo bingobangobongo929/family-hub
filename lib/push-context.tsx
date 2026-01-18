@@ -21,6 +21,8 @@ interface PushContextType {
   isEnabled: boolean;
   permissionStatus: 'granted' | 'denied' | 'prompt' | 'loading';
   token: string | null;
+  error: string | null;
+  debugLog: string[];
   requestPermission: () => Promise<boolean>;
   refreshToken: () => Promise<void>;
 }
@@ -30,6 +32,8 @@ const PushContext = createContext<PushContextType>({
   isEnabled: false,
   permissionStatus: 'loading',
   token: null,
+  error: null,
+  debugLog: [],
   requestPermission: async () => false,
   refreshToken: async () => {},
 });
@@ -41,6 +45,14 @@ export function PushProvider({ children }: { children: ReactNode }) {
   const [isEnabled, setIsEnabled] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt' | 'loading'>('loading');
   const [token, setToken] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  // Add to debug log
+  const log = useCallback((msg: string) => {
+    console.log('[PushContext]', msg);
+    setDebugLog(prev => [...prev.slice(-9), `${new Date().toLocaleTimeString()}: ${msg}`]);
+  }, []);
 
   // Save token to server
   const saveTokenToServer = useCallback(async (tokenToSave: string) => {
@@ -76,25 +88,29 @@ export function PushProvider({ children }: { children: ReactNode }) {
 
   // Handle receiving token from native
   const handleToken = useCallback(async (newToken: string) => {
-    console.log('handleToken called with:', newToken?.substring(0, 20) + '...');
+    log(`handleToken called with: ${newToken?.substring(0, 20)}...`);
     setToken(newToken);
     setIsEnabled(true);
+    setError(null); // Clear any previous errors
 
     // Store token locally for persistence
     try {
       await Preferences.set({ key: PUSH_TOKEN_KEY, value: newToken });
-      console.log('Token saved locally');
+      log('Token saved locally');
     } catch (e) {
-      console.error('Failed to save token locally:', e);
+      log(`Failed to save token locally: ${e}`);
+      setError(`Failed to save token: ${e}`);
     }
 
     // Store token via API
     if (user) {
-      await saveTokenToServer(newToken);
+      log('Saving token to server...');
+      const success = await saveTokenToServer(newToken);
+      log(`Server save result: ${success}`);
     } else {
-      console.log('No user, will save token when user logs in');
+      log('No user, will save token when user logs in');
     }
-  }, [user, saveTokenToServer]);
+  }, [user, saveTokenToServer, log]);
 
   // When user logs in, save any stored token
   useEffect(() => {
@@ -157,30 +173,46 @@ export function PushProvider({ children }: { children: ReactNode }) {
   // Check permission status on mount
   useEffect(() => {
     const checkStatus = async () => {
+      log(`checkStatus started, isNative=${isNative}`);
+
       if (!isNative) {
+        log('Not native, setting permissionStatus=denied');
         setPermissionStatus('denied');
         return;
       }
 
+      log('Getting permission status...');
       const status = await getPushPermissionStatus();
+      log(`Permission status: ${status}`);
       setPermissionStatus(status);
 
       // If already granted, initialize
       if (status === 'granted') {
         // First, try to load any stored token
         try {
+          log('Checking for stored token...');
           const { value: storedToken } = await Preferences.get({ key: PUSH_TOKEN_KEY });
           if (storedToken) {
-            console.log('Found stored token on init:', storedToken.substring(0, 10) + '...');
+            log(`Found stored token: ${storedToken.substring(0, 10)}...`);
             setToken(storedToken);
             setIsEnabled(true);
+          } else {
+            log('No stored token found');
           }
         } catch (e) {
-          console.error('Failed to load stored token:', e);
+          log(`Error loading stored token: ${e}`);
+          setError(`Failed to load stored token: ${e}`);
         }
 
         // Initialize listeners and register (will trigger token callback)
-        await initPushNotifications(handleToken, handleNotification, handleAction);
+        log('Calling initPushNotifications...');
+        try {
+          const success = await initPushNotifications(handleToken, handleNotification, handleAction);
+          log(`initPushNotifications returned: ${success}`);
+        } catch (e) {
+          log(`initPushNotifications error: ${e}`);
+          setError(`Init error: ${e}`);
+        }
       }
     };
 
@@ -189,7 +221,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
     return () => {
       removePushListeners();
     };
-  }, [isNative, handleToken, handleNotification, handleAction]);
+  }, [isNative, handleToken, handleNotification, handleAction, log]);
 
   // Request permission and initialize
   const requestPermission = useCallback(async (): Promise<boolean> => {
@@ -215,6 +247,8 @@ export function PushProvider({ children }: { children: ReactNode }) {
       isEnabled,
       permissionStatus,
       token,
+      error,
+      debugLog,
       requestPermission,
       refreshToken,
     }}>
