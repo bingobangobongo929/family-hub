@@ -22,7 +22,7 @@
     },
     {
       "path": "/api/notifications/triggers/f1-news",
-      "schedule": "*/30 * * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/notifications/triggers/f1-sessions",

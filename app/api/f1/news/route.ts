@@ -394,6 +394,7 @@ export async function GET(request: NextRequest) {
       items,
       newArticles: newItems.length,
       totalInDb: existingArticles?.length || 0,
+      aiCalled: newItems.length > 0, // AI only called when there are new articles
       timestamp: Date.now(),
     })
   } catch (error) {

@@ -116,17 +116,20 @@ export async function GET(request: NextRequest) {
 
     for (const pref of prefs) {
       const state = stateMap.get(pref.user_id);
-      const lastNotifiedId = state?.last_news_article_id;
+      const lastNewsCheck = state?.last_news_check ? new Date(state.last_news_check) : null;
 
-      // Find articles to notify about
+      // Find articles to notify about (only articles published AFTER last check)
       const articlesToNotify: F1NewsItem[] = [];
 
       for (const article of articles) {
         // Skip if not interesting (AI filtered)
         if (!article.isInteresting) continue;
 
-        // Skip if already notified
-        if (lastNotifiedId && article.id === lastNotifiedId) break; // Articles are sorted by date
+        // Skip if article is older than last check (already notified)
+        if (lastNewsCheck && article.pubDate) {
+          const articleDate = new Date(article.pubDate);
+          if (articleDate <= lastNewsCheck) continue;
+        }
 
         // Skip spoilers if user has spoiler-free mode
         if (pref.f1_spoiler_free && article.isSpoiler) continue;
