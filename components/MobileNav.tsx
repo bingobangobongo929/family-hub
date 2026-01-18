@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, CheckSquare, ShoppingCart, Menu } from 'lucide-react'
+import { Home, Calendar, ListChecks, ShoppingCart, Menu } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n-context'
 
 interface MobileNavProps {
@@ -13,7 +13,7 @@ interface MobileNavProps {
 const MOBILE_NAV_ITEMS = [
   { href: '/', labelKey: 'nav.dashboard', icon: Home },
   { href: '/calendar', labelKey: 'nav.calendar', icon: Calendar },
-  { href: '/tasks', labelKey: 'nav.tasks', icon: CheckSquare },
+  { href: '/routines', labelKey: 'nav.routines', icon: ListChecks },
   { href: '/shopping', labelKey: 'nav.shopping', icon: ShoppingCart },
 ]
 
