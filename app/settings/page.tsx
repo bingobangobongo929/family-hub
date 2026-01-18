@@ -82,7 +82,7 @@ function PushNotificationSettings() {
         {/* Status */}
         <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
           <div className="flex items-center gap-3">
-            {isEnabled ? (
+            {permissionStatus === 'granted' ? (
               <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
@@ -93,7 +93,7 @@ function PushNotificationSettings() {
             )}
             <div>
               <p className="font-medium text-slate-700 dark:text-slate-200">
-                {isEnabled ? 'Notifications Enabled' : 'Notifications Disabled'}
+                {permissionStatus === 'granted' ? 'Notifications Enabled' : 'Notifications Disabled'}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 {permissionStatus === 'granted' && 'You will receive reminders for events, chores, and bins.'}
@@ -127,7 +127,7 @@ function PushNotificationSettings() {
         )}
 
         {/* Test Notification */}
-        {isEnabled && (
+        {permissionStatus === 'granted' && (
           <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Test Notifications</p>
             <Button

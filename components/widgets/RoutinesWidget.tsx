@@ -10,6 +10,7 @@ import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineCompletion, FamilyMember, RoutineScenario } from '@/lib/database.types'
 import Confetti from '@/components/Confetti'
 import { AvatarDisplay } from '@/components/PhotoUpload'
+import { hapticSuccess, hapticLight } from '@/lib/haptics'
 
 interface RoutineWithData extends Routine {
   steps: RoutineStep[]
@@ -207,6 +208,7 @@ export default function RoutinesWidget() {
     cooldownTimers.current.set(cooldownKey, timer)
 
     if (isCompleted) {
+      hapticLight() // Light haptic for uncomplete
       setCompletions(prev => prev.filter(
         c => !(c.routine_id === routine.id && c.step_id === stepId && c.member_id === memberId)
       ))
@@ -221,6 +223,7 @@ export default function RoutinesWidget() {
           .eq('completed_date', today)
       }
     } else {
+      hapticSuccess() // Success haptic for completing step
       const newCompletion: RoutineCompletion = {
         id: `temp-${Date.now()}`,
         routine_id: routine.id,

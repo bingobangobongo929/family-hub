@@ -14,6 +14,7 @@ import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineScenario, FamilyMember, ScheduleType, SCHEDULE_TYPES } from '@/lib/database.types'
 import Confetti from '@/components/Confetti'
+import { hapticSuccess, hapticLight, hapticMedium } from '@/lib/haptics'
 
 // Extended routine type with steps, members, and scenarios
 type RoutineWithDetails = Routine & {
@@ -323,6 +324,7 @@ export default function RoutinesPage() {
 
     if (newCompleted.has(key)) {
       newCompleted.delete(key)
+      hapticLight() // Light haptic for uncomplete
       await supabase
         .from('routine_completions')
         .delete()
@@ -341,6 +343,7 @@ export default function RoutinesPage() {
       })
     } else {
       newCompleted.add(key)
+      hapticSuccess() // Success haptic for completing step
 
       // Find the step emoji for confetti
       const step = selectedRoutine?.steps.find(s => s.id === stepId)

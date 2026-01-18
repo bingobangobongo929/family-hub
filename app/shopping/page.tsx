@@ -14,6 +14,7 @@ import {
   getCategoryConfig,
   CATEGORY_CONFIG
 } from '@/lib/database.types'
+import { hapticLight } from '@/lib/haptics'
 
 // Demo data for when Supabase is not configured
 const demoItems: ShoppingListItem[] = [
@@ -131,6 +132,8 @@ export default function ShoppingPage() {
   const toggleItem = async (id: string) => {
     const item = items.find(i => i.id === id)
     if (!item) return
+
+    hapticLight() // Haptic feedback for check/uncheck
 
     // Optimistic update
     setItems(items.map(i =>

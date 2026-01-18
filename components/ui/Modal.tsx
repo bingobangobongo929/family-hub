@@ -68,13 +68,14 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' }:
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
             <button
               onClick={onClose}
-              className="w-11 h-11 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors touch-target tap-highlight"
+              aria-label="Close modal"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors touch-target tap-highlight focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
         )}
-        <div className="p-4 overflow-y-auto flex-1 overscroll-contain">{children}</div>
+        <div className="p-4 overflow-y-auto flex-1 overscroll-contain" style={{ paddingLeft: 'max(1rem, env(safe-area-inset-left))', paddingRight: 'max(1rem, env(safe-area-inset-right))' }}>{children}</div>
       </div>
     </div>
   )

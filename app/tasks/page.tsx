@@ -13,6 +13,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
 import { Chore, CHORE_CATEGORIES, getChoreCategoryConfig } from '@/lib/database.types'
 import { useTranslation } from '@/lib/i18n-context'
+import { hapticSuccess, hapticLight } from '@/lib/haptics'
 
 export default function TasksPage() {
   const { user } = useAuth()
@@ -67,6 +68,13 @@ export default function TasksPage() {
     const newStatus = chore.status === 'completed' ? 'pending' : 'completed'
     const completedAt = newStatus === 'completed' ? new Date().toISOString() : null
     const pointsChange = newStatus === 'completed' ? chore.points : -chore.points
+
+    // Haptic feedback
+    if (newStatus === 'completed') {
+      hapticSuccess()
+    } else {
+      hapticLight()
+    }
 
     try {
       const { error } = await supabase

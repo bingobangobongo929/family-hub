@@ -45,17 +45,19 @@ export default function PhotoWidget({ autoPlay = true }: { autoPlay?: boolean })
         <p className="text-white text-sm font-display font-medium">{current.caption}</p>
       </div>
 
-      {/* Controls - show on hover */}
-      <div className="absolute inset-0 flex items-center justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      {/* Controls - always visible on mobile, hover on desktop */}
+      <div className="absolute inset-0 flex items-center justify-between px-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
         <button
           onClick={prev}
-          className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+          aria-label="Previous photo"
+          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 active:bg-black/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
         <button
           onClick={next}
-          className="p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors"
+          aria-label="Next photo"
+          className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 active:bg-black/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
         >
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -64,21 +66,25 @@ export default function PhotoWidget({ autoPlay = true }: { autoPlay?: boolean })
       {/* Play/Pause */}
       <button
         onClick={() => setIsPlaying(!isPlaying)}
-        className="absolute top-2 right-2 p-2 rounded-full bg-black/30 text-white hover:bg-black/50 transition-colors opacity-0 group-hover:opacity-100"
+        aria-label={isPlaying ? 'Pause slideshow' : 'Play slideshow'}
+        className="absolute top-2 right-2 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-black/30 text-white hover:bg-black/50 active:bg-black/60 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
       >
-        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+        {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
       </button>
 
-      {/* Dots */}
-      <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1">
+      {/* Dots - larger for touch */}
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-2">
         {DEMO_PHOTOS.map((_, i) => (
           <button
             key={i}
             onClick={() => setCurrentIndex(i)}
-            className={`w-2 h-2 rounded-full transition-colors ${
+            aria-label={`Go to photo ${i + 1}`}
+            className={`w-3 h-3 rounded-full transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center ${
               i === currentIndex ? 'bg-white' : 'bg-white/40'
             }`}
-          />
+          >
+            <span className={`w-3 h-3 rounded-full ${i === currentIndex ? 'bg-white' : 'bg-white/40'}`} />
+          </button>
         ))}
       </div>
     </div>

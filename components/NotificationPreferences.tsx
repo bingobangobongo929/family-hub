@@ -247,7 +247,7 @@ function ToggleItem({
 
 export default function NotificationPreferences() {
   const { user } = useAuth()
-  const { isNative, isEnabled } = usePush()
+  const { isNative, permissionStatus } = usePush()
   const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -327,7 +327,7 @@ export default function NotificationPreferences() {
   }
 
   // Show warning if push not enabled
-  if (isNative && !isEnabled) {
+  if (isNative && permissionStatus !== 'granted') {
     return (
       <Card className="mb-6">
         <CardHeader title="Notification Preferences" icon={<Bell className="w-5 h-5" />} />

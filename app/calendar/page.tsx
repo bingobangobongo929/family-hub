@@ -1058,20 +1058,20 @@ export default function CalendarPage() {
                         <button
                           key={event.id}
                           onClick={(e) => handleEventClick(event, e)}
-                          className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600 transition-colors ${
-                            isMobile ? 'px-2 py-1 min-h-[28px]' : 'px-2 py-0.5'
+                          className={`flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 active:bg-slate-300 dark:active:bg-slate-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${
+                            isMobile ? 'px-2.5 py-1.5 min-h-[36px]' : 'px-2 py-1 min-h-[32px]'
                           }`}
                           title={event.title}
                         >
-                          {category && <span className={isMobile ? 'text-[11px]' : 'text-[11px]'}>{category.emoji}</span>}
-                          <span className={`text-slate-500 dark:text-slate-400 truncate ${isMobile ? 'text-[10px] max-w-[80px]' : 'text-[11px] max-w-[120px]'}`}>
+                          {category && <span className="text-xs">{category.emoji}</span>}
+                          <span className={`text-slate-500 dark:text-slate-400 truncate text-xs ${isMobile ? 'max-w-[80px]' : 'max-w-[120px]'}`}>
                             {event.title}
                           </span>
                         </button>
                       )
                     })}
                     {backgroundEvents.length > 2 && (
-                      <span className={`text-slate-400 dark:text-slate-500 ${isMobile ? 'text-[9px]' : 'text-[11px]'}`}>
+                      <span className="text-xs text-slate-400 dark:text-slate-500">
                         +{backgroundEvents.length - 2}
                       </span>
                     )}
@@ -1098,14 +1098,14 @@ export default function CalendarPage() {
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-0.5">
-                            {isRecurring && <Repeat className={`flex-shrink-0 ${isMobile ? 'w-2.5 h-2.5' : 'w-3 h-3'}`} style={{ color: event.color }} />}
+                            {isRecurring && <Repeat className={`flex-shrink-0 ${isMobile ? 'w-3 h-3' : 'w-3.5 h-3.5'}`} style={{ color: event.color }} />}
                             {category && !isMobile && <span className="text-xs flex-shrink-0">{category.emoji}</span>}
-                            <span className={`font-semibold truncate ${isMobile ? 'text-[10px]' : 'text-xs'}`} style={{ color: event.color }}>
+                            <span className={`font-semibold truncate text-xs`} style={{ color: event.color }}>
                               {event.title}
                             </span>
                           </div>
                           {!isMobile && (
-                            <div className="flex items-center gap-1.5 text-[10px] text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
                               <span>{time}</span>
                               {(memberIds.length > 0 || contactIds.length > 0) && (
                                 <>

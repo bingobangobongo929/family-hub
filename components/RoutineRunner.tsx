@@ -9,6 +9,7 @@ import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineCompletion, FamilyMember } from '@/lib/database.types'
+import { hapticSuccess, hapticMedium } from '@/lib/haptics'
 
 interface RoutineWithData extends Routine {
   steps: RoutineStep[]
@@ -84,6 +85,9 @@ export default function RoutineRunner({ routine, completions: initialCompletions
 
     // Optimistically update local state
     setCompletions(prev => [...prev, newCompletion])
+
+    // Haptic feedback for completing step
+    hapticSuccess()
 
     // Show celebration for this member
     setCelebratingMember(member)

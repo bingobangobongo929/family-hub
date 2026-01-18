@@ -594,17 +594,17 @@ export default function ScheduleWidget() {
                           {category && (
                             <span className="text-xs flex-shrink-0">{category.emoji}</span>
                           )}
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate flex-1">
+                          <span className="text-xs text-slate-500 dark:text-slate-400 truncate flex-1">
                             {event.title}
                           </span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 flex-shrink-0">
+                          <span className="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0">
                             →{formatEndDate(endDate)}
                           </span>
                         </div>
                       )
                     })}
                     {uniqueBackgroundEvents.length > 3 && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 pl-2">
+                      <p className="text-xs text-slate-400 dark:text-slate-500 pl-2">
                         +{uniqueBackgroundEvents.length - 3} {t('common.more', { count: uniqueBackgroundEvents.length - 3 })}
                       </p>
                     )}
