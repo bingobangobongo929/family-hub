@@ -163,25 +163,35 @@ export default function NotesPage() {
   }
 
   const togglePin = async (note: Note) => {
-    if (!user) {
-      setNotes(notes.map(n =>
-        n.id === note.id ? { ...n, pinned: !n.pinned } : n
-      ).sort((a, b) => {
-        if (a.pinned !== b.pinned) return b.pinned ? 1 : -1
-        return 0
-      }))
-      return
-    }
+    const newPinned = !note.pinned
 
-    try {
-      await supabase
-        .from('notes')
-        .update({ pinned: !note.pinned })
-        .eq('id', note.id)
-      await fetchNotes()
-    } catch (error) {
-      console.error('Error toggling pin:', error)
-    }
+    // IMMEDIATELY update UI (optimistic)
+    setNotes(prev => prev.map(n =>
+      n.id === note.id ? { ...n, pinned: newPinned } : n
+    ).sort((a, b) => {
+      if (a.pinned !== b.pinned) return b.pinned ? 1 : -1
+      return 0
+    }))
+
+    if (!user) return
+
+    // Do database operation in background
+    supabase
+      .from('notes')
+      .update({ pinned: newPinned })
+      .eq('id', note.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error toggling pin:', error)
+          // Revert on error
+          setNotes(prev => prev.map(n =>
+            n.id === note.id ? { ...n, pinned: note.pinned } : n
+          ).sort((a, b) => {
+            if (a.pinned !== b.pinned) return b.pinned ? 1 : -1
+            return 0
+          }))
+        }
+      })
   }
 
   const openEditModal = (note: Note) => {

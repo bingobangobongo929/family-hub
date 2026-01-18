@@ -76,27 +76,40 @@ export default function TasksPage() {
       hapticLight()
     }
 
-    try {
-      const { error } = await supabase
-        .from('chores')
-        .update({
-          status: newStatus,
-          completed_at: completedAt,
-          completed_by: newStatus === 'completed' ? chore.assigned_to : null,
-        })
-        .eq('id', chore.id)
+    // IMMEDIATELY update UI (optimistic)
+    setChores(prev => prev.map(c =>
+      c.id === chore.id
+        ? { ...c, status: newStatus, completed_at: completedAt, completed_by: newStatus === 'completed' ? chore.assigned_to : null }
+        : c
+    ))
 
-      if (error) throw error
-
-      // Update member points
-      if (chore.assigned_to && chore.points > 0) {
-        await updateMemberPoints(chore.assigned_to, pointsChange)
-      }
-
-      await fetchChores()
-    } catch (error) {
-      console.error('Error updating chore:', error)
+    // Update member points immediately
+    if (chore.assigned_to && chore.points > 0) {
+      updateMemberPoints(chore.assigned_to, pointsChange)
     }
+
+    // Do database operations in background
+    supabase
+      .from('chores')
+      .update({
+        status: newStatus,
+        completed_at: completedAt,
+        completed_by: newStatus === 'completed' ? chore.assigned_to : null,
+      })
+      .eq('id', chore.id)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error updating chore:', error)
+          // Revert on error
+          setChores(prev => prev.map(c =>
+            c.id === chore.id ? chore : c
+          ))
+          // Revert points
+          if (chore.assigned_to && chore.points > 0) {
+            updateMemberPoints(chore.assigned_to, -pointsChange)
+          }
+        }
+      })
   }
 
   const handleAddChore = () => {
@@ -146,17 +159,26 @@ export default function TasksPage() {
   const handleDeleteChore = async (choreId: string) => {
     if (!user) return
 
-    try {
-      const { error } = await supabase
-        .from('chores')
-        .delete()
-        .eq('id', choreId)
+    // Store for potential revert
+    const deletedChore = chores.find(c => c.id === choreId)
 
-      if (error) throw error
-      await fetchChores()
-    } catch (error) {
-      console.error('Error deleting chore:', error)
-    }
+    // IMMEDIATELY update UI (optimistic)
+    setChores(prev => prev.filter(c => c.id !== choreId))
+
+    // Do database operation in background
+    supabase
+      .from('chores')
+      .delete()
+      .eq('id', choreId)
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error deleting chore:', error)
+          // Revert on error
+          if (deletedChore) {
+            setChores(prev => [...prev, deletedChore].sort((a, b) => a.sort_order - b.sort_order))
+          }
+        }
+      })
   }
 
   const childMembers = members.filter(m => m.role === 'child')
