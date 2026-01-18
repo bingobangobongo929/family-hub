@@ -232,30 +232,29 @@ export default function CountdownWidget() {
     const displayEvents = allCountdowns.slice(0, 4)
     const useGrid = displayEvents.length === 4
 
-    // Scale text based on size - larger sizes for better readability
-    const gridEmoji = size === 'xlarge' ? 'text-5xl' : 'text-4xl'
-    const gridName = size === 'xlarge' ? 'text-lg' : 'text-base'
-    const gridDays = size === 'xlarge' ? 'text-5xl' : 'text-4xl'
-    const gridDate = size === 'xlarge' ? 'text-base' : 'text-sm'
+    // Scale text based on size
+    const gridEmoji = size === 'xlarge' ? 'text-3xl' : 'text-2xl'
+    const gridName = size === 'xlarge' ? 'text-xl' : 'text-lg'
+    const gridDays = size === 'xlarge' ? 'text-4xl' : 'text-3xl'
 
     return (
       <div ref={ref} className={`h-full ${useGrid ? 'grid grid-cols-2 grid-rows-2' : 'flex'} gap-3 p-3 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark`}>
         {displayEvents.map((event, idx) => (
           <div
             key={event.id}
-            className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(event.type)} p-3 text-white shadow-lg ${!useGrid && idx === 0 ? 'scale-[1.02]' : ''}`}
+            className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(event.type)} p-4 text-white shadow-lg ${!useGrid && idx === 0 ? 'scale-[1.02]' : ''}`}
           >
             <span className={gridEmoji}>{event.emoji}</span>
-            <p className={`${gridName} opacity-90 mt-1 font-medium truncate w-full px-2`}>{event.title.replace("'s Birthday", "")}</p>
+            <p className={`${gridName} font-semibold mt-1 leading-tight`}>{event.title.replace("'s Birthday", "")}</p>
             {event.linkedRelationships && event.linkedRelationships.length > 0 && (
-              <p className="text-xs opacity-75 truncate w-full px-2">
+              <p className="text-xs opacity-75 mt-0.5">
                 ({event.linkedRelationships[0]})
               </p>
             )}
-            <div className={`font-bold ${gridDays} leading-tight`}>
+            <div className={`font-bold ${gridDays} mt-1`}>
               {event.daysLeft === 0 ? t('countdown.today') : event.daysLeft === 1 ? t('countdown.oneDay') : `${event.daysLeft}${t('countdown.daysShort')}`}
             </div>
-            <p className={`${gridDate} opacity-75`}>
+            <p className="text-sm opacity-75">
               {format(parseISO(event.date), 'MMM d', { locale: dateLocale })}
             </p>
           </div>
