@@ -110,7 +110,7 @@ function PushNotificationSettings() {
                 {permissionStatus === 'granted' ? 'Notifications Enabled' : 'Notifications Disabled'}
               </p>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {permissionStatus === 'granted' && 'You will receive reminders for events, chores, and bins.'}
+                {permissionStatus === 'granted' && (token ? `Token: ${token.substring(0, 8)}...` : 'Waiting for token...')}
                 {permissionStatus === 'denied' && 'Enable in iOS Settings → Family Hub → Notifications'}
                 {permissionStatus === 'prompt' && 'Tap below to enable push notifications.'}
                 {permissionStatus === 'loading' && 'Checking status...'}
