@@ -222,13 +222,15 @@ export default function RoutinesPage() {
     const today = new Date().toISOString().split('T')[0]
 
     try {
-      const { data } = await supabase
-        .from('routine_completions')
-        .select('step_id, member_id')
-        .eq('completed_date', today)
-
-      if (data) {
-        setCompletedSteps(new Set(data.map(c => `${c.step_id}:${c.member_id}`)))
+      // Use API route to bypass RLS (same as save/delete)
+      const response = await fetch(`/api/routines/completion?completed_date=${today}`)
+      if (response.ok) {
+        const { data } = await response.json()
+        if (data) {
+          setCompletedSteps(new Set(data.map((c: { step_id: string; member_id: string }) => `${c.step_id}:${c.member_id}`)))
+        }
+      } else {
+        console.error('Error loading completions:', await response.text())
       }
     } catch (error) {
       console.error('Error loading completions:', error)
@@ -1475,10 +1477,12 @@ export default function RoutinesPage() {
                   onTouchMove={handleSwipeMove}
                   onTouchEnd={() => handleSwipeEnd(step)}
                 >
-                  {/* Swipe reveal background */}
-                  <div className="absolute inset-y-0 right-0 w-32 bg-amber-500 flex items-center justify-end pr-4">
-                    <span className="text-white font-medium">Skip</span>
-                  </div>
+                  {/* Swipe reveal background - only visible when actively swiping */}
+                  {isSwiping && swipeOffset > 0 && (
+                    <div className="absolute inset-y-0 right-0 w-32 bg-amber-500 flex items-center justify-end pr-4">
+                      <span className="text-white font-medium">Skip</span>
+                    </div>
+                  )}
 
                   {/* Main card content */}
                   <div

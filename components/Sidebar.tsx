@@ -276,27 +276,35 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             </button>
           </div>
 
-          {/* Pinned Navigation */}
+          {/* Navigation - Desktop/Kitchen shows all items, Mobile uses collapse */}
           <nav className="space-y-0.5">
             {pinnedItems.map((item, index) => renderNavItem(item, true, index, pinnedItems.length))}
           </nav>
 
-          {/* More Section - Collapsible */}
+          {/* More Section - Desktop/Kitchen: show all directly, Mobile: collapsible */}
           {moreItems.length > 0 && (
             <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
-              <button
-                onClick={() => setMoreExpanded(!moreExpanded)}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
-              >
-                <MoreHorizontal className="w-5 h-5" />
-                <span className="font-medium text-sm flex-1 text-left">{t('nav.more') || 'More'}</span>
-                <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? 'rotate-180' : ''}`} />
-              </button>
-              {moreExpanded && (
-                <div className="mt-1 space-y-0.5">
-                  {moreItems.map((item, index) => renderNavItem(item, false, index, moreItems.length))}
-                </div>
-              )}
+              {/* Desktop/Kitchen: show all items directly without collapse */}
+              <div className="hidden lg:block space-y-0.5">
+                {moreItems.map((item, index) => renderNavItem(item, false, index, moreItems.length))}
+              </div>
+
+              {/* Mobile: collapsible More section */}
+              <div className="lg:hidden">
+                <button
+                  onClick={() => setMoreExpanded(!moreExpanded)}
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                  <span className="font-medium text-sm flex-1 text-left">{t('nav.more') || 'More'}</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${moreExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                {moreExpanded && (
+                  <div className="mt-1 space-y-0.5">
+                    {moreItems.map((item, index) => renderNavItem(item, false, index, moreItems.length))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
