@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Card, { CardHeader } from '@/components/Card'
-import { Bell, Trash2, Calendar, Clock, Sparkles, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
+import { Bell, Trash2, Calendar, Clock, Sparkles, ShoppingCart, ChevronDown, ChevronRight, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { usePush } from '@/lib/push-context'
@@ -30,6 +30,11 @@ interface NotificationPrefs {
   // Routines
   routines_enabled: boolean
   routine_start_reminder: boolean
+
+  // Shopping
+  shopping_enabled: boolean
+  shopping_list_changes: boolean
+  shopping_notify_own_changes: boolean
 
   // Chores
   chores_enabled: boolean
@@ -79,6 +84,9 @@ const DEFAULT_PREFS: NotificationPrefs = {
   calendar_reminder_1d: true,
   routines_enabled: true,
   routine_start_reminder: true,
+  shopping_enabled: true,
+  shopping_list_changes: true,
+  shopping_notify_own_changes: true,
   chores_enabled: true,
   chores_reminder: true,
   f1_enabled: false,
@@ -518,6 +526,33 @@ export default function NotificationPreferences() {
             enabled={prefs.chores_reminder}
             onChange={(v) => updatePref('chores_reminder', v)}
           />
+        </CategorySection>
+
+        {/* Shopping Section */}
+        <CategorySection
+          title="Shopping List"
+          icon={<ShoppingCart className="w-5 h-5" />}
+          enabled={prefs.shopping_enabled}
+          onToggle={(v) => updatePref('shopping_enabled', v)}
+          description="Shopping list change notifications"
+          masterEnabled={prefs.master_enabled}
+        >
+          <ToggleItem
+            label="List Changes"
+            description="Notify when items are added, removed, or completed"
+            enabled={prefs.shopping_list_changes}
+            onChange={(v) => updatePref('shopping_list_changes', v)}
+          />
+          <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+              <ToggleItem
+                label="Include My Own Changes"
+                description="Also notify me when I add or complete items"
+                enabled={prefs.shopping_notify_own_changes}
+                onChange={(v) => updatePref('shopping_notify_own_changes', v)}
+              />
+            </div>
+          </div>
         </CategorySection>
 
         {/* F1 Section */}

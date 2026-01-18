@@ -3,9 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Shopping List Change notification trigger with 10-minute debounce
 // Cron schedule: "*/10 * * * *" (every 10 minutes)
-// Only sends notifications if:
-// 1. There are changes in the last 10 minutes
-// 2. No changes have occurred in the last 10 minutes (debounce)
+// Notifies ALL family members about shopping list changes
+// With option to include/exclude your own changes
 
 interface ShoppingListChange {
   id: string;
@@ -76,70 +75,85 @@ export async function GET(request: NextRequest) {
     const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
     const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000);
 
-    // Get changes from the last 20 minutes grouped by user
-    const { data: changes } = await supabase
+    // Get ALL changes from the last 20 minutes
+    const { data: allChanges } = await supabase
       .from('shopping_list_changes')
       .select('*')
       .gte('created_at', twentyMinutesAgo.toISOString())
       .order('created_at', { ascending: false });
 
-    if (!changes || changes.length === 0) {
+    if (!allChanges || allChanges.length === 0) {
       return NextResponse.json({ message: 'No recent changes', sent: 0 });
     }
 
-    // Group changes by user
-    const changesByUser = new Map<string, ShoppingListChange[]>();
-    for (const change of changes) {
-      const existing = changesByUser.get(change.user_id) || [];
-      existing.push(change);
-      changesByUser.set(change.user_id, existing);
+    // Check debounce: only notify if the most recent change is > 10 minutes old
+    const mostRecentChange = new Date(allChanges[0].created_at);
+    if (mostRecentChange > tenMinutesAgo) {
+      return NextResponse.json({ message: 'Still editing, debouncing', sent: 0 });
     }
+
+    // Get changes to notify about (between 10-20 minutes ago)
+    const changesToNotify = allChanges.filter(c => {
+      const changeTime = new Date(c.created_at);
+      return changeTime <= tenMinutesAgo && changeTime > twentyMinutesAgo;
+    });
+
+    if (changesToNotify.length === 0) {
+      return NextResponse.json({ message: 'No new changes to notify', sent: 0 });
+    }
+
+    // Get unique user IDs who made changes (to check notify_own_changes)
+    const changeAuthors = new Set(changesToNotify.map(c => c.user_id));
+
+    // Get ALL users with push tokens
+    const { data: tokens } = await supabase
+      .from('push_tokens')
+      .select('user_id')
+      .not('user_id', 'is', null);
+
+    if (!tokens || tokens.length === 0) {
+      return NextResponse.json({ message: 'No users with push tokens', sent: 0 });
+    }
+
+    const userIds = [...new Set(tokens.map(t => t.user_id))];
+
+    // Format the notification content
+    const { details } = formatChanges(changesToNotify);
+    const title = `🛒 Shopping List Updated`;
+    const body = details || `${changesToNotify.length} change${changesToNotify.length > 1 ? 's' : ''}`;
 
     let sentCount = 0;
     const results: { user_id: string; sent: boolean; reason?: string }[] = [];
 
-    for (const [userId, userChanges] of changesByUser) {
-      // Check debounce: only notify if the most recent change is > 10 minutes old
-      // This means the user stopped making changes for at least 10 minutes
-      const mostRecentChange = new Date(userChanges[0].created_at);
-      const oldestChange = new Date(userChanges[userChanges.length - 1].created_at);
-
-      // If the most recent change is less than 10 minutes old, skip (still editing)
-      if (mostRecentChange > tenMinutesAgo) {
-        results.push({ user_id: userId, sent: false, reason: 'still_editing' });
-        continue;
-      }
-
-      // Only include changes that haven't been notified yet (between 10-20 minutes ago)
-      const changesToNotify = userChanges.filter(c => {
-        const changeTime = new Date(c.created_at);
-        return changeTime <= tenMinutesAgo && changeTime > twentyMinutesAgo;
-      });
-
-      if (changesToNotify.length === 0) {
-        results.push({ user_id: userId, sent: false, reason: 'already_notified' });
-        continue;
-      }
-
+    // Send to each user
+    for (const userId of userIds) {
       // Check user preferences
       const { data: prefs } = await supabase
         .from('notification_preferences')
-        .select('shopping_enabled, shopping_list_changes')
+        .select('shopping_enabled, shopping_list_changes, shopping_notify_own_changes')
         .eq('user_id', userId)
         .single();
 
-      // Default: shopping notifications OFF unless explicitly enabled
-      const shouldNotify = prefs?.shopping_enabled && prefs?.shopping_list_changes;
+      // Default: shopping notifications ON (changed from previous behavior)
+      const shoppingEnabled = !prefs || prefs.shopping_enabled !== false;
+      const listChangesEnabled = !prefs || prefs.shopping_list_changes !== false;
 
-      if (!shouldNotify) {
+      if (!shoppingEnabled || !listChangesEnabled) {
         results.push({ user_id: userId, sent: false, reason: 'disabled' });
         continue;
       }
 
-      // Format clean notification
-      const { summary, details } = formatChanges(changesToNotify);
-      const title = `🛒 Shopping List`;
-      const body = `${details}\n${changesToNotify.length} change${changesToNotify.length > 1 ? 's' : ''}`;
+      // Check if this user made ALL the changes
+      const userMadeAllChanges = changesToNotify.every(c => c.user_id === userId);
+
+      if (userMadeAllChanges) {
+        // User made all changes - check if they want to be notified about own changes
+        const notifyOwnChanges = !prefs || prefs.shopping_notify_own_changes !== false;
+        if (!notifyOwnChanges) {
+          results.push({ user_id: userId, sent: false, reason: 'own_changes_disabled' });
+          continue;
+        }
+      }
 
       // Send notification
       try {
@@ -176,13 +190,6 @@ export async function GET(request: NextRequest) {
               data: { change_count: changesToNotify.length },
             });
 
-          // Clean up old changes for this user (older than 20 minutes)
-          await supabase
-            .from('shopping_list_changes')
-            .delete()
-            .eq('user_id', userId)
-            .lt('created_at', twentyMinutesAgo.toISOString());
-
           results.push({ user_id: userId, sent: true });
         } else {
           results.push({ user_id: userId, sent: false, reason: 'send_failed' });
@@ -192,6 +199,12 @@ export async function GET(request: NextRequest) {
         results.push({ user_id: userId, sent: false, reason: 'error' });
       }
     }
+
+    // Clean up old changes (older than 20 minutes)
+    await supabase
+      .from('shopping_list_changes')
+      .delete()
+      .lt('created_at', twentyMinutesAgo.toISOString());
 
     return NextResponse.json({
       message: `Sent ${sentCount} shopping list notifications`,
