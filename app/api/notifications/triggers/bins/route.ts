@@ -13,8 +13,13 @@ interface NotificationPrefs {
   bin_reminder_morning: boolean;
 }
 
-// Check if this is a morning or evening run based on hour
-function isEveningRun(): boolean {
+// Check if this is a morning or evening run based on query param or hour
+function isEveningRun(typeParam?: string | null): boolean {
+  // If explicitly specified via query param, use that
+  if (typeParam === 'morning') return false;
+  if (typeParam === 'evening') return true;
+
+  // Otherwise detect based on current hour (for manual testing)
   const hour = new Date().getHours();
   return hour >= 17 && hour <= 21; // 5pm - 9pm is evening
 }
@@ -58,7 +63,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const isEvening = isEveningRun();
+    // Get type from query parameter for explicit control
+    const { searchParams } = new URL(request.url);
+    const typeParam = searchParams.get('type');
+    const isEvening = isEveningRun(typeParam);
 
     // Determine which date to check
     let targetDate: Date;

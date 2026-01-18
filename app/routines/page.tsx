@@ -355,14 +355,22 @@ export default function RoutinesPage() {
       playSound('complete')
       setTimeout(() => setCelebratingStep(null), 600)
 
-      await supabase
+      const { error: insertError } = await supabase
         .from('routine_completions')
-        .insert({
+        .upsert({
           routine_id: selectedRoutine?.id,
           step_id: stepId,
           member_id: memberId,
           completed_date: today
-        })
+        }, { onConflict: 'routine_id,step_id,member_id,completed_date' })
+
+      if (insertError) {
+        console.error('Error saving completion:', insertError)
+        // Revert optimistic update
+        newCompleted.delete(key)
+        setCompletedSteps(newCompleted)
+        return
+      }
 
       // Log complete action to history
       await supabase.from('routine_completion_log').insert({

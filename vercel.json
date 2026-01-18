@@ -2,15 +2,23 @@
   "crons": [
     {
       "path": "/api/notifications/triggers/events",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
     },
     {
-      "path": "/api/notifications/triggers/bins",
-      "schedule": "0 19 * * *"
+      "path": "/api/notifications/triggers/bins?type=evening",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/bins?type=morning",
+      "schedule": "45 4 * * *"
     },
     {
       "path": "/api/notifications/triggers/chores",
-      "schedule": "0 9 * * *"
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/shopping-list",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

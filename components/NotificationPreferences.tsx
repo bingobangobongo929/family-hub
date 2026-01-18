@@ -302,15 +302,27 @@ export default function NotificationPreferences() {
 
     setSaving(true)
     try {
-      await supabase
+      // Send all current preferences to ensure nothing gets lost
+      // Remove any fields that shouldn't be sent to the database
+      const { ...dbPrefs } = newPrefs
+
+      const { error } = await supabase
         .from('notification_preferences')
         .upsert({
           user_id: user.id,
-          [key]: value,
+          ...dbPrefs,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' })
+
+      if (error) {
+        console.error('Error saving notification preference:', error)
+        // Revert the optimistic update on error
+        setPrefs(prefs)
+      }
     } catch (error) {
       console.error('Error saving notification preference:', error)
+      // Revert the optimistic update on error
+      setPrefs(prefs)
     }
     setSaving(false)
   }

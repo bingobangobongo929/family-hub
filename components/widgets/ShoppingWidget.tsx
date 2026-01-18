@@ -7,6 +7,7 @@ import { recipeVaultSupabase } from '@/lib/supabase'
 import { useWidgetSize } from '@/lib/useWidgetSize'
 import { ShoppingListItem } from '@/lib/database.types'
 import { useTranslation } from '@/lib/i18n-context'
+import { useAuth } from '@/lib/auth-context'
 
 // Demo shopping items
 const DEMO_ITEMS: ShoppingListItem[] = [
@@ -32,6 +33,7 @@ export default function ShoppingWidget() {
   const [isConnected, setIsConnected] = useState(false)
   const [ref, { size, isWide, isTall, width, height }] = useWidgetSize()
   const { t } = useTranslation()
+  const { user } = useAuth()
 
   const fetchItems = useCallback(async () => {
     if (!isRecipeVaultConfigured()) {
@@ -87,6 +89,19 @@ export default function ShoppingWidget() {
         .from('shopping_list_items')
         .update({ is_checked: newChecked })
         .eq('id', item.id)
+
+      // Record change for notification (non-blocking)
+      if (user?.id) {
+        fetch('/api/notifications/triggers/shopping-list', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: user.id,
+            item_name: item.item_name,
+            action: newChecked ? 'completed' : 'added'
+          }),
+        }).catch(() => {})
+      }
     } catch (error) {
       setItems(items.map(i => i.id === item.id ? { ...i, is_checked: !newChecked } : i))
     }

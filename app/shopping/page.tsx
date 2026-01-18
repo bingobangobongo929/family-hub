@@ -15,6 +15,7 @@ import {
   CATEGORY_CONFIG
 } from '@/lib/database.types'
 import { hapticLight } from '@/lib/haptics'
+import { useAuth } from '@/lib/auth-context'
 
 // Demo data for when Supabase is not configured
 const demoItems: ShoppingListItem[] = [
@@ -30,8 +31,24 @@ const demoItems: ShoppingListItem[] = [
 
 const CATEGORIES = Object.keys(CATEGORY_CONFIG)
 
+// Record shopping list change for notification debouncing
+async function recordShoppingChange(userId: string | undefined, itemName: string, action: 'added' | 'removed' | 'completed') {
+  if (!userId) return
+  try {
+    await fetch('/api/notifications/triggers/shopping-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, item_name: itemName, action }),
+    })
+  } catch (e) {
+    // Silent fail - don't block the user action
+    console.debug('Failed to record shopping change for notification:', e)
+  }
+}
+
 export default function ShoppingPage() {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const [items, setItems] = useState<ShoppingListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isConnected, setIsConnected] = useState(false)
@@ -150,12 +167,16 @@ export default function ShoppingPage() {
         console.error('Error updating item:', error)
         // Revert on error
         setItems(items)
+      } else {
+        // Record change for notification
+        recordShoppingChange(user?.id, item.item_name, !item.is_checked ? 'completed' : 'added')
       }
     }
   }
 
   // Delete item
   const deleteItem = async (id: string) => {
+    const item = items.find(i => i.id === id)
     // Optimistic update
     const previousItems = items
     setItems(items.filter(i => i.id !== id))
@@ -169,6 +190,9 @@ export default function ShoppingPage() {
       if (error) {
         console.error('Error deleting item:', error)
         setItems(previousItems)
+      } else if (item) {
+        // Record change for notification
+        recordShoppingChange(user?.id, item.item_name, 'removed')
       }
     }
   }
@@ -203,6 +227,8 @@ export default function ShoppingPage() {
         console.error('Error adding item:', error)
       } else if (data) {
         setItems([...items, data as ShoppingListItem])
+        // Record change for notification
+        recordShoppingChange(user?.id, newItemName.trim(), 'added')
       }
     } else {
       // Demo mode - add locally
