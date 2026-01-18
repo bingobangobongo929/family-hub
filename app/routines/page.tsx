@@ -474,43 +474,52 @@ export default function RoutinesPage() {
 
   // Long-press handling for uncheck protection
   const LONG_PRESS_DURATION = 600 // milliseconds
+  const lastClickTime = useRef<Map<string, number>>(new Map()) // Debounce per button
+  const DEBOUNCE_MS = 1000 // 1 second debounce - very aggressive
 
-  const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
+  // Simple click handler with aggressive debouncing
+  const handleMemberClick = (stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
+    const now = Date.now()
+    const lastClick = lastClickTime.current.get(key) || 0
 
-    // CRITICAL: Prevent double-firing on mobile (touchstart + mousedown both fire)
-    if (e.type === 'mousedown') {
-      // If we just had a touch event, ignore this mouse event
-      if (Date.now() - lastTouchTime.current < 500) {
-        return
-      }
+    // Aggressive debounce - ignore clicks within 1 second
+    if (now - lastClick < DEBOUNCE_MS) {
+      console.log('[CLICK] DEBOUNCED - too fast:', key, now - lastClick, 'ms since last')
+      return
     }
-    if (e.type === 'touchstart') {
-      lastTouchTime.current = Date.now()
-      e.preventDefault() // Prevent simulated mouse events
-    }
+    lastClickTime.current.set(key, now)
 
-    // Prevent double-toggle while one is in progress
-    if (pendingToggle.current.has(key)) {
+    const isCompleted = completedSteps.has(key)
+    console.log('[CLICK] Accepted:', { key, isCompleted, timeSinceLast: now - lastClick })
+
+    if (isCompleted) {
+      // Already completed - don't do anything on tap (require long-press)
+      console.log('[CLICK] Already complete - tap ignored, use long-press to undo')
       return
     }
 
+    // Not completed - complete it
+    toggleStepForMember(stepId, memberId)
+  }
+
+  const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
+    const key = `${stepId}:${memberId}`
     const isCompleted = completedSteps.has(key)
 
+    // Only handle long-press for completed steps (to undo)
     if (isCompleted) {
-      // Already completed - require long-press to uncheck
+      e.preventDefault()
       setLongPressActive(key)
       const timer = setTimeout(() => {
         // Long press completed - do the uncheck
         if (navigator.vibrate) navigator.vibrate(50)
+        console.log('[LONG-PRESS] Undo triggered:', key)
         toggleStepForMember(stepId, memberId)
         setLongPressActive(null)
         longPressTimers.current.delete(key)
       }, LONG_PRESS_DURATION)
       longPressTimers.current.set(key, timer)
-    } else {
-      // Not completed - instant check
-      toggleStepForMember(stepId, memberId)
     }
   }
 
@@ -1582,12 +1591,13 @@ export default function RoutinesPage() {
                         return (
                           <div key={member.id} className="relative group">
                             <button
-                              onMouseDown={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
-                              onMouseUp={() => handleStepPressEnd(step.id, member.id)}
-                              onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
+                              onClick={() => !memberSkipped && handleMemberClick(step.id, member.id)}
                               onTouchStart={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
                               onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
                               onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
+                              onMouseDown={(e) => !memberSkipped && handleStepPressStart(e, step.id, member.id)}
+                              onMouseUp={() => handleStepPressEnd(step.id, member.id)}
+                              onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
                               onContextMenu={(e) => e.preventDefault()}
                               className={`relative w-12 h-12 rounded-xl transition-all duration-200 shadow-md hover:shadow-lg overflow-hidden select-none touch-manipulation ${
                                 memberSkipped
