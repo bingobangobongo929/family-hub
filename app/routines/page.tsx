@@ -1289,10 +1289,10 @@ export default function RoutinesPage() {
 
       {/* Selected Routine - Simple Checklist */}
       {selectedRoutine && (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl ${
+        <Card className="p-3 sm:p-6">
+          <div className="flex items-center justify-between mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-3xl ${
                 selectedRoutine.type === 'morning'
                   ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                   : selectedRoutine.type === 'evening'
@@ -1302,17 +1302,18 @@ export default function RoutinesPage() {
                 {selectedRoutine.emoji}
               </div>
               <div>
-                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</h2>
-                <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
-                  {selectedRoutine.type === 'morning' ? <Sun className="w-4 h-4 text-amber-500" /> : <Moon className="w-4 h-4 text-indigo-500" />}
+                <h2 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</h2>
+                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  {selectedRoutine.type === 'morning' ? <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" /> : <Moon className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500" />}
                   {selectedRoutine.points_reward > 0 && (
                     <span className="flex items-center gap-1 text-amber-600">
-                      <Star className="w-4 h-4" />
+                      <Star className="w-3 h-3 sm:w-4 sm:h-4" />
                       +{selectedRoutine.points_reward}
                     </span>
                   )}
+                  {/* Member avatars - hidden on mobile */}
                   {(selectedRoutine.members?.length || 0) > 0 && (
-                    <span className="flex items-center gap-1">
+                    <span className="hidden sm:flex items-center gap-1">
                       {selectedRoutine.members?.map(member => (
                         <AvatarDisplay
                           key={member.id}
@@ -1328,7 +1329,7 @@ export default function RoutinesPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <button
                 onClick={() => {
                   const newValue = !soundEnabled
@@ -1336,27 +1337,27 @@ export default function RoutinesPage() {
                   localStorage.setItem('routine-sounds-enabled', String(newValue))
                   if (newValue) playSound('complete') // Test sound
                 }}
-                className={`w-11 h-11 rounded-xl flex items-center justify-center transition-colors tap-highlight ${
+                className={`w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors tap-highlight ${
                   soundEnabled
                     ? 'text-teal-600 bg-teal-50 dark:bg-teal-900/30 dark:text-teal-400'
                     : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700'
                 }`}
                 title={soundEnabled ? t('routines.soundsOn') : t('routines.soundsOff')}
               >
-                {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+                {soundEnabled ? <Volume2 className="w-4 h-4 sm:w-5 sm:h-5" /> : <VolumeX className="w-4 h-4 sm:w-5 sm:h-5" />}
               </button>
               <button
                 onClick={() => openEditModal(selectedRoutine)}
-                className="w-11 h-11 rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 tap-highlight"
+                className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 tap-highlight"
               >
-                <Edit2 className="w-5 h-5" />
+                <Edit2 className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
               <button
                 onClick={resetRoutine}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                className="w-9 h-9 sm:w-auto sm:h-auto flex items-center justify-center sm:gap-2 sm:px-3 sm:py-2 text-sm text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               >
                 <RotateCcw className="w-4 h-4" />
-                {t('routines.reset')}
+                <span className="hidden sm:inline">{t('routines.reset')}</span>
               </button>
             </div>
           </div>
@@ -1398,7 +1399,7 @@ export default function RoutinesPage() {
           )}
 
           {/* Fun Step Checklist */}
-          <div className="space-y-3">
+          <div className="space-y-2 sm:space-y-3">
             {getVisibleSteps(selectedRoutine).map((step, index) => {
               const routineMembers = selectedRoutine.members || []
               // Get only the members this step applies to
@@ -1422,7 +1423,7 @@ export default function RoutinesPage() {
                   onDragLeave={handleStepDragLeave}
                   onDrop={(e) => handleStepDrop(e, step.id)}
                   onDragEnd={handleStepDragEnd}
-                  className={`flex items-center gap-2 p-4 rounded-2xl transition-all duration-300 ${
+                  className={`flex items-center gap-2 sm:gap-2 p-3 sm:p-4 rounded-2xl transition-all duration-300 ${
                     allMembersSkipped
                       ? 'bg-slate-100 dark:bg-slate-800/30 opacity-60'
                       : isDone
@@ -1432,17 +1433,18 @@ export default function RoutinesPage() {
                     draggingStepId === step.id ? 'opacity-50 scale-95' : ''
                   } ${dragOverStepId === step.id ? 'ring-2 ring-teal-400 ring-offset-2' : ''}`}
                 >
-                  {/* Drag handle */}
+                  {/* Drag handle - hidden on mobile */}
                   <div
-                    className="cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 touch-none"
+                    className="hidden sm:flex cursor-grab active:cursor-grabbing p-1 -ml-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 touch-none"
                     onTouchStart={(e) => e.stopPropagation()}
                   >
                     <GripVertical className="w-5 h-5" />
                   </div>
 
                   {/* Step number & emoji */}
-                  <div className="flex items-center gap-3">
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-all ${
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {/* Step number - hidden on mobile */}
+                    <span className={`hidden sm:flex w-8 h-8 rounded-full items-center justify-center font-bold transition-all ${
                       isDone
                         ? 'bg-green-500 text-white'
                         : 'bg-slate-200 dark:bg-slate-600 text-slate-500'
@@ -1457,7 +1459,7 @@ export default function RoutinesPage() {
                       onTouchEnd={() => handleStepEmojiPressEnd(step.id)}
                       onTouchCancel={() => handleStepEmojiPressEnd(step.id)}
                       onContextMenu={(e) => e.preventDefault()}
-                      className={`w-14 h-14 rounded-2xl flex items-center justify-center text-3xl transition-all cursor-pointer touch-manipulation ${
+                      className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-2xl sm:text-3xl transition-all cursor-pointer touch-manipulation ${
                         isDone
                           ? 'bg-green-100 dark:bg-green-900/50'
                           : 'bg-white dark:bg-slate-700 shadow-sm hover:shadow-md active:scale-95'
@@ -1479,8 +1481,8 @@ export default function RoutinesPage() {
                     </div>
                   </div>
 
-                  {/* Step title */}
-                  <div className="flex-1 min-w-0">
+                  {/* Step title - hidden on mobile, show only emoji */}
+                  <div className="hidden sm:block flex-1 min-w-0">
                     <p className={`font-semibold text-lg transition-all truncate ${
                       allMembersSkipped
                         ? 'text-slate-400 dark:text-slate-500 line-through decoration-2'
@@ -1504,13 +1506,15 @@ export default function RoutinesPage() {
                       </p>
                     ) : null}
                   </div>
+                  {/* Spacer on mobile to push buttons to right */}
+                  <div className="flex-1 sm:hidden" />
 
                   {/* Member completion buttons - tap to complete, long-press to undo */}
                   {hasMembers ? (
-                    <div className="flex items-center gap-3">
-                      {/* Show indicator if this is a per-member step */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      {/* Show indicator if this is a per-member step - hidden on mobile */}
                       {isPerMemberStep && stepMembers.length < routineMembers.length && (
-                        <span className="text-xs text-slate-400 dark:text-slate-500 mr-1" title="This step is for specific members only">
+                        <span className="hidden sm:inline text-xs text-slate-400 dark:text-slate-500 mr-1" title="This step is for specific members only">
                           {stepMembers.map(m => m.name.charAt(0)).join(', ')} only
                         </span>
                       )}
@@ -1567,7 +1571,7 @@ export default function RoutinesPage() {
                             {/* Skip/Unskip button */}
                             <button
                               onClick={() => toggleSkipStep(step.id, member.id)}
-                              className={`absolute -bottom-2 -right-2 w-7 h-7 rounded-full flex items-center justify-center text-sm transition-all shadow-sm ${
+                              className={`absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs sm:text-sm transition-all shadow-sm ${
                                 memberSkipped
                                   ? 'bg-amber-500 text-white hover:bg-amber-600'
                                   : 'bg-slate-300 dark:bg-slate-600 text-slate-600 dark:text-slate-300 hover:bg-amber-400 hover:text-white sm:opacity-0 sm:group-hover:opacity-100'
