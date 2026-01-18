@@ -64,34 +64,44 @@ export const BIN_TYPES: BinInfo[] = [
 ]
 
 // 2026 schedule - dates as DD/MM format
-// NOTE: These are placeholder dates. User should update from AffaldRanders app
-// Randers Kommune uses RenoWeb - actual dates require MitID authentication to retrieve
-// Collection is typically every 14 days for madaffald/restaffald, 4 weeks for papir/PMG
+// ============================================================================
+// HOW TO UPDATE YOUR BIN SCHEDULE:
+// 1. Open the AffaldRanders app on your phone
+// 2. Select your address (Ebbeshøjvej 3, Virring)
+// 3. View the tømningskalender for each bin type
+// 4. Update the dates below to match your actual schedule
+//
+// OR log in to randers.renoweb.dk with MitID to see your schedule
+// ============================================================================
+// Current: PLACEHOLDER DATES - Please update with actual dates from your app
+// Collection typically: every 14 days for mad/rest, every 4 weeks for papir/PMG
 export const BIN_SCHEDULE_2026: Record<BinType, string[]> = {
-  // Madaffald & Restaffald collected together every 14 days (Tuesdays typically)
+  // Madaffald & Restaffald collected together every 14 days
+  // UPDATE: Replace these with your actual collection Tuesdays from the app
   madaffald: [
-    // TODO: Get actual dates from AffaldRanders app or randers.renoweb.dk
-    '07/01', '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
+    '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
     '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
     '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
     '28/10', '11/11', '25/11', '09/12', '23/12'
   ],
   restaffald: [
     // Same schedule as madaffald (collected together)
-    '07/01', '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
+    '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
     '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
     '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
     '28/10', '11/11', '25/11', '09/12', '23/12'
   ],
   // Papir & Pap collected every 4 weeks
+  // UPDATE: Replace these with your actual collection dates from the app
   papir_pap: [
-    '14/01', '11/02', '11/03', '08/04', '06/05', '03/06', '01/07',
-    '29/07', '26/08', '23/09', '21/10', '18/11', '16/12'
+    '28/01', '25/02', '25/03', '22/04', '20/05', '17/06', '15/07',
+    '12/08', '09/09', '07/10', '04/11', '02/12', '30/12'
   ],
   // Plast, Metal & Glas collected every 4 weeks (different week from papir)
+  // UPDATE: Replace these with your actual collection dates from the app
   plast_metal_glas: [
-    '07/01', '04/02', '04/03', '01/04', '29/04', '27/05', '24/06',
-    '22/07', '19/08', '16/09', '14/10', '11/11', '09/12'
+    '21/01', '18/02', '18/03', '15/04', '13/05', '10/06', '08/07',
+    '05/08', '02/09', '30/09', '28/10', '25/11', '23/12'
   ],
 }
 

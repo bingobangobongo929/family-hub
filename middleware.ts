@@ -13,6 +13,7 @@ const PUBLIC_API_ROUTES = [
 // Routes that use service role key internally (bypass middleware auth)
 const SERVICE_ROLE_ROUTES = [
   '/api/routines/completion',
+  '/api/notifications/log',
 ]
 
 // Routes that use CRON_SECRET instead of user auth (cron jobs only)

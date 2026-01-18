@@ -100,46 +100,56 @@ const DEFAULT_PREFS: NotificationPrefs = {
   f1_favorite_pole: true,
 }
 
-// F1 Teams for selection
+// F1 Teams for 2026 season (11 teams)
 const F1_TEAMS = [
-  { id: 'red_bull', name: 'Red Bull Racing', emoji: '🔵' },
-  { id: 'ferrari', name: 'Ferrari', emoji: '🔴' },
-  { id: 'mercedes', name: 'Mercedes', emoji: '⚫' },
   { id: 'mclaren', name: 'McLaren', emoji: '🟠' },
+  { id: 'ferrari', name: 'Ferrari', emoji: '🔴' },
+  { id: 'red_bull', name: 'Red Bull Racing', emoji: '🔵' },
+  { id: 'mercedes', name: 'Mercedes', emoji: '⚫' },
   { id: 'aston_martin', name: 'Aston Martin', emoji: '🟢' },
-  { id: 'alpine', name: 'Alpine', emoji: '🔵' },
+  { id: 'alpine', name: 'Alpine', emoji: '🩵' },
   { id: 'williams', name: 'Williams', emoji: '🔵' },
+  { id: 'audi', name: 'Audi', emoji: '⚪' },
   { id: 'haas', name: 'Haas', emoji: '⚪' },
-  { id: 'kick_sauber', name: 'Kick Sauber', emoji: '🟢' },
-  { id: 'rb', name: 'Racing Bulls', emoji: '🔵' },
+  { id: 'racing_bulls', name: 'Racing Bulls', emoji: '🔵' },
+  { id: 'cadillac', name: 'Cadillac', emoji: '🖤' },
 ]
 
-// F1 Drivers for selection
+// F1 Drivers for 2026 season (22 drivers)
 const F1_DRIVERS = [
-  { id: 'verstappen', name: 'Max Verstappen', team: 'Red Bull' },
-  { id: 'perez', name: 'Sergio Perez', team: 'Red Bull' },
-  { id: 'leclerc', name: 'Charles Leclerc', team: 'Ferrari' },
-  { id: 'sainz', name: 'Carlos Sainz', team: 'Ferrari' },
-  { id: 'hamilton', name: 'Lewis Hamilton', team: 'Ferrari' },
-  { id: 'russell', name: 'George Russell', team: 'Mercedes' },
+  // McLaren
   { id: 'norris', name: 'Lando Norris', team: 'McLaren' },
   { id: 'piastri', name: 'Oscar Piastri', team: 'McLaren' },
+  // Ferrari
+  { id: 'leclerc', name: 'Charles Leclerc', team: 'Ferrari' },
+  { id: 'hamilton', name: 'Lewis Hamilton', team: 'Ferrari' },
+  // Red Bull
+  { id: 'verstappen', name: 'Max Verstappen', team: 'Red Bull' },
+  { id: 'hadjar', name: 'Isack Hadjar', team: 'Red Bull' },
+  // Mercedes
+  { id: 'russell', name: 'George Russell', team: 'Mercedes' },
+  { id: 'antonelli', name: 'Kimi Antonelli', team: 'Mercedes' },
+  // Aston Martin
   { id: 'alonso', name: 'Fernando Alonso', team: 'Aston Martin' },
   { id: 'stroll', name: 'Lance Stroll', team: 'Aston Martin' },
+  // Alpine
   { id: 'gasly', name: 'Pierre Gasly', team: 'Alpine' },
-  { id: 'ocon', name: 'Esteban Ocon', team: 'Haas' },
-  { id: 'albon', name: 'Alex Albon', team: 'Williams' },
   { id: 'colapinto', name: 'Franco Colapinto', team: 'Alpine' },
-  { id: 'magnussen', name: 'Kevin Magnussen', team: 'Haas' },
-  { id: 'hulkenberg', name: 'Nico Hulkenberg', team: 'Kick Sauber' },
-  { id: 'bottas', name: 'Valtteri Bottas', team: 'Mercedes' },
-  { id: 'tsunoda', name: 'Yuki Tsunoda', team: 'Racing Bulls' },
-  { id: 'lawson', name: 'Liam Lawson', team: 'Racing Bulls' },
+  // Williams
+  { id: 'sainz', name: 'Carlos Sainz', team: 'Williams' },
+  { id: 'albon', name: 'Alex Albon', team: 'Williams' },
+  // Audi (formerly Sauber)
+  { id: 'hulkenberg', name: 'Nico Hulkenberg', team: 'Audi' },
+  { id: 'bortoleto', name: 'Gabriel Bortoleto', team: 'Audi' },
+  // Haas
+  { id: 'ocon', name: 'Esteban Ocon', team: 'Haas' },
   { id: 'bearman', name: 'Oliver Bearman', team: 'Haas' },
-  { id: 'antonelli', name: 'Kimi Antonelli', team: 'Mercedes' },
-  { id: 'bortoleto', name: 'Gabriel Bortoleto', team: 'Kick Sauber' },
-  { id: 'doohan', name: 'Jack Doohan', team: 'Alpine' },
-  { id: 'hadjar', name: 'Isack Hadjar', team: 'Racing Bulls' },
+  // Racing Bulls
+  { id: 'lawson', name: 'Liam Lawson', team: 'Racing Bulls' },
+  { id: 'lindblad', name: 'Arvid Lindblad', team: 'Racing Bulls' },
+  // Cadillac (new team)
+  { id: 'perez', name: 'Sergio Perez', team: 'Cadillac' },
+  { id: 'bottas', name: 'Valtteri Bottas', team: 'Cadillac' },
 ]
 
 // Toggle component

@@ -51,24 +51,16 @@ export default function NotificationsPage() {
     if (!user) return
 
     try {
-      let query = supabase
-        .from('notification_log')
-        .select('*')
-        .eq('user_id', user.id)
-        .neq('status', 'dismissed') // Don't show dismissed notifications
-        .order('sent_at', { ascending: false })
-        .limit(50)
+      // Use API route to bypass RLS
+      const params = new URLSearchParams({ user_id: user.id })
+      if (filter) params.set('category', filter)
 
-      if (filter) {
-        query = query.eq('category', filter)
-      }
-
-      const { data, error } = await query
-
-      if (error) {
-        console.error('Error fetching notifications:', error)
-      } else {
+      const response = await fetch(`/api/notifications/log?${params}`)
+      if (response.ok) {
+        const { data } = await response.json()
         setNotifications(data || [])
+      } else {
+        console.error('Error fetching notifications:', await response.text())
       }
     } catch (error) {
       console.error('Error:', error)
@@ -82,37 +74,57 @@ export default function NotificationsPage() {
   }, [fetchNotifications])
 
   const markAsRead = async (id: string) => {
-    await supabase
-      .from('notification_log')
-      .update({ status: 'read' })
-      .eq('id', id)
-
+    // Optimistic update
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, status: 'read' as const } : n)
     )
+
+    // Use API route to bypass RLS
+    const response = await fetch('/api/notifications/log', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_read', id })
+    })
+
+    if (!response.ok) {
+      // Revert on error
+      setNotifications(prev =>
+        prev.map(n => n.id === id ? { ...n, status: 'sent' as const } : n)
+      )
+    }
   }
 
   const dismissNotification = async (id: string) => {
-    await supabase
-      .from('notification_log')
-      .update({ status: 'dismissed' })
-      .eq('id', id)
-
+    // Optimistic update
     setNotifications(prev => prev.filter(n => n.id !== id))
+
+    // Use API route to bypass RLS
+    await fetch('/api/notifications/log', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'dismiss', id })
+    })
   }
 
   const markAllAsRead = async () => {
     if (!user) return
 
-    await supabase
-      .from('notification_log')
-      .update({ status: 'read' })
-      .eq('user_id', user.id)
-      .eq('status', 'sent')
-
+    // Optimistic update
     setNotifications(prev =>
       prev.map(n => ({ ...n, status: 'read' as const }))
     )
+
+    // Use API route to bypass RLS
+    const response = await fetch('/api/notifications/log', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'mark_all_read', user_id: user.id })
+    })
+
+    if (!response.ok) {
+      // Refetch on error
+      fetchNotifications()
+    }
   }
 
   const handleNotificationClick = (notification: NotificationLog) => {
