@@ -25,6 +25,13 @@ function PushNotificationSettings() {
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  // Re-register on mount if permission already granted (ensures token is saved)
+  useEffect(() => {
+    if (isNative && permissionStatus === 'granted' && !token) {
+      requestPermission()
+    }
+  }, [isNative, permissionStatus, token, requestPermission])
+
   const handleRequestPermission = async () => {
     setIsRequesting(true)
     await requestPermission()
