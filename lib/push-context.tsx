@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { Preferences } from '@capacitor/preferences';
 import { useAuth } from './auth-context';
 import { supabase } from './supabase';
 import {
@@ -11,6 +12,8 @@ import {
   getPushPermissionStatus
 } from './push-notifications';
 import type { PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
+
+const PUSH_TOKEN_KEY = 'push_token';
 
 interface PushContextType {
   isNative: boolean;
@@ -36,43 +39,80 @@ export function PushProvider({ children }: { children: ReactNode }) {
   const [permissionStatus, setPermissionStatus] = useState<'granted' | 'denied' | 'prompt' | 'loading'>('loading');
   const [token, setToken] = useState<string | null>(null);
 
+  // Save token to server
+  const saveTokenToServer = useCallback(async (tokenToSave: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        console.log('No session for push token save');
+        return false;
+      }
+
+      const response = await fetch('/api/push-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ token: tokenToSave, platform: 'ios' }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        console.log('Push token saved successfully');
+        return true;
+      } else {
+        console.error('Push token save failed:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('Error storing push token:', error);
+      return false;
+    }
+  }, []);
+
   // Handle receiving token from native
   const handleToken = useCallback(async (newToken: string) => {
     console.log('handleToken called with:', newToken?.substring(0, 20) + '...');
     setToken(newToken);
     setIsEnabled(true);
 
-    // Store token via API (uses service role to bypass RLS issues)
-    if (user) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) {
-          console.error('No session for push token save');
-          return;
-        }
-
-        const response = await fetch('/api/push-token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ token: newToken, platform: 'ios' }),
-        });
-
-        const result = await response.json();
-        if (result.success) {
-          console.log('Push token saved successfully');
-        } else {
-          console.error('Push token save failed:', result.error);
-        }
-      } catch (error) {
-        console.error('Error storing push token:', error);
-      }
-    } else {
-      console.log('No user, skipping token save');
+    // Store token locally for persistence
+    try {
+      await Preferences.set({ key: PUSH_TOKEN_KEY, value: newToken });
+      console.log('Token saved locally');
+    } catch (e) {
+      console.error('Failed to save token locally:', e);
     }
-  }, [user]);
+
+    // Store token via API
+    if (user) {
+      await saveTokenToServer(newToken);
+    } else {
+      console.log('No user, will save token when user logs in');
+    }
+  }, [user, saveTokenToServer]);
+
+  // When user logs in, save any stored token
+  useEffect(() => {
+    const saveStoredToken = async () => {
+      if (!user || !isNative) return;
+
+      try {
+        const { value: storedToken } = await Preferences.get({ key: PUSH_TOKEN_KEY });
+        if (storedToken) {
+          console.log('Found stored token, saving to server...');
+          setToken(storedToken);
+          setIsEnabled(true);
+          await saveTokenToServer(storedToken);
+        }
+      } catch (e) {
+        console.error('Failed to get stored token:', e);
+      }
+    };
+
+    saveStoredToken();
+  }, [user, isNative, saveTokenToServer]);
 
   // Handle incoming notification
   const handleNotification = useCallback((notification: PushNotificationSchema) => {
