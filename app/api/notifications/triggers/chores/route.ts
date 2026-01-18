@@ -58,7 +58,10 @@ export async function GET(request: NextRequest) {
 
         const response = await fetch(new URL('/api/notifications/send', request.url), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.CRON_SECRET}`,
+          },
           body: JSON.stringify({
             user_id: userId,
             title: `${choreCount} chore${choreCount > 1 ? 's' : ''} for today`,
