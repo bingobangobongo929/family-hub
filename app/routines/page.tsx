@@ -237,11 +237,8 @@ export default function RoutinesPage() {
   }, [loadCompletions])
 
   // Real-time subscription for completions sync across devices
-  // DISABLED FOR DEBUGGING - this might be the cause of the issue
   useEffect(() => {
     if (!user) return
-
-    console.log('[REALTIME] Setting up subscription for date:', today)
 
     const channel = supabase
       .channel('completions-sync')
@@ -256,14 +253,13 @@ export default function RoutinesPage() {
         (payload) => {
           const { step_id, member_id } = payload.new as { step_id: string; member_id: string }
           const key = `${step_id}:${member_id}`
-          console.log('[REALTIME] INSERT event received:', { key, payload })
-          // DON'T update state - let's see if this fixes it
-          // setCompletedSteps(prev => {
-          //   if (prev.has(key)) return prev
-          //   const newSet = new Set(prev)
-          //   newSet.add(key)
-          //   return newSet
-          // })
+          // Only add if not already present (avoids conflicts with optimistic updates)
+          setCompletedSteps(prev => {
+            if (prev.has(key)) return prev
+            const newSet = new Set(prev)
+            newSet.add(key)
+            return newSet
+          })
         }
       )
       .on(
@@ -277,20 +273,18 @@ export default function RoutinesPage() {
         (payload) => {
           const { step_id, member_id } = payload.old as { step_id: string; member_id: string }
           const key = `${step_id}:${member_id}`
-          console.log('[REALTIME] DELETE event received:', { key, payload })
-          // DON'T update state - let's see if this fixes it
-          // setCompletedSteps(prev => {
-          //   if (!prev.has(key)) return prev
-          //   const newSet = new Set(prev)
-          //   newSet.delete(key)
-          //   return newSet
-          // })
+          // Only remove if present (avoids conflicts with optimistic updates)
+          setCompletedSteps(prev => {
+            if (!prev.has(key)) return prev
+            const newSet = new Set(prev)
+            newSet.delete(key)
+            return newSet
+          })
         }
       )
       .subscribe()
 
     return () => {
-      console.log('[REALTIME] Cleaning up subscription')
       supabase.removeChannel(channel)
     }
   }, [user, today])
@@ -364,7 +358,7 @@ export default function RoutinesPage() {
       // === UNCOMPLETE ===
       hapticLight()
 
-      // Update UI
+      // Update UI immediately (optimistic)
       setCompletedSteps(prev => {
         const next = new Set(prev)
         next.delete(key)
@@ -372,19 +366,24 @@ export default function RoutinesPage() {
         return next
       })
 
-      // Update DB
-      const { error } = await supabase
-        .from('routine_completions')
-        .delete()
-        .eq('step_id', stepId)
-        .eq('member_id', memberId)
-        .eq('completed_date', todayStr)
+      // Update DB via API (bypasses RLS)
+      try {
+        const response = await fetch('/api/routines/completion', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step_id: stepId, member_id: memberId, completed_date: todayStr })
+        })
 
-      if (error) {
-        console.error('[TOGGLE] DB delete error:', error)
+        if (!response.ok) {
+          const error = await response.json()
+          console.error('[TOGGLE] API delete error:', error)
+          setCompletedSteps(prev => new Set([...prev, key])) // Revert
+        } else {
+          console.log('[TOGGLE] API delete success')
+        }
+      } catch (error) {
+        console.error('[TOGGLE] API delete error:', error)
         setCompletedSteps(prev => new Set([...prev, key])) // Revert
-      } else {
-        console.log('[TOGGLE] DB delete success')
       }
     } else {
       // === COMPLETE ===
@@ -398,7 +397,7 @@ export default function RoutinesPage() {
       setConfettiTrigger(t => t + 1)
       setTimeout(() => setCelebratingStep(null), 600)
 
-      // Update UI
+      // Update UI immediately (optimistic)
       setCompletedSteps(prev => {
         const next = new Set(prev)
         next.add(key)
@@ -406,44 +405,51 @@ export default function RoutinesPage() {
         return next
       })
 
-      // Update DB
-      const { error } = await supabase
-        .from('routine_completions')
-        .upsert({
-          routine_id: routineId,
-          step_id: stepId,
-          member_id: memberId,
-          completed_date: todayStr
-        }, { onConflict: 'routine_id,step_id,member_id,completed_date' })
+      // Update DB via API (bypasses RLS)
+      try {
+        const response = await fetch('/api/routines/completion', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ routine_id: routineId, step_id: stepId, member_id: memberId, completed_date: todayStr })
+        })
 
-      if (error) {
-        console.error('[TOGGLE] DB upsert error:', error)
+        if (!response.ok) {
+          const error = await response.json()
+          console.error('[TOGGLE] API upsert error:', error)
+          setCompletedSteps(prev => {
+            const next = new Set(prev)
+            next.delete(key)
+            return next
+          }) // Revert
+        } else {
+          console.log('[TOGGLE] API upsert success')
+
+          // Check for routine completion
+          const visibleSteps = getVisibleSteps(selectedRoutine)
+          const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
+
+          setCompletedSteps(current => {
+            const memberCompletedAll = memberSteps.every(s => current.has(`${s.id}:${memberId}`))
+            if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
+              const member = getMember(memberId)
+              if (member?.stars_enabled) {
+                updateMemberPoints(memberId, selectedRoutine.points_reward)
+              }
+              updateStreak(memberId, routineId, todayStr)
+              setConfettiConfig({ intensity: 'big', emoji: '⭐' })
+              setConfettiTrigger(t => t + 1)
+              playSound('allDone')
+            }
+            return current // Don't modify
+          })
+        }
+      } catch (error) {
+        console.error('[TOGGLE] API upsert error:', error)
         setCompletedSteps(prev => {
           const next = new Set(prev)
           next.delete(key)
           return next
         }) // Revert
-      } else {
-        console.log('[TOGGLE] DB upsert success')
-
-        // Check for routine completion
-        const visibleSteps = getVisibleSteps(selectedRoutine)
-        const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
-
-        setCompletedSteps(current => {
-          const memberCompletedAll = memberSteps.every(s => current.has(`${s.id}:${memberId}`))
-          if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
-            const member = getMember(memberId)
-            if (member?.stars_enabled) {
-              updateMemberPoints(memberId, selectedRoutine.points_reward)
-            }
-            updateStreak(memberId, routineId, todayStr)
-            setConfettiConfig({ intensity: 'big', emoji: '⭐' })
-            setConfettiTrigger(t => t + 1)
-            playSound('allDone')
-          }
-          return current // Don't modify
-        })
       }
     }
   }
