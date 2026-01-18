@@ -18,7 +18,7 @@ const DEMO_NOTES: Note[] = [
   { id: 'demo-1', user_id: 'demo', title: 'Grocery List', content: 'Milk, Bread, Eggs, Cheese, Apples, Bananas', color: '#fef3c7', pinned: true, author_id: 'demo-mum', created_at: '', updated_at: '' },
   { id: 'demo-2', user_id: 'demo', title: 'Doctor Appointment', content: "Ellie's 18 month checkup - Thursday 10am at Wilmslow Health Centre", color: '#dbeafe', pinned: true, author_id: 'demo-dad', created_at: '', updated_at: '' },
   { id: 'demo-3', user_id: 'demo', title: null, content: "Olivia's playdate with Sophie on Saturday at 2pm", color: '#fce7f3', pinned: false, author_id: 'demo-mum', created_at: '', updated_at: '' },
-  { id: 'demo-4', user_id: 'demo', title: 'WiFi Password', content: 'FamilyHub2024!', color: '#e0e7ff', pinned: true, author_id: null, created_at: '', updated_at: '' },
+  { id: 'demo-4', user_id: 'demo', title: 'WiFi Password', content: 'YourWiFiPasswordHere', color: '#e0e7ff', pinned: true, author_id: null, created_at: '', updated_at: '' },
   { id: 'demo-5', user_id: 'demo', title: 'School Term Dates', content: 'Half term: Feb 12-16\nEaster hols: Mar 29 - Apr 12\nSummer: Jul 19', color: '#dcfce7', pinned: false, author_id: null, created_at: '', updated_at: '' },
   { id: 'demo-6', user_id: 'demo', title: 'Bin Collection', content: 'Black bin: Tuesday\nGreen bin: Alternate Tuesdays\nNext green bin: Jan 14th', color: '#ffedd5', pinned: false, author_id: null, created_at: '', updated_at: '' },
 ]

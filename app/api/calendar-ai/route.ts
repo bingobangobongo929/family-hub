@@ -229,6 +229,9 @@ Note: recurrence_pattern is optional - only include if the event repeats.`
   }
 }
 
+// Maximum image size (5MB base64 = ~3.75MB actual image)
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -241,6 +244,28 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Validate image size to prevent memory exhaustion
+    if (image) {
+      const base64Size = image.length
+      // Base64 is ~33% larger than the actual data
+      const estimatedSize = Math.ceil(base64Size * 0.75)
+
+      if (base64Size > MAX_IMAGE_SIZE_BYTES) {
+        return NextResponse.json(
+          { error: 'Image too large. Maximum size is 5MB.' },
+          { status: 400 }
+        )
+      }
+
+      // Validate it's actually a base64 data URL
+      if (!image.startsWith('data:image/')) {
+        return NextResponse.json(
+          { error: 'Invalid image format. Must be a base64 data URL.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Validate model ID, fallback to default if invalid
     const modelId: GeminiModelId = VALID_GEMINI_MODELS.includes(model as GeminiModelId)
       ? (model as GeminiModelId)
@@ -251,8 +276,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result)
   } catch (error) {
     console.error('Calendar AI error:', error)
+    // Don't expose internal error details to client
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to process request' },
+      { error: 'Failed to process request' },
       { status: 500 }
     )
   }

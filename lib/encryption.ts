@@ -52,3 +52,24 @@ export function decrypt(encryptedText: string): string {
 export function generateEncryptionKey(): string {
   return randomBytes(32).toString('hex')
 }
+
+/**
+ * Validate encryption key is configured correctly.
+ * Call this at app startup to catch configuration errors early.
+ */
+export function validateEncryptionKey(): void {
+  const key = process.env.ENCRYPTION_KEY
+  if (!key) {
+    throw new Error('ENCRYPTION_KEY environment variable is required for token encryption')
+  }
+
+  // Validate key length (should be 64 hex characters = 32 bytes)
+  if (key.length !== 64) {
+    throw new Error('ENCRYPTION_KEY must be 64 hex characters (32 bytes). Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"')
+  }
+
+  // Validate it's valid hex
+  if (!/^[0-9a-fA-F]+$/.test(key)) {
+    throw new Error('ENCRYPTION_KEY must be a valid hex string')
+  }
+}

@@ -3,8 +3,10 @@ import { getValidAccessToken } from '@/lib/google-auth'
 
 // Fetch photos from a Google Photos album
 export async function GET(request: NextRequest) {
+  // Get authenticated user from middleware (secure)
+  const authenticatedUserId = request.headers.get('x-authenticated-user-id')
   const searchParams = request.nextUrl.searchParams
-  const userId = searchParams.get('user_id')
+  const userId = authenticatedUserId || searchParams.get('user_id')
   const albumId = searchParams.get('album_id')
   const pageSize = searchParams.get('page_size') || '50'
   const pageToken = searchParams.get('page_token')

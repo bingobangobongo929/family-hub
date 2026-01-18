@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
 import { encrypt } from '@/lib/encryption'
+import { verifyOAuthState, getSecureRedirectUri } from '@/lib/oauth-state'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL + '/api/google-calendar/callback'
+const REDIRECT_URI = getSecureRedirectUri('/api/google-calendar/callback')
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
+  const state = searchParams.get('state')
 
   if (error) {
     return NextResponse.redirect(
@@ -23,6 +24,22 @@ export async function GET(request: NextRequest) {
       new URL('/settings?google_error=no_code', request.url)
     )
   }
+
+  if (!state) {
+    return NextResponse.redirect(
+      new URL('/settings?google_error=invalid_state', request.url)
+    )
+  }
+
+  // Verify the signed state token (prevents CSRF)
+  const stateData = await verifyOAuthState(state, 'google_calendar')
+  if (!stateData) {
+    return NextResponse.redirect(
+      new URL('/settings?google_error=invalid_state', request.url)
+    )
+  }
+
+  const userId = stateData.userId
 
   try {
     // Exchange code for tokens
@@ -60,30 +77,11 @@ export async function GET(request: NextRequest) {
 
     const googleUser = await userInfoResponse.json()
 
-    // Get the current user from Supabase cookie
-    const cookieStore = await cookies()
-    const supabaseAuthToken = cookieStore.get('sb-access-token')?.value
-
-    if (!supabaseAuthToken) {
-      return NextResponse.redirect(
-        new URL('/settings?google_error=not_authenticated', request.url)
-      )
-    }
-
-    // Create Supabase client
+    // Create Supabase client with service role
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
-
-    // Get user from session
-    const { data: { user } } = await supabase.auth.getUser(supabaseAuthToken)
-
-    if (!user) {
-      return NextResponse.redirect(
-        new URL('/settings?google_error=no_user', request.url)
-      )
-    }
 
     // Encrypt tokens before storing
     const encryptedAccessToken = encrypt(tokens.access_token)
@@ -93,7 +91,7 @@ export async function GET(request: NextRequest) {
     const { error: dbError } = await supabase
       .from('user_integrations')
       .upsert({
-        user_id: user.id,
+        user_id: userId,
         provider: 'google_calendar',
         access_token: encryptedAccessToken,
         refresh_token: encryptedRefreshToken,

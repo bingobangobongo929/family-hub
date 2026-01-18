@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { encrypt, decrypt } from '@/lib/encryption'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
@@ -37,20 +38,25 @@ async function getValidAccessToken(
   const expiresAt = new Date(integration.token_expires_at)
   const now = new Date()
 
+  // Decrypt tokens from database
+  const decryptedAccessToken = decrypt(integration.access_token)
+  const decryptedRefreshToken = decrypt(integration.refresh_token)
+
   // If token is still valid (with 5 minute buffer)
   if (expiresAt.getTime() - 5 * 60 * 1000 > now.getTime()) {
-    return integration.access_token
+    return decryptedAccessToken
   }
 
   // Refresh the token
-  const refreshed = await refreshAccessToken(integration.refresh_token)
+  const refreshed = await refreshAccessToken(decryptedRefreshToken)
   if (!refreshed) return null
 
-  // Update the stored token
+  // Encrypt and update the stored token
+  const encryptedAccessToken = encrypt(refreshed.access_token)
   await supabase
     .from('user_integrations')
     .update({
-      access_token: refreshed.access_token,
+      access_token: encryptedAccessToken,
       token_expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -67,8 +73,10 @@ export async function GET(request: NextRequest) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
+  // Get authenticated user from middleware (secure) or fall back to query param (validated by middleware)
+  const authenticatedUserId = request.headers.get('x-authenticated-user-id')
   const searchParams = request.nextUrl.searchParams
-  const userId = searchParams.get('user_id')
+  const userId = authenticatedUserId || searchParams.get('user_id')
 
   if (!userId) {
     return NextResponse.json({ error: 'User ID required' }, { status: 400 })
@@ -176,8 +184,13 @@ export async function POST(request: NextRequest) {
   )
 
   try {
+    // Get authenticated user from middleware (secure)
+    const authenticatedUserId = request.headers.get('x-authenticated-user-id')
     const body = await request.json()
-    const { user_id, event } = body
+    const { user_id: bodyUserId, event } = body
+
+    // Use authenticated user, or body user_id if validated by middleware
+    const user_id = authenticatedUserId || bodyUserId
 
     if (!user_id || !event) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })

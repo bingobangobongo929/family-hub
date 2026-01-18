@@ -94,8 +94,8 @@ async function sendAPNsNotification(
 ): Promise<{ success: boolean; reason?: string }> {
   const apnsKeyId = process.env.APNS_KEY_ID;
   const apnsTeamId = process.env.APNS_TEAM_ID;
-  const apnsKey = process.env.APNS_AUTH_KEY; // .p8 file contents (PEM format)
-  const bundleId = 'com.familyhub.app';
+  const apnsKey = process.env.APNS_PRIVATE_KEY; // .p8 file contents (PEM format)
+  const bundleId = process.env.APNS_BUNDLE_ID || 'com.familyhub.app';
 
   if (!apnsKeyId || !apnsTeamId || !apnsKey) {
     console.log('APNs not configured - would send:', {

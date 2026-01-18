@@ -3,8 +3,10 @@ import { getValidAccessToken } from '@/lib/google-auth'
 
 // List user's Google Photos albums
 export async function GET(request: NextRequest) {
+  // Get authenticated user from middleware (secure)
+  const authenticatedUserId = request.headers.get('x-authenticated-user-id')
   const searchParams = request.nextUrl.searchParams
-  const userId = searchParams.get('user_id')
+  const userId = authenticatedUserId || searchParams.get('user_id')
 
   if (!userId) {
     return NextResponse.json({ error: 'User ID required' }, { status: 400 })
@@ -15,12 +17,6 @@ export async function GET(request: NextRequest) {
     if (!accessToken) {
       return NextResponse.json({ error: 'Google Photos not connected' }, { status: 401 })
     }
-
-    // Debug: Check what scopes the token actually has
-    const tokenInfoResponse = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?access_token=${accessToken}`
-    )
-    const tokenInfo = await tokenInfoResponse.json()
 
     // Fetch albums from Google Photos API
     const albumsResponse = await fetch(
@@ -33,19 +29,8 @@ export async function GET(request: NextRequest) {
     if (!albumsResponse.ok) {
       const errorText = await albumsResponse.text()
       console.error('Google Photos API error:', errorText)
-      // Return full error for debugging
-      let errorJson
-      try {
-        errorJson = JSON.parse(errorText)
-      } catch {
-        errorJson = { raw: errorText }
-      }
-      return NextResponse.json({
-        error: 'Failed to fetch albums',
-        debug_token_scopes: tokenInfo.scope,
-        debug_api_error: errorJson,
-        debug_api_status: albumsResponse.status
-      }, { status: 500 })
+      // Don't expose internal API details to client
+      return NextResponse.json({ error: 'Failed to fetch albums' }, { status: 500 })
     }
 
     const data = await albumsResponse.json()
@@ -59,7 +44,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ albums })
   } catch (error) {
     console.error('Albums fetch error:', error)
-    const errorMsg = error instanceof Error ? error.message : 'Unknown error'
-    return NextResponse.json({ error: `Failed to fetch albums: ${errorMsg}` }, { status: 500 })
+    // Don't expose error details to client
+    return NextResponse.json({ error: 'Failed to fetch albums' }, { status: 500 })
   }
 }

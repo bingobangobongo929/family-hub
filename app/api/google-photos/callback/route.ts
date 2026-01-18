@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { encrypt } from '@/lib/encryption'
+import { verifyOAuthState, getSecureRedirectUri } from '@/lib/oauth-state'
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
-const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL + '/api/google-photos/callback'
+const REDIRECT_URI = getSecureRedirectUri('/api/google-photos/callback')
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')
-  const userId = searchParams.get('state') // User ID passed through OAuth state
+  const state = searchParams.get('state')
 
   if (error) {
     return NextResponse.redirect(
@@ -24,11 +25,21 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  if (!userId) {
+  if (!state) {
     return NextResponse.redirect(
-      new URL('/settings?google_photos_error=not_authenticated', request.url)
+      new URL('/settings?google_photos_error=invalid_state', request.url)
     )
   }
+
+  // Verify the signed state token (prevents CSRF)
+  const stateData = await verifyOAuthState(state, 'google_photos')
+  if (!stateData) {
+    return NextResponse.redirect(
+      new URL('/settings?google_photos_error=invalid_state', request.url)
+    )
+  }
+
+  const userId = stateData.userId
 
   try {
     // Exchange code for tokens
@@ -105,9 +116,9 @@ export async function GET(request: NextRequest) {
     )
   } catch (error) {
     console.error('OAuth callback error:', error)
-    const errorMsg = error instanceof Error ? error.message : 'unknown'
+    // Don't expose error details to client
     return NextResponse.redirect(
-      new URL(`/settings?google_photos_error=${encodeURIComponent(errorMsg)}`, request.url)
+      new URL('/settings?google_photos_error=unknown', request.url)
     )
   }
 }
