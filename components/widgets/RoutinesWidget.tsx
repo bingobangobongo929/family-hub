@@ -417,11 +417,6 @@ export default function RoutinesWidget() {
                 <h3 className={`font-semibold text-slate-800 dark:text-slate-100 ${isSmall ? 'text-base' : 'text-lg'}`}>
                   {currentStep?.title || 'Loading...'}
                 </h3>
-                {currentStep?.description && !isSmall && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                    {currentStep.description}
-                  </p>
-                )}
               </div>
 
               {/* Member Buttons */}
