@@ -9,7 +9,8 @@ import {
   initPushNotifications,
   removePushListeners,
   isNativeApp,
-  getPushPermissionStatus
+  getPushPermissionStatus,
+  refreshPushToken
 } from './push-notifications';
 import type { PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 
@@ -21,6 +22,7 @@ interface PushContextType {
   permissionStatus: 'granted' | 'denied' | 'prompt' | 'loading';
   token: string | null;
   requestPermission: () => Promise<boolean>;
+  refreshToken: () => Promise<void>;
 }
 
 const PushContext = createContext<PushContextType>({
@@ -29,6 +31,7 @@ const PushContext = createContext<PushContextType>({
   permissionStatus: 'loading',
   token: null,
   requestPermission: async () => false,
+  refreshToken: async () => {},
 });
 
 export function PushProvider({ children }: { children: ReactNode }) {
@@ -164,7 +167,20 @@ export function PushProvider({ children }: { children: ReactNode }) {
 
       // If already granted, initialize
       if (status === 'granted') {
-        initPushNotifications(handleToken, handleNotification, handleAction);
+        // First, try to load any stored token
+        try {
+          const { value: storedToken } = await Preferences.get({ key: PUSH_TOKEN_KEY });
+          if (storedToken) {
+            console.log('Found stored token on init:', storedToken.substring(0, 10) + '...');
+            setToken(storedToken);
+            setIsEnabled(true);
+          }
+        } catch (e) {
+          console.error('Failed to load stored token:', e);
+        }
+
+        // Initialize listeners and register (will trigger token callback)
+        await initPushNotifications(handleToken, handleNotification, handleAction);
       }
     };
 
@@ -186,6 +202,13 @@ export function PushProvider({ children }: { children: ReactNode }) {
     return success;
   }, [isNative, handleToken, handleNotification, handleAction]);
 
+  // Force refresh the push token (useful when token is missing)
+  const refreshToken = useCallback(async (): Promise<void> => {
+    if (!isNative) return;
+    console.log('Refreshing push token...');
+    await refreshPushToken();
+  }, [isNative]);
+
   return (
     <PushContext.Provider value={{
       isNative,
@@ -193,6 +216,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
       permissionStatus,
       token,
       requestPermission,
+      refreshToken,
     }}>
       {children}
     </PushContext.Provider>

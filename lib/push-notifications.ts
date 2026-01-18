@@ -24,31 +24,32 @@ export async function initPushNotifications(
       return false;
     }
 
-    // Register for push notifications
-    await PushNotifications.register();
-
+    // IMPORTANT: Add listeners BEFORE calling register() to avoid race condition
     // Listen for registration success
-    PushNotifications.addListener('registration', (token: Token) => {
+    await PushNotifications.addListener('registration', (token: Token) => {
       console.log('Push registration success, token:', token.value);
       onToken(token.value);
     });
 
     // Listen for registration errors
-    PushNotifications.addListener('registrationError', (error: any) => {
+    await PushNotifications.addListener('registrationError', (error: any) => {
       console.error('Push registration error:', error);
     });
 
     // Listen for incoming notifications (app in foreground)
-    PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
+    await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
       console.log('Push notification received:', notification);
       onNotification(notification);
     });
 
     // Listen for notification tap
-    PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
+    await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
       console.log('Push notification action:', action);
       onAction(action);
     });
+
+    // Register for push notifications AFTER listeners are set up
+    await PushNotifications.register();
 
     return true;
   } catch (error) {
@@ -69,4 +70,13 @@ export async function getPushPermissionStatus(): Promise<'granted' | 'denied' | 
 
   const status = await PushNotifications.checkPermissions();
   return status.receive as 'granted' | 'denied' | 'prompt';
+}
+
+// Force re-registration to get a fresh token
+// Call this when token might be missing or stale
+export async function refreshPushToken(): Promise<void> {
+  if (!isNativeApp()) return;
+
+  console.log('Forcing push token refresh...');
+  await PushNotifications.register();
 }

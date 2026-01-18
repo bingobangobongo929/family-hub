@@ -20,8 +20,9 @@ import NotificationPreferences from '@/components/NotificationPreferences'
 
 // Push Notification Settings Component
 function PushNotificationSettings() {
-  const { isNative, isEnabled, permissionStatus, token, requestPermission } = usePush()
+  const { isNative, isEnabled, permissionStatus, token, requestPermission, refreshToken } = usePush()
   const [isRequesting, setIsRequesting] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
@@ -31,6 +32,14 @@ function PushNotificationSettings() {
       requestPermission()
     }
   }, [isNative, permissionStatus, token, requestPermission])
+
+  const handleRefreshToken = async () => {
+    setIsRefreshing(true)
+    await refreshToken()
+    // Give a moment for the registration event to fire
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(false)
+  }
 
   const handleRequestPermission = async () => {
     setIsRequesting(true)
@@ -140,25 +149,60 @@ function PushNotificationSettings() {
           </Button>
         )}
 
+        {/* Refresh Token Button - shown when granted but no token */}
+        {permissionStatus === 'granted' && !token && (
+          <Button
+            onClick={handleRefreshToken}
+            disabled={isRefreshing}
+            className="w-full"
+          >
+            {isRefreshing ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Refreshing...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Refresh Token
+              </>
+            )}
+          </Button>
+        )}
+
         {/* Test Notification */}
         {permissionStatus === 'granted' && (
           <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
             <p className="text-sm font-medium text-slate-700 dark:text-slate-200 mb-2">Test Notifications</p>
-            <Button
-              onClick={handleSendTest}
-              disabled={testSending}
-              variant="secondary"
-              size="sm"
-            >
-              {testSending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Sending...
-                </>
-              ) : (
-                'Send Test Notification'
-              )}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSendTest}
+                disabled={testSending}
+                variant="secondary"
+                size="sm"
+              >
+                {testSending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Test Notification'
+                )}
+              </Button>
+              <Button
+                onClick={handleRefreshToken}
+                disabled={isRefreshing}
+                variant="secondary"
+                size="sm"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
             {testResult && (
               <p className={`mt-2 text-sm ${testResult.success ? 'text-green-600' : 'text-red-500'}`}>
                 {testResult.message}
