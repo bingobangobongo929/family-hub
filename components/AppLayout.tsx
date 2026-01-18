@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useDevice, getDeviceCSSVars } from '@/lib/device-context'
+import { usePush } from '@/lib/push-context'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
@@ -13,6 +14,7 @@ import { DEFAULT_SETTINGS } from '@/lib/database.types'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const { isMobile, isKitchen, device } = useDevice()
+  const { isNative } = usePush()
   const pathname = usePathname()
   const router = useRouter()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -96,15 +98,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Mobile Bottom Navigation - hidden on kitchen display */}
         {!isKitchen && <MobileNav onMoreClick={openSidebar} />}
 
-        {/* Screensaver */}
-        <Screensaver
-          mode={settings.screensaver_mode as 'clock' | 'photos' | 'gradient' | 'blank'}
-          enabled={settings.screensaver_enabled as boolean}
-          timeout={settings.screensaver_timeout as number}
-          sleepStart={settings.sleep_start as string}
-          sleepEnd={settings.sleep_end as string}
-          onWake={handleScreensaverWake}
-        />
+        {/* Screensaver - disabled on native mobile apps (iPhone/Android) */}
+        {!isNative && (
+          <Screensaver
+            mode={settings.screensaver_mode as 'clock' | 'photos' | 'gradient' | 'blank' | 'dashboard'}
+            enabled={settings.screensaver_enabled as boolean}
+            timeout={settings.screensaver_timeout as number}
+            sleepStart={settings.sleep_start as string}
+            sleepEnd={settings.sleep_end as string}
+            onWake={handleScreensaverWake}
+          />
+        )}
       </div>
     )
   }

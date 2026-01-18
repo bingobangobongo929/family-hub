@@ -565,7 +565,7 @@ export const DEFAULT_SETTINGS: Record<string, Json> = {
   theme: 'light',
   screensaver_enabled: true,
   screensaver_timeout: 300,
-  screensaver_mode: 'clock',
+  screensaver_mode: 'dashboard',
   sleep_start: '22:00',
   sleep_end: '06:00',
   weather_location: 'Randers, Denmark',

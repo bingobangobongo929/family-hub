@@ -1483,9 +1483,10 @@ export default function SettingsPage() {
               onChange={(e) => updateSetting('screensaver_mode', e.target.value)}
               className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100"
             >
+              <option value="dashboard">Dashboard (Recommended)</option>
               <option value="clock">Clock</option>
-              <option value="photos">Photos</option>
               <option value="gradient">Gradient</option>
+              <option value="photos">Photos</option>
               <option value="blank">Blank (Sleep)</option>
             </select>
           </div>

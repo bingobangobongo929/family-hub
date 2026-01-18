@@ -178,10 +178,10 @@ export default function CountdownWidget() {
 
   // Number of secondary events based on size
   const secondaryCount = {
-    small: 2,
-    medium: 2,
-    large: 4,
-    xlarge: 5,
+    small: 0,  // No secondary events for small (2x2)
+    medium: 1,
+    large: 3,
+    xlarge: 4,
   }[size]
 
   const otherEvents = allCountdowns.slice(1, 1 + secondaryCount)
@@ -199,21 +199,21 @@ export default function CountdownWidget() {
 
   // Size-based styling
   const emojiSize = {
-    small: 'text-2xl',
-    medium: 'text-3xl',
+    small: 'text-3xl',
+    medium: 'text-4xl',
     large: 'text-4xl',
     xlarge: 'text-5xl',
   }[size]
 
   const countdownSize = {
-    small: 'text-3xl',
-    medium: 'text-4xl',
+    small: 'text-4xl',
+    medium: 'text-5xl',
     large: 'text-5xl',
     xlarge: 'text-6xl',
   }[size]
 
   const titleSize = {
-    small: 'text-xs',
+    small: 'text-sm',
     medium: 'text-sm',
     large: 'text-base',
     xlarge: 'text-lg',
@@ -264,28 +264,34 @@ export default function CountdownWidget() {
     )
   }
 
+  // Compact padding for small size
+  const padding = size === 'small' ? 'p-2' : 'p-4'
+  const innerPadding = size === 'small' ? 'p-3' : 'p-4'
+
   return (
-    <div ref={ref} className="h-full flex flex-col p-4 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark">
+    <div ref={ref} className={`h-full flex flex-col ${padding} bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-slate-800 dark:to-slate-700 rounded-3xl shadow-widget dark:shadow-widget-dark`}>
       {/* Main countdown */}
-      <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} p-4 text-white shadow-lg`}>
-        <span className={`${emojiSize} mb-1`}>{nextEvent.emoji}</span>
-        <p className={`${titleSize} opacity-90 mb-1 font-medium`}>{nextEvent.title}</p>
-        {nextEvent.linkedRelationships && nextEvent.linkedRelationships.length > 0 && (
+      <div className={`flex-1 flex flex-col items-center justify-center text-center rounded-2xl bg-gradient-to-br ${getTypeColor(nextEvent.type)} ${innerPadding} text-white shadow-lg min-h-0`}>
+        <span className={`${emojiSize} ${size === 'small' ? 'mb-0.5' : 'mb-1'}`}>{nextEvent.emoji}</span>
+        <p className={`${titleSize} opacity-90 ${size === 'small' ? 'mb-0.5' : 'mb-1'} font-medium truncate w-full px-1`}>
+          {nextEvent.title.replace("'s Birthday", "")}
+        </p>
+        {nextEvent.linkedRelationships && nextEvent.linkedRelationships.length > 0 && size !== 'small' && (
           <p className="text-xs opacity-75 -mt-0.5 mb-1">
             ({nextEvent.linkedRelationships.join(', ')})
           </p>
         )}
-        <div className={`font-display ${countdownSize} font-bold`}>
+        <div className={`font-display ${countdownSize} font-bold leading-tight`}>
           {nextEvent.daysLeft === 0 ? (
             <span>{t('countdown.today')}</span>
           ) : nextEvent.daysLeft === 1 ? (
-            <span>{t('countdown.tomorrow')}</span>
+            <span>{size === 'small' ? '1' + t('countdown.daysShort') : t('countdown.oneDay')}</span>
           ) : (
-            <span>{t('countdown.days', { count: nextEvent.daysLeft })}</span>
+            <span>{size === 'small' ? `${nextEvent.daysLeft}${t('countdown.daysShort')}` : t('countdown.days', { count: nextEvent.daysLeft })}</span>
           )}
         </div>
-        <p className="text-xs opacity-75 mt-1 font-medium">
-          {format(parseISO(nextEvent.date), 'EEEE, MMM d', { locale: dateLocale })}
+        <p className={`text-xs opacity-75 ${size === 'small' ? 'mt-0.5' : 'mt-1'} font-medium`}>
+          {format(parseISO(nextEvent.date), size === 'small' ? 'MMM d' : 'EEEE, MMM d', { locale: dateLocale })}
         </p>
       </div>
 
