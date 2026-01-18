@@ -63,7 +63,10 @@ export default function RoutinesPage() {
   const [swipingStepId, setSwipingStepId] = useState<string | null>(null)
   const [swipeOffset, setSwipeOffset] = useState(0)
   const swipeStartX = useRef<number>(0)
+  const swipeStartY = useRef<number>(0)
+  const swipeDirectionLocked = useRef<'horizontal' | 'vertical' | null>(null)
   const SWIPE_THRESHOLD = 100 // pixels to trigger skip
+  const SWIPE_DIRECTION_THRESHOLD = 10 // pixels before we determine swipe direction
   // Confirmation modals
   const [skipConfirmStep, setSkipConfirmStep] = useState<RoutineStep | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
@@ -754,25 +757,51 @@ export default function RoutinesPage() {
   // === SWIPE TO SKIP HANDLERS ===
   const handleSwipeStart = (e: React.TouchEvent, stepId: string) => {
     swipeStartX.current = e.touches[0].clientX
+    swipeStartY.current = e.touches[0].clientY
+    swipeDirectionLocked.current = null // Reset direction lock
     setSwipingStepId(stepId)
   }
 
   const handleSwipeMove = (e: React.TouchEvent) => {
     if (!swipingStepId) return
+
     const currentX = e.touches[0].clientX
-    const diff = swipeStartX.current - currentX // Positive = swiping left
-    if (diff > 0) {
-      setSwipeOffset(Math.min(diff, SWIPE_THRESHOLD + 50))
+    const currentY = e.touches[0].clientY
+    const diffX = swipeStartX.current - currentX // Positive = swiping left
+    const diffY = Math.abs(currentY - swipeStartY.current)
+
+    // Determine swipe direction if not yet locked
+    if (swipeDirectionLocked.current === null) {
+      const totalMovement = Math.max(Math.abs(diffX), diffY)
+      if (totalMovement > SWIPE_DIRECTION_THRESHOLD) {
+        // Lock direction based on which axis has more movement
+        if (diffY > Math.abs(diffX)) {
+          // More vertical movement = scrolling, not swiping
+          swipeDirectionLocked.current = 'vertical'
+          setSwipingStepId(null)
+          setSwipeOffset(0)
+          return
+        } else {
+          // More horizontal movement = intentional swipe
+          swipeDirectionLocked.current = 'horizontal'
+        }
+      }
+    }
+
+    // Only update swipe offset if locked to horizontal
+    if (swipeDirectionLocked.current === 'horizontal' && diffX > 0) {
+      setSwipeOffset(Math.min(diffX, SWIPE_THRESHOLD + 50))
     }
   }
 
   const handleSwipeEnd = (step: RoutineStep) => {
-    if (swipeOffset >= SWIPE_THRESHOLD) {
+    if (swipeDirectionLocked.current === 'horizontal' && swipeOffset >= SWIPE_THRESHOLD) {
       // Trigger skip confirmation
       setSkipConfirmStep(step)
     }
     setSwipeOffset(0)
     setSwipingStepId(null)
+    swipeDirectionLocked.current = null
   }
 
   // Cleanup timers on unmount
@@ -1477,8 +1506,8 @@ export default function RoutinesPage() {
                   onTouchMove={handleSwipeMove}
                   onTouchEnd={() => handleSwipeEnd(step)}
                 >
-                  {/* Swipe reveal background - only visible when actively swiping */}
-                  {isSwiping && swipeOffset > 0 && (
+                  {/* Swipe reveal background - only visible when actively swiping horizontally */}
+                  {isSwiping && swipeOffset > 20 && (
                     <div className="absolute inset-y-0 right-0 w-32 bg-amber-500 flex items-center justify-end pr-4">
                       <span className="text-white font-medium">Skip</span>
                     </div>
