@@ -38,25 +38,39 @@ export function PushProvider({ children }: { children: ReactNode }) {
 
   // Handle receiving token from native
   const handleToken = useCallback(async (newToken: string) => {
+    console.log('handleToken called with:', newToken?.substring(0, 20) + '...');
     setToken(newToken);
     setIsEnabled(true);
 
-    // Store token in database for this user
+    // Store token via API (uses service role to bypass RLS issues)
     if (user) {
       try {
-        await supabase
-          .from('push_tokens')
-          .upsert({
-            user_id: user.id,
-            token: newToken,
-            platform: 'ios',
-            updated_at: new Date().toISOString(),
-          }, {
-            onConflict: 'user_id,token',
-          });
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) {
+          console.error('No session for push token save');
+          return;
+        }
+
+        const response = await fetch('/api/push-token', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ token: newToken, platform: 'ios' }),
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          console.log('Push token saved successfully');
+        } else {
+          console.error('Push token save failed:', result.error);
+        }
       } catch (error) {
         console.error('Error storing push token:', error);
       }
+    } else {
+      console.log('No user, skipping token save');
     }
   }, [user]);
 
