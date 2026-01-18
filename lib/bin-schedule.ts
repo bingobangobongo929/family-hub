@@ -2,7 +2,7 @@
 
 // Randers Kommune waste collection types
 // Based on actual containers at Ebbeshøjvej 3, Virring, 8960 Randers SØ
-export type BinType = 'madaffald' | 'restaffald' | 'papir_pap' | 'plast_metal_glas' | 'storskrald'
+export type BinType = 'madaffald' | 'restaffald' | 'papir_pap' | 'plast_metal_glas'
 
 export interface BinInfo {
   id: BinType
@@ -61,17 +61,6 @@ export const BIN_TYPES: BinInfo[] = [
     description: 'Plastic, metal & glass',
     frequency: 'Every 3-4 weeks (Wednesdays)'
   },
-  {
-    id: 'storskrald',
-    name: 'Storskrald',
-    shortName: 'Stor',
-    emoji: '🛋️',
-    color: 'text-purple-600 dark:text-purple-400',
-    bgColor: 'bg-purple-500',
-    borderColor: 'border-purple-500',
-    description: 'Large items',
-    frequency: 'Monthly (Wednesdays)'
-  },
 ]
 
 // 2026 schedule - dates as DD/MM format
@@ -102,11 +91,6 @@ export const BIN_SCHEDULE_2026: Record<BinType, string[]> = {
     '14/01', '04/02', '25/02', '18/03', '08/04', '29/04', '20/05',
     '10/06', '01/07', '22/07', '12/08', '02/09', '23/09', '14/10',
     '04/11', '25/11', '16/12'
-  ],
-  // Storskrald - Wednesdays, monthly
-  storskrald: [
-    '28/01', '25/02', '25/03', '22/04', '27/05', '24/06', '29/07',
-    '26/08', '30/09', '28/10', '25/11', '30/12'
   ],
 }
 
