@@ -422,9 +422,14 @@ export default function CalendarPage() {
       // Send notification about new event
       if (insertedEvent) {
         try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+          }
           await fetch('/api/notifications/triggers/event-created', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
               event: { ...insertedEvent, source: 'manual' },
               member_ids: formData.member_ids,
@@ -458,9 +463,14 @@ export default function CalendarPage() {
       // Send deletion notification
       if (eventToDelete) {
         try {
+          const { data: { session } } = await supabase.auth.getSession()
+          const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`
+          }
           await fetch('/api/notifications/triggers/event-deleted', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers,
             body: JSON.stringify({
               event: {
                 id: eventToDelete.id,
@@ -549,9 +559,14 @@ export default function CalendarPage() {
 
         if (changes.length > 0) {
           try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+            if (session?.access_token) {
+              headers['Authorization'] = `Bearer ${session.access_token}`
+            }
             await fetch('/api/notifications/triggers/event-changed', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify({
                 event: {
                   id: eventId,
@@ -669,9 +684,14 @@ export default function CalendarPage() {
           // Send notification about new AI event
           if (insertedEvent) {
             try {
+              const { data: { session } } = await supabase.auth.getSession()
+              const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+              if (session?.access_token) {
+                headers['Authorization'] = `Bearer ${session.access_token}`
+              }
               await fetch('/api/notifications/triggers/event-created', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                   event: { ...insertedEvent, source: 'ai' },
                   member_ids: memberIds,
