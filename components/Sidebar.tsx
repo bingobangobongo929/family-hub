@@ -27,7 +27,8 @@ import {
   History,
   ChevronRight,
   MoreHorizontal,
-  Pin
+  Pin,
+  Monitor
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
@@ -35,6 +36,7 @@ import { useTranslation } from '@/lib/i18n-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useEditMode } from '@/lib/edit-mode-context'
+import { useDevice } from '@/lib/device-context'
 import { AvatarDisplay } from './PhotoUpload'
 import MemberProfileModal from './MemberProfileModal'
 import LanguageToggle from './LanguageToggle'
@@ -73,6 +75,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const { members, reorderMembers } = useFamily()
   const { rewardsEnabled, sidebarPinnedItems, updateSetting } = useSettings()
   const { isEditMode, setIsEditMode } = useEditMode()
+  const { isKitchen, device } = useDevice()
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null)
   const [showFamilyModal, setShowFamilyModal] = useState(false)
   const [moreExpanded, setMoreExpanded] = useState(false)
@@ -147,13 +150,19 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     }
   }
 
-  // Render a nav item
+  // Render a nav item - kitchen mode has larger elements
   const renderNavItem = (item: typeof ALL_NAV_ITEMS[0], isPinned: boolean, index: number, total: number) => {
     const Icon = item.icon
     const isActive = pathname === item.href
     const isFirst = index === 0
     const isLast = index === total - 1
     const canPin = !isPinned && sidebarPinnedItems.length < MAX_PINNED
+
+    // Kitchen mode: larger icons and text
+    const iconSize = isKitchen ? 'w-6 h-6' : 'w-5 h-5'
+    const textSize = isKitchen ? 'text-base' : 'text-sm'
+    const padding = isKitchen ? 'px-4 py-3.5' : 'px-3 py-2.5'
+    const gap = isKitchen ? 'gap-4' : 'gap-3'
 
     return (
       <div key={item.href} className="flex items-center gap-1">
@@ -206,18 +215,25 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
               handleNavClick()
             }
           }}
-          className={`flex-1 flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+          className={`flex-1 flex items-center ${gap} ${padding} rounded-xl transition-all duration-200 ${
             isActive && !isEditMode
               ? 'bg-gradient-to-r from-teal-500 to-teal-600 text-white shadow-md shadow-teal-500/25'
               : 'text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-slate-700/50 hover:text-teal-700 dark:hover:text-teal-400'
           } ${isEditMode ? 'cursor-default' : ''}`}
         >
-          <Icon className={`w-5 h-5 ${isActive && !isEditMode ? '' : 'text-teal-600 dark:text-teal-400'}`} />
-          <span className="font-medium text-sm">{t(item.labelKey)}</span>
+          <Icon className={`${iconSize} ${isActive && !isEditMode ? '' : 'text-teal-600 dark:text-teal-400'}`} />
+          <span className={`font-medium ${textSize}`}>{t(item.labelKey)}</span>
         </Link>
       </div>
     )
   }
+
+  // Kitchen mode: wider sidebar (320px vs 256px)
+  const sidebarWidth = isKitchen ? 'w-80 lg:w-80' : 'w-72 lg:w-64'
+  const headerLogoSize = isKitchen ? 'w-11 h-11' : 'w-9 h-9'
+  const headerIconSize = isKitchen ? 'w-6 h-6' : 'w-5 h-5'
+  const headerTextSize = isKitchen ? 'text-xl' : 'text-lg'
+  const sidebarPadding = isKitchen ? 'p-4 lg:p-5' : 'p-3 lg:p-4'
 
   return (
     <>
@@ -232,20 +248,21 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          fixed left-0 top-0 h-full w-72 lg:w-64 glass shadow-xl z-50 flex flex-col
+          fixed left-0 top-0 h-full ${sidebarWidth} glass shadow-xl z-50 flex flex-col
           transition-transform duration-300 ease-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
+        data-device={device}
       >
-        <div className="p-3 lg:p-4 flex-1 flex flex-col safe-top">
-          {/* Header - more compact */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20">
-                <Users className="w-5 h-5 text-white" />
+        <div className={`${sidebarPadding} flex-1 flex flex-col safe-top`}>
+          {/* Header */}
+          <div className={`flex items-center justify-between ${isKitchen ? 'mb-6' : 'mb-4'}`}>
+            <div className="flex items-center gap-3">
+              <div className={`${headerLogoSize} rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20`}>
+                <Users className={`${headerIconSize} text-white`} />
               </div>
-              <h1 className="font-display text-lg font-semibold bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-400 dark:to-teal-500 bg-clip-text text-transparent">
+              <h1 className={`font-display ${headerTextSize} font-semibold bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-400 dark:to-teal-500 bg-clip-text text-transparent`}>
                 {t('nav.appName')}
               </h1>
             </div>
@@ -283,77 +300,113 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             </div>
           )}
 
-          {/* Family Section - Compact button that opens modal */}
-          <div className="mt-3 pt-3 border-t border-slate-200/60 dark:border-slate-700/60">
-            <button
-              onClick={() => setShowFamilyModal(true)}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-slate-700/50 hover:text-teal-700 dark:hover:text-teal-400 transition-all duration-200"
-            >
-              <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              <span className="font-medium text-sm flex-1 text-left">{t('nav.family')}</span>
-              {/* Show member avatars preview */}
-              <div className="flex -space-x-1.5">
-                {members.slice(0, 3).map(member => (
-                  <div key={member.id} className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 overflow-hidden">
+          {/* Family Section - Inline on kitchen, modal on mobile/tablet */}
+          <div className={`${isKitchen ? 'mt-4 pt-4' : 'mt-3 pt-3'} border-t border-slate-200/60 dark:border-slate-700/60`}>
+            {isKitchen ? (
+              // Kitchen mode: Show family members directly in sidebar
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 px-2 mb-2">
+                  <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                  <span className="font-medium text-sm text-slate-500 dark:text-slate-400">{t('nav.family')}</span>
+                </div>
+                {members.map(member => (
+                  <button
+                    key={member.id}
+                    onClick={() => setSelectedMember(member)}
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl bg-slate-50/50 dark:bg-slate-700/30 hover:bg-teal-50 dark:hover:bg-slate-700 transition-colors text-left"
+                  >
                     <AvatarDisplay
                       photoUrl={member.photo_url}
                       emoji={member.avatar}
                       name={member.name}
                       color={member.color}
-                      size="xs"
+                      size="md"
                     />
-                  </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="block text-base font-medium text-slate-700 dark:text-slate-200 truncate">{member.name}</span>
+                      <span className="block text-xs text-slate-500 dark:text-slate-400 capitalize">{member.role}</span>
+                    </div>
+                    {rewardsEnabled && member.role === 'child' && (
+                      <span className="flex items-center gap-1 text-sm font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-full">
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        {member.points}
+                      </span>
+                    )}
+                  </button>
                 ))}
-                {members.length > 3 && (
-                  <div className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300">
-                    +{members.length - 3}
-                  </div>
-                )}
               </div>
-            </button>
+            ) : (
+              // Mobile/tablet: Compact button that opens modal
+              <button
+                onClick={() => setShowFamilyModal(true)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-teal-50 dark:hover:bg-slate-700/50 hover:text-teal-700 dark:hover:text-teal-400 transition-all duration-200"
+              >
+                <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                <span className="font-medium text-sm flex-1 text-left">{t('nav.family')}</span>
+                {/* Show member avatars preview */}
+                <div className="flex -space-x-1.5">
+                  {members.slice(0, 3).map(member => (
+                    <div key={member.id} className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 overflow-hidden">
+                      <AvatarDisplay
+                        photoUrl={member.photo_url}
+                        emoji={member.avatar}
+                        name={member.name}
+                        color={member.color}
+                        size="xs"
+                      />
+                    </div>
+                  ))}
+                  {members.length > 3 && (
+                    <div className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                      +{members.length - 3}
+                    </div>
+                  )}
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Spacer to push user section to bottom */}
           <div className="flex-1" />
         </div>
 
-        {/* User section at bottom - more compact */}
+        {/* User section at bottom */}
         {user && (
-          <div className="p-3 border-t border-slate-200/60 dark:border-slate-700/60 safe-bottom">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white text-xs font-semibold shadow-md">
+          <div className={`${isKitchen ? 'p-4' : 'p-3'} border-t border-slate-200/60 dark:border-slate-700/60 safe-bottom`}>
+            <div className="flex items-center gap-3">
+              <div className={`${isKitchen ? 'w-10 h-10' : 'w-8 h-8'} rounded-full bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center text-white ${isKitchen ? 'text-sm' : 'text-xs'} font-semibold shadow-md`}>
                 E
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">Ed</p>
+                <p className={`${isKitchen ? 'text-base' : 'text-sm'} font-medium text-slate-700 dark:text-slate-200 truncate`}>Ed</p>
               </div>
               {/* Action buttons */}
-              <div className="flex items-center">
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => setIsEditMode(!isEditMode)}
                   aria-label={isEditMode ? 'Done editing' : 'Edit sidebar'}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
+                  className={`${isKitchen ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center transition-colors ${
                     isEditMode
                       ? 'bg-teal-500 text-white'
                       : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600'
                   }`}
                 >
-                  {isEditMode ? <X className="w-4 h-4" /> : <Edit3 className="w-4 h-4" />}
+                  {isEditMode ? <X className={isKitchen ? 'w-5 h-5' : 'w-4 h-4'} /> : <Edit3 className={isKitchen ? 'w-5 h-5' : 'w-4 h-4'} />}
                 </button>
                 <LanguageToggle />
                 <button
                   onClick={toggleTheme}
                   aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 transition-colors"
+                  className={`${isKitchen ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 transition-colors`}
                 >
-                  {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                  {theme === 'light' ? <Moon className={isKitchen ? 'w-5 h-5' : 'w-4 h-4'} /> : <Sun className={isKitchen ? 'w-5 h-5' : 'w-4 h-4'} />}
                 </button>
                 <button
                   onClick={handleSignOut}
                   aria-label="Sign out"
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-coral-50 dark:hover:bg-coral-900/20 hover:text-coral-600 transition-colors"
+                  className={`${isKitchen ? 'w-10 h-10' : 'w-8 h-8'} rounded-lg flex items-center justify-center text-slate-400 hover:bg-coral-50 dark:hover:bg-coral-900/20 hover:text-coral-600 transition-colors`}
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className={isKitchen ? 'w-5 h-5' : 'w-4 h-4'} />
                 </button>
               </div>
             </div>

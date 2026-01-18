@@ -30,6 +30,7 @@ import {
 import { Calendar, CheckSquare, ShoppingCart, Star, Edit3, X, Plus, Trash2, RotateCcw, Sun, Moon } from 'lucide-react'
 import { supabase, recipeVaultSupabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useDevice } from '@/lib/device-context'
 import { useFamily } from '@/lib/family-context'
 import { useSettings } from '@/lib/settings-context'
 import { useEditMode } from '@/lib/edit-mode-context'
@@ -66,6 +67,7 @@ const ACTIVE_WIDGETS_KEY = 'family-hub-active-widgets'
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { isMobile, isKitchen } = useDevice()
   const { members } = useFamily()
   const { rewardsEnabled } = useSettings()
   const { isEditMode, setIsEditMode } = useEditMode()
@@ -79,17 +81,8 @@ export default function Dashboard() {
   const [activeWidgets, setActiveWidgets] = useState<string[]>(DEFAULT_LAYOUT.map(l => l.i))
   const [mounted, setMounted] = useState(false)
   const [backgroundGradient, setBackgroundGradient] = useState<string>('default')
-  const [isMobile, setIsMobile] = useState(false)
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const initialLoadDone = useRef(false)
-
-  // Detect mobile for layout switching
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
 
   // Load saved layout on mount - from database if logged in, otherwise localStorage
   useEffect(() => {
@@ -390,38 +383,38 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+      <div className={`grid grid-cols-2 md:grid-cols-4 ${isKitchen ? 'gap-5 mb-10' : 'gap-3 sm:gap-4 mb-6 sm:mb-8'}`}>
         <Link href="/calendar">
-          <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 transition-all cursor-pointer shadow-lg shadow-teal-500/20 hover:shadow-xl hover:shadow-teal-500/30 active:scale-[0.98] tap-highlight">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Calendar className="w-6 h-6 sm:w-8 sm:h-8 opacity-90" />
+          <div className={`${isKitchen ? 'p-6' : 'p-3 sm:p-4'} rounded-2xl bg-gradient-to-br from-teal-500 to-teal-600 text-white hover:from-teal-600 hover:to-teal-700 transition-all cursor-pointer shadow-lg shadow-teal-500/20 hover:shadow-xl hover:shadow-teal-500/30 active:scale-[0.98] tap-highlight`}>
+            <div className={`flex items-center ${isKitchen ? 'gap-4' : 'gap-2 sm:gap-3'}`}>
+              <Calendar className={`${isKitchen ? 'w-10 h-10' : 'w-6 h-6 sm:w-8 sm:h-8'} opacity-90`} />
               <div>
-                <p className="text-teal-100 text-xs sm:text-sm font-medium">{t('common.today')}</p>
-                <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : t('dashboard.stats.events', { count: eventCount })}</p>
+                <p className={`text-teal-100 ${isKitchen ? 'text-base' : 'text-xs sm:text-sm'} font-medium`}>{t('common.today')}</p>
+                <p className={`${isKitchen ? 'text-3xl' : 'text-xl sm:text-2xl'} font-bold`}>{loading ? '...' : t('dashboard.stats.events', { count: eventCount })}</p>
               </div>
             </div>
           </div>
         </Link>
 
         <Link href="/tasks">
-          <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all cursor-pointer shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-[0.98] tap-highlight">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 opacity-90" />
+          <div className={`${isKitchen ? 'p-6' : 'p-3 sm:p-4'} rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all cursor-pointer shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-[0.98] tap-highlight`}>
+            <div className={`flex items-center ${isKitchen ? 'gap-4' : 'gap-2 sm:gap-3'}`}>
+              <CheckSquare className={`${isKitchen ? 'w-10 h-10' : 'w-6 h-6 sm:w-8 sm:h-8'} opacity-90`} />
               <div>
-                <p className="text-emerald-100 text-xs sm:text-sm font-medium">{t('chores.title')}</p>
-                <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : `${choreStats.completed}/${choreStats.total}`}</p>
+                <p className={`text-emerald-100 ${isKitchen ? 'text-base' : 'text-xs sm:text-sm'} font-medium`}>{t('chores.title')}</p>
+                <p className={`${isKitchen ? 'text-3xl' : 'text-xl sm:text-2xl'} font-bold`}>{loading ? '...' : `${choreStats.completed}/${choreStats.total}`}</p>
               </div>
             </div>
           </div>
         </Link>
 
         <Link href="/shopping">
-          <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-coral-400 to-coral-500 text-white hover:from-coral-500 hover:to-coral-600 transition-all cursor-pointer shadow-lg shadow-coral-500/20 hover:shadow-xl hover:shadow-coral-500/30 active:scale-[0.98] tap-highlight">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 opacity-90" />
+          <div className={`${isKitchen ? 'p-6' : 'p-3 sm:p-4'} rounded-2xl bg-gradient-to-br from-coral-400 to-coral-500 text-white hover:from-coral-500 hover:to-coral-600 transition-all cursor-pointer shadow-lg shadow-coral-500/20 hover:shadow-xl hover:shadow-coral-500/30 active:scale-[0.98] tap-highlight`}>
+            <div className={`flex items-center ${isKitchen ? 'gap-4' : 'gap-2 sm:gap-3'}`}>
+              <ShoppingCart className={`${isKitchen ? 'w-10 h-10' : 'w-6 h-6 sm:w-8 sm:h-8'} opacity-90`} />
               <div>
-                <p className="text-coral-100 text-xs sm:text-sm font-medium">{t('shopping.title')}</p>
-                <p className="text-xl sm:text-2xl font-bold">{loading ? '...' : t('dashboard.stats.items', { count: shoppingCount })}</p>
+                <p className={`text-coral-100 ${isKitchen ? 'text-base' : 'text-xs sm:text-sm'} font-medium`}>{t('shopping.title')}</p>
+                <p className={`${isKitchen ? 'text-3xl' : 'text-xl sm:text-2xl'} font-bold`}>{loading ? '...' : t('dashboard.stats.items', { count: shoppingCount })}</p>
               </div>
             </div>
           </div>
@@ -429,24 +422,24 @@ export default function Dashboard() {
 
         {rewardsEnabled ? (
           <Link href="/rewards">
-            <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 active:scale-[0.98] tap-highlight">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Star className="w-6 h-6 sm:w-8 sm:h-8 opacity-90" />
+            <div className={`${isKitchen ? 'p-6' : 'p-3 sm:p-4'} rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 active:scale-[0.98] tap-highlight`}>
+              <div className={`flex items-center ${isKitchen ? 'gap-4' : 'gap-2 sm:gap-3'}`}>
+                <Star className={`${isKitchen ? 'w-10 h-10' : 'w-6 h-6 sm:w-8 sm:h-8'} opacity-90`} />
                 <div>
-                  <p className="text-purple-100 text-xs sm:text-sm font-medium">{t('dashboard.stats.totalStars')}</p>
-                  <p className="text-xl sm:text-2xl font-bold">{totalStars}</p>
+                  <p className={`text-purple-100 ${isKitchen ? 'text-base' : 'text-xs sm:text-sm'} font-medium`}>{t('dashboard.stats.totalStars')}</p>
+                  <p className={`${isKitchen ? 'text-3xl' : 'text-xl sm:text-2xl'} font-bold`}>{totalStars}</p>
                 </div>
               </div>
             </div>
           </Link>
         ) : (
           <Link href="/notes">
-            <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 active:scale-[0.98] tap-highlight">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <Star className="w-6 h-6 sm:w-8 sm:h-8 opacity-90" />
+            <div className={`${isKitchen ? 'p-6' : 'p-3 sm:p-4'} rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 transition-all cursor-pointer shadow-lg shadow-purple-500/20 hover:shadow-xl hover:shadow-purple-500/30 active:scale-[0.98] tap-highlight`}>
+              <div className={`flex items-center ${isKitchen ? 'gap-4' : 'gap-2 sm:gap-3'}`}>
+                <Star className={`${isKitchen ? 'w-10 h-10' : 'w-6 h-6 sm:w-8 sm:h-8'} opacity-90`} />
                 <div>
-                  <p className="text-purple-100 text-xs sm:text-sm font-medium">{t('nav.family')}</p>
-                  <p className="text-xl sm:text-2xl font-bold">{members.length}</p>
+                  <p className={`text-purple-100 ${isKitchen ? 'text-base' : 'text-xs sm:text-sm'} font-medium`}>{t('nav.family')}</p>
+                  <p className={`${isKitchen ? 'text-3xl' : 'text-xl sm:text-2xl'} font-bold`}>{members.length}</p>
                 </div>
               </div>
             </div>
@@ -522,11 +515,11 @@ export default function Dashboard() {
             layouts={layouts}
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 6, md: 4, sm: 2, xs: 2, xxs: 1 }}
-            rowHeight={100}
+            rowHeight={isKitchen ? 140 : 100}
             isDraggable={isEditMode}
             isResizable={isEditMode}
             onLayoutChange={handleLayoutChange}
-            margin={[16, 16]}
+            margin={isKitchen ? [24, 24] : [16, 16]}
             containerPadding={[0, 0]}
             useCSSTransforms={true}
           >

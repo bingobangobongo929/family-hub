@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { useDevice, getDeviceCSSVars } from '@/lib/device-context'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
@@ -11,6 +12,7 @@ import { DEFAULT_SETTINGS } from '@/lib/database.types'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
+  const { isMobile, isKitchen, device } = useDevice()
   const pathname = usePathname()
   const router = useRouter()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -72,18 +74,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Demo mode (no Supabase) or logged in - show full app
   if (!isSupabaseConfigured || user) {
+    // Sidebar width: 256px desktop, 320px kitchen
+    const sidebarMargin = isKitchen ? 'lg:ml-80' : 'lg:ml-64'
+    // Padding: larger on kitchen for readability from distance
+    const mainPadding = isKitchen ? 'p-6 lg:p-10' : 'p-4 sm:p-6 lg:p-8'
+
     return (
-      <div className="flex min-h-screen bg-warm-50 dark:bg-slate-900">
+      <div
+        className="flex min-h-screen bg-warm-50 dark:bg-slate-900"
+        style={getDeviceCSSVars(device)}
+        data-device={device}
+      >
         {/* Sidebar - hidden on mobile, always visible on desktop */}
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         {/* Main Content */}
-        <main className="flex-1 lg:ml-64 pb-20 lg:pb-0 p-4 sm:p-6 lg:p-8 overflow-x-hidden">
+        <main className={`flex-1 ${sidebarMargin} pb-20 lg:pb-0 ${mainPadding} overflow-x-hidden`}>
           {children}
         </main>
 
-        {/* Mobile Bottom Navigation */}
-        <MobileNav onMoreClick={openSidebar} />
+        {/* Mobile Bottom Navigation - hidden on kitchen display */}
+        {!isKitchen && <MobileNav onMoreClick={openSidebar} />}
 
         {/* Screensaver */}
         <Screensaver

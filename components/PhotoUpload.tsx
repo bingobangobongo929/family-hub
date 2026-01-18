@@ -332,7 +332,7 @@ interface AvatarDisplayProps {
   emoji: string | null
   name: string
   color: string
-  size?: 'xs' | 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl'
   className?: string
 }
 
@@ -349,6 +349,7 @@ export function AvatarDisplay({
     sm: 'w-10 h-10 text-lg',
     md: 'w-12 h-12 text-xl',
     lg: 'w-16 h-16 text-3xl',
+    xl: 'w-20 h-20 text-4xl', // Kitchen display size
   }
 
   const displayContent = () => {

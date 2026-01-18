@@ -12,6 +12,7 @@ import { usePush } from '@/lib/push-context'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
 import { useTheme } from '@/lib/theme-context'
+import { useDevice, DeviceMode } from '@/lib/device-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { FamilyMember, MEMBER_COLORS, DEFAULT_SETTINGS, DASHBOARD_GRADIENTS, RELATIONSHIP_GROUPS, CountdownEvent, CountdownEventType, COUNTDOWN_EVENT_TYPES, DEFAULT_DANISH_EVENTS } from '@/lib/database.types'
@@ -238,6 +239,7 @@ function PushNotificationSettings() {
 export default function SettingsPage() {
   const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
+  const { deviceMode, setDeviceMode, device } = useDevice()
   const { members, refreshMembers, reorderMembers } = useFamily()
   const { t } = useTranslation()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -889,6 +891,49 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Display Mode */}
+          <div className="pt-4 border-t border-slate-200/60 dark:border-slate-700/60">
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-100">Display Mode</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Optimize UI for your device type. Kitchen mode has larger buttons and text.
+                </p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                  Currently detected: <span className="font-medium capitalize">{device}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'auto', icon: Monitor, label: 'Auto', description: 'Detect automatically' },
+                  { id: 'mobile', icon: Smartphone, label: 'Mobile', description: 'Phone layout' },
+                  { id: 'kitchen', icon: Monitor, label: 'Kitchen', description: 'Large display' }
+                ].map(opt => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setDeviceMode(opt.id as DeviceMode)}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all min-h-[44px] tap-highlight ${
+                      deviceMode === opt.id
+                        ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 ring-2 ring-purple-300 dark:ring-purple-700'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                    }`}
+                  >
+                    <opt.icon className="w-4 h-4" />
+                    <span className="text-sm font-medium">{opt.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            {deviceMode === 'kitchen' && (
+              <div className="mt-3 p-3 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-sm text-purple-700 dark:text-purple-300">
+                <p className="font-medium mb-1">Kitchen Display Mode Active</p>
+                <p className="text-purple-600 dark:text-purple-400 text-xs">
+                  UI optimized for large touchscreens (27"+ monitors). Larger tap targets, bigger text, and expanded sidebar with family members visible.
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </Card>

@@ -347,13 +347,13 @@ export default function RoutinesWidget() {
     }
   }
 
-  const getAvatarSizeProp = (): 'xs' | 'sm' | 'md' | 'lg' => {
+  const getAvatarSizeProp = (): 'xs' | 'sm' | 'md' | 'lg' | 'xl' => {
     switch (widgetSize) {
       case 'tiny': return 'sm'
       case 'compact': return 'md'
       case 'standard': return 'md'
       case 'large': return 'lg'
-      case 'xlarge': return 'lg'
+      case 'xlarge': return 'xl'
     }
   }
 

@@ -10,6 +10,7 @@ import { Sun, Moon, RotateCcw, Plus, Edit2, Trash2, GripVertical, X, Star, Check
 import { AvatarDisplay } from '@/components/PhotoUpload'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { useDevice } from '@/lib/device-context'
 import { useFamily } from '@/lib/family-context'
 import { useTranslation } from '@/lib/i18n-context'
 import { Routine, RoutineStep, RoutineScenario, FamilyMember, ScheduleType, SCHEDULE_TYPES } from '@/lib/database.types'
@@ -26,6 +27,7 @@ type RoutineWithDetails = Routine & {
 
 export default function RoutinesPage() {
   const { user } = useAuth()
+  const { isKitchen, scale } = useDevice()
   const { members, getMember, updateMemberPoints } = useFamily()
   const { t } = useTranslation()
   const [routines, setRoutines] = useState<RoutineWithDetails[]>([])
@@ -1481,14 +1483,14 @@ export default function RoutinesPage() {
                   {/* Main card content */}
                   <div
                     style={{ transform: isSwiping ? `translateX(-${swipeOffset}px)` : 'translateX(0)' }}
-                    className={`relative p-3 rounded-2xl transition-all duration-200 ${
+                    className={`relative ${isKitchen ? 'p-5' : 'p-3'} rounded-2xl transition-all duration-200 ${
                       isDone
                         ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/30 dark:to-emerald-900/30'
                         : 'bg-slate-50 dark:bg-slate-800/50'
                     } ${isCelebrating ? 'animate-wiggle !bg-yellow-50 dark:!bg-yellow-900/30 shadow-lg scale-[1.02]' : ''}`}
                   >
                     {/* Row 1: Emoji + Title */}
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className={`flex items-center ${isKitchen ? 'gap-4 mb-4' : 'gap-3 mb-3'}`}>
                       {/* Large emoji - long press to delete */}
                       <div
                         onMouseDown={(e) => !isDone && handleStepEmojiPressStart(e, selectedRoutine.id, step)}
@@ -1498,7 +1500,7 @@ export default function RoutinesPage() {
                         onTouchEnd={() => handleStepEmojiPressEnd(step.id)}
                         onTouchCancel={() => handleStepEmojiPressEnd(step.id)}
                         onContextMenu={(e) => e.preventDefault()}
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all select-none touch-manipulation ${
+                        className={`${isKitchen ? 'w-16 h-16' : 'w-12 h-12'} rounded-xl flex items-center justify-center ${isKitchen ? 'text-3xl' : 'text-2xl'} transition-all select-none touch-manipulation ${
                           isDone
                             ? 'bg-green-100 dark:bg-green-800/50'
                             : 'bg-white dark:bg-slate-700 shadow-sm'
@@ -1507,9 +1509,9 @@ export default function RoutinesPage() {
                         }`}
                       >
                         {stepRemoveLongPressActive === step.id ? (
-                          <Trash2 className="w-6 h-6 text-red-500 animate-pulse" />
+                          <Trash2 className={`${isKitchen ? 'w-8 h-8' : 'w-6 h-6'} text-red-500 animate-pulse`} />
                         ) : isDone ? (
-                          <Check className="w-6 h-6 text-green-500" />
+                          <Check className={`${isKitchen ? 'w-8 h-8' : 'w-6 h-6'} text-green-500`} />
                         ) : (
                           <span>{step.emoji}</span>
                         )}
@@ -1517,7 +1519,7 @@ export default function RoutinesPage() {
 
                       {/* Step title - ALWAYS visible */}
                       <div className="flex-1 min-w-0">
-                        <p className={`font-semibold text-base transition-all truncate ${
+                        <p className={`font-semibold ${isKitchen ? 'text-xl' : 'text-base'} transition-all truncate ${
                           isDone
                             ? 'text-green-600 dark:text-green-400'
                             : 'text-slate-800 dark:text-slate-100'
@@ -1525,7 +1527,7 @@ export default function RoutinesPage() {
                           {step.title}
                         </p>
                         {isDone && (
-                          <p className="text-xs text-green-500 dark:text-green-400 font-medium">
+                          <p className={`${isKitchen ? 'text-sm' : 'text-xs'} text-green-500 dark:text-green-400 font-medium`}>
                             Great job! 🌟
                           </p>
                         )}
@@ -1533,18 +1535,26 @@ export default function RoutinesPage() {
 
                       {/* Drag handle - desktop only */}
                       <div className="hidden sm:flex text-slate-300 dark:text-slate-600 cursor-grab">
-                        <GripVertical className="w-5 h-5" />
+                        <GripVertical className={`${isKitchen ? 'w-6 h-6' : 'w-5 h-5'}`} />
                       </div>
                     </div>
 
                     {/* Row 2: Child avatars with names */}
                     {hasMembers && (
-                      <div className="flex justify-center gap-4 sm:gap-6">
+                      <div className={`flex justify-center ${isKitchen ? 'gap-8' : 'gap-4 sm:gap-6'}`}>
                         {stepMembers.map(member => {
                           const memberDone = isStepCompleteForMember(step.id, member.id)
                           const pressKey = `${step.id}:${member.id}`
                           const isLongPressing = longPressActive === pressKey
-                          const showName = stepMembers.length <= 3 // Show names if 3 or fewer kids
+                          const showName = isKitchen || stepMembers.length <= 3 // Always show names in kitchen mode
+
+                          // Avatar sizes: kitchen 80px, regular 56px
+                          const avatarSize = isKitchen ? 'w-20 h-20' : 'w-14 h-14'
+                          const checkSize = isKitchen ? 'w-10 h-10' : 'w-8 h-8'
+                          const ringViewBox = isKitchen ? '0 0 80 80' : '0 0 56 56'
+                          const ringRadius = isKitchen ? 37 : 26
+                          const ringCenter = isKitchen ? 40 : 28
+                          const ringCircumference = isKitchen ? 232.48 : 163.36
 
                           return (
                             <div key={member.id} className="flex flex-col items-center">
@@ -1558,7 +1568,7 @@ export default function RoutinesPage() {
                                 onMouseUp={() => handleStepPressEnd(step.id, member.id)}
                                 onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
                                 onContextMenu={(e) => e.preventDefault()}
-                                className={`relative w-14 h-14 rounded-2xl transition-all duration-300 shadow-md overflow-hidden select-none touch-manipulation ${
+                                className={`relative ${avatarSize} rounded-2xl transition-all duration-300 shadow-md overflow-hidden select-none touch-manipulation ${
                                   isLongPressing
                                     ? 'scale-90'
                                     : memberDone
@@ -1571,34 +1581,34 @@ export default function RoutinesPage() {
                                   emoji={member.avatar}
                                   name={member.name}
                                   color={member.color}
-                                  size="lg"
+                                  size={isKitchen ? 'xl' : 'lg'}
                                   className="w-full h-full"
                                 />
 
                                 {/* Completion overlay */}
                                 {memberDone && !isLongPressing && (
                                   <span className="absolute inset-0 flex items-center justify-center bg-green-500/40">
-                                    <span className="animate-pop bg-white text-green-500 rounded-full w-8 h-8 flex items-center justify-center font-bold shadow-lg">✓</span>
+                                    <span className={`animate-pop bg-white text-green-500 rounded-full ${checkSize} flex items-center justify-center font-bold shadow-lg`}>✓</span>
                                   </span>
                                 )}
 
                                 {/* Long-press progress ring */}
                                 {isLongPressing && (
                                   <span className="absolute inset-0 flex items-center justify-center">
-                                    <svg className="w-full h-full absolute" viewBox="0 0 56 56">
+                                    <svg className="w-full h-full absolute" viewBox={ringViewBox}>
                                       <circle
-                                        cx="28"
-                                        cy="28"
-                                        r="26"
+                                        cx={ringCenter}
+                                        cy={ringCenter}
+                                        r={ringRadius}
                                         fill="rgba(239, 68, 68, 0.3)"
                                         stroke="#ef4444"
                                         strokeWidth="4"
-                                        strokeDasharray={`${longPressProgress * 163.36} 163.36`}
+                                        strokeDasharray={`${longPressProgress * ringCircumference} ${ringCircumference}`}
                                         strokeLinecap="round"
-                                        transform="rotate(-90 28 28)"
+                                        transform={`rotate(-90 ${ringCenter} ${ringCenter})`}
                                       />
                                     </svg>
-                                    <span className="bg-white text-red-500 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold z-10">
+                                    <span className={`bg-white text-red-500 rounded-full ${isKitchen ? 'w-8 h-8 text-sm' : 'w-6 h-6 text-xs'} flex items-center justify-center font-bold z-10`}>
                                       {Math.ceil(3 - longPressProgress * 3)}
                                     </span>
                                   </span>
@@ -1607,7 +1617,7 @@ export default function RoutinesPage() {
 
                               {/* Name label */}
                               {showName && (
-                                <span className={`mt-1 text-xs font-medium truncate max-w-[60px] ${
+                                <span className={`mt-1.5 ${isKitchen ? 'text-sm' : 'text-xs'} font-medium truncate ${isKitchen ? 'max-w-[80px]' : 'max-w-[60px]'} ${
                                   memberDone ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-400'
                                 }`}>
                                   {member.name}
@@ -1615,7 +1625,7 @@ export default function RoutinesPage() {
                               )}
 
                               {/* Status indicator */}
-                              <span className={`text-lg ${memberDone ? 'animate-bounce' : 'opacity-30'}`}>
+                              <span className={`${isKitchen ? 'text-xl' : 'text-lg'} ${memberDone ? 'animate-bounce' : 'opacity-30'}`}>
                                 {memberDone ? '✓' : '○'}
                               </span>
                             </div>

@@ -10,6 +10,7 @@ import { CategoriesProvider } from '@/lib/categories-context'
 import { ContactsProvider } from '@/lib/contacts-context'
 import { EditModeProvider } from '@/lib/edit-mode-context'
 import { PushProvider } from '@/lib/push-context'
+import { DeviceProvider } from '@/lib/device-context'
 import AppLayout from '@/components/AppLayout'
 
 const inter = Inter({
@@ -56,21 +57,23 @@ export default function RootLayout({
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
-              <FamilyProvider>
-                <SettingsProvider>
-                  <CategoriesProvider>
-                    <ContactsProvider>
-                      <EditModeProvider>
-                        <PushProvider>
-                          <AppLayout>
-                            {children}
-                          </AppLayout>
-                        </PushProvider>
-                      </EditModeProvider>
-                    </ContactsProvider>
-                  </CategoriesProvider>
-                </SettingsProvider>
-              </FamilyProvider>
+              <DeviceProvider>
+                <FamilyProvider>
+                  <SettingsProvider>
+                    <CategoriesProvider>
+                      <ContactsProvider>
+                        <EditModeProvider>
+                          <PushProvider>
+                            <AppLayout>
+                              {children}
+                            </AppLayout>
+                          </PushProvider>
+                        </EditModeProvider>
+                      </ContactsProvider>
+                    </CategoriesProvider>
+                  </SettingsProvider>
+                </FamilyProvider>
+              </DeviceProvider>
             </AuthProvider>
           </I18nProvider>
         </ThemeProvider>
