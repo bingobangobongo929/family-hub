@@ -8,6 +8,7 @@ const PUBLIC_API_ROUTES = [
   '/api/f1/next',
   '/api/f1/standings',
   '/api/f1/news',
+  '/api/f1/fantasy',
 ]
 
 // Routes that use service role key internally (bypass middleware auth)

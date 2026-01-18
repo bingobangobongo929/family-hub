@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
-import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
+import { Wrench, Clock, Zap, Flag, Newspaper, ExternalLink, Star, Loader2, RefreshCw, Filter, EyeOff, Eye, Sparkles, ChevronDown, ChevronUp, TrendingUp, TrendingDown, Minus, Trophy, DollarSign, Timer } from 'lucide-react'
 import {
   OpenF1Meeting,
   OpenF1Session,
@@ -83,7 +83,55 @@ interface NewsData {
   timestamp: number
 }
 
-type TabType = 'calendar' | 'drivers' | 'constructors' | 'news'
+type TabType = 'calendar' | 'drivers' | 'constructors' | 'news' | 'fantasy'
+
+// F1 Fantasy types
+interface FantasyPlayer {
+  id: number
+  firstName: string
+  lastName: string
+  teamId: number
+  teamName: string
+  price: number
+  priceChange: number
+  priceChangeWeek: number
+  seasonPoints: number
+  headshot?: string
+  isConstructor: boolean
+}
+
+interface FantasyTeam {
+  id: number
+  name: string
+  shortName: string
+  price: number
+  priceChange: number
+  priceChangeWeek: number
+  seasonPoints: number
+  logoUrl?: string
+  color?: string
+  isConstructor: boolean
+}
+
+interface FantasyGame {
+  season: number
+  currentGamePeriod: number
+  nextDeadline: string
+  gamePeriods: {
+    id: number
+    name: string
+    deadline: string
+    status: string
+  }[]
+}
+
+interface FantasyData {
+  players: FantasyPlayer[]
+  teams: FantasyTeam[]
+  game: FantasyGame
+  timestamp: number
+  cached?: boolean
+}
 
 // Wrapper component with Suspense for useSearchParams
 export default function F1Page() {
@@ -112,7 +160,7 @@ function F1PageContent() {
 
   // Get initial tab from URL or default to 'calendar'
   const tabFromUrl = searchParams.get('tab') as TabType | null
-  const validTabs: TabType[] = ['calendar', 'drivers', 'constructors', 'news']
+  const validTabs: TabType[] = ['calendar', 'drivers', 'constructors', 'news', 'fantasy']
   const initialTab = tabFromUrl && validTabs.includes(tabFromUrl) ? tabFromUrl : 'calendar'
 
   const [activeTab, setActiveTab] = useState<TabType>(initialTab)
@@ -127,8 +175,10 @@ function F1PageContent() {
   const [schedule, setSchedule] = useState<ScheduleData | null>(null)
   const [standings, setStandings] = useState<StandingsData | null>(null)
   const [news, setNews] = useState<NewsData | null>(null)
+  const [fantasy, setFantasy] = useState<FantasyData | null>(null)
   const [loading, setLoading] = useState(true)
   const [newsLoading, setNewsLoading] = useState(false)
+  const [fantasyLoading, setFantasyLoading] = useState(false)
   const [showAllNews, setShowAllNews] = useState(false)
   const [selectedCategories, setSelectedCategories] = useState<string[]>(['race', 'driver', 'technical', 'calendar', 'other'])
   const [selectedYear] = useState(2026)
@@ -218,6 +268,30 @@ function F1PageContent() {
   useEffect(() => {
     if (activeTab === 'news' && !news) {
       fetchNews()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab])
+
+  // Fetch fantasy data function
+  const fetchFantasy = async (forceRefresh = false) => {
+    setFantasyLoading(true)
+    try {
+      const url = `/api/f1/fantasy?year=${selectedYear}&endpoint=all`
+      const response = await fetch(url)
+      if (response.ok) {
+        setFantasy(await response.json())
+      }
+    } catch (error) {
+      console.error('Error fetching F1 Fantasy data:', error)
+    } finally {
+      setFantasyLoading(false)
+    }
+  }
+
+  // Fetch fantasy when tab changes to fantasy
+  useEffect(() => {
+    if (activeTab === 'fantasy' && !fantasy) {
+      fetchFantasy()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
@@ -314,10 +388,11 @@ function F1PageContent() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex gap-2 mb-6 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
             {[
               { id: 'calendar', label: t('f1.calendar'), icon: '📅' },
               { id: 'news', label: t('f1.news'), icon: '📰' },
+              { id: 'fantasy', label: 'Fantasy', icon: '🎮' },
               { id: 'drivers', label: t('f1.drivers'), icon: '👤' },
               { id: 'constructors', label: t('f1.teams'), icon: '🏢' },
             ].map(tab => (
@@ -363,6 +438,16 @@ function F1PageContent() {
                   onRefresh={() => fetchNews(true)}
                   onReclassify={() => fetchNews(false, true)}
                   spoilerFree={spoilerFreeActive}
+                  t={t}
+                  locale={locale}
+                />
+              )}
+              {activeTab === 'fantasy' && (
+                <FantasyView
+                  fantasy={fantasy}
+                  loading={fantasyLoading}
+                  onRefresh={() => fetchFantasy(true)}
+                  nextRace={nextRace || null}
                   t={t}
                   locale={locale}
                 />
@@ -1042,6 +1127,336 @@ function NewsView({
           )}
         </button>
       )}
+    </div>
+  )
+}
+
+// Fantasy View component - Price tracker, deadline, stats
+function FantasyView({
+  fantasy,
+  loading,
+  onRefresh,
+  nextRace,
+  t,
+  locale,
+}: {
+  fantasy: FantasyData | null
+  loading: boolean
+  onRefresh: () => void
+  nextRace: (OpenF1Meeting & { sessions?: OpenF1Session[] }) | null
+  t: (key: string, params?: Record<string, any>) => string
+  locale: string
+}) {
+  const [sortBy, setSortBy] = useState<'price' | 'points' | 'value' | 'change'>('change')
+  const [showDrivers, setShowDrivers] = useState(true)
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-red-600 mx-auto mb-2" />
+          <p className="text-slate-500 dark:text-slate-400">Loading Fantasy data...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!fantasy) {
+    return (
+      <div className="text-center py-12 text-slate-500">
+        <DollarSign className="w-12 h-12 mx-auto mb-4 text-slate-300" />
+        <p>No Fantasy data available</p>
+        <p className="text-sm mt-2">The 2026 season may not have started yet</p>
+        <button
+          onClick={onRefresh}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Try Again
+        </button>
+      </div>
+    )
+  }
+
+  // Calculate next deadline countdown
+  const getDeadlineCountdown = () => {
+    if (!fantasy.game?.nextDeadline) return null
+    const deadline = new Date(fantasy.game.nextDeadline)
+    const now = new Date()
+    const diff = deadline.getTime() - now.getTime()
+
+    if (diff <= 0) return { expired: true, text: 'Deadline passed' }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+
+    return { expired: false, days, hours, minutes, deadline }
+  }
+
+  const deadlineInfo = getDeadlineCountdown()
+
+  // Sort and filter data
+  const sortedPlayers = [...(fantasy.players || [])].sort((a, b) => {
+    switch (sortBy) {
+      case 'price': return b.price - a.price
+      case 'points': return b.seasonPoints - a.seasonPoints
+      case 'value': return (b.seasonPoints / b.price) - (a.seasonPoints / a.price)
+      case 'change': return b.priceChange - a.priceChange
+      default: return 0
+    }
+  })
+
+  const sortedTeams = [...(fantasy.teams || [])].sort((a, b) => {
+    switch (sortBy) {
+      case 'price': return b.price - a.price
+      case 'points': return b.seasonPoints - a.seasonPoints
+      case 'value': return (b.seasonPoints / b.price) - (a.seasonPoints / a.price)
+      case 'change': return b.priceChange - a.priceChange
+      default: return 0
+    }
+  })
+
+  // Get price movers (top risers and fallers)
+  const priceRisers = [...sortedPlayers, ...sortedTeams]
+    .filter(p => p.priceChange > 0)
+    .sort((a, b) => b.priceChange - a.priceChange)
+    .slice(0, 5)
+
+  const priceFallers = [...sortedPlayers, ...sortedTeams]
+    .filter(p => p.priceChange < 0)
+    .sort((a, b) => a.priceChange - b.priceChange)
+    .slice(0, 5)
+
+  const formatPrice = (price: number) => `£${price.toFixed(1)}m`
+  const formatChange = (change: number) => {
+    if (change === 0) return '—'
+    const sign = change > 0 ? '+' : ''
+    return `${sign}£${change.toFixed(1)}m`
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Lineup Deadline Countdown */}
+      {deadlineInfo && !deadlineInfo.expired && (
+        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-4 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Timer className="w-8 h-8" />
+              <div>
+                <p className="text-sm text-white/80 uppercase tracking-wide">Lineup Deadline</p>
+                <p className="font-semibold">
+                  {fantasy.game.gamePeriods?.find(gp => gp.id === fantasy.game.currentGamePeriod)?.name || 'Next Race'}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 text-center">
+              <div>
+                <p className="text-2xl md:text-3xl font-bold font-mono">{deadlineInfo.days}</p>
+                <p className="text-xs text-white/70">days</p>
+              </div>
+              <div>
+                <p className="text-2xl md:text-3xl font-bold font-mono">{deadlineInfo.hours}</p>
+                <p className="text-xs text-white/70">hrs</p>
+              </div>
+              <div>
+                <p className="text-2xl md:text-3xl font-bold font-mono">{deadlineInfo.minutes}</p>
+                <p className="text-xs text-white/70">min</p>
+              </div>
+            </div>
+          </div>
+          {deadlineInfo.deadline && (
+            <p className="text-xs text-white/60 mt-2">
+              Locks: {deadlineInfo.deadline.toLocaleDateString(locale === 'da' ? 'da-DK' : 'en-GB', {
+                weekday: 'long', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+              })}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Price Movers Section */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Risers */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-5 h-5 text-green-500" />
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200">Price Risers</h3>
+          </div>
+          {priceRisers.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-4">No price increases yet</p>
+          ) : (
+            <div className="space-y-2">
+              {priceRisers.map((item, idx) => (
+                <div key={`riser-${idx}`} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{item.isConstructor ? '🏎️' : '👤'}</span>
+                    <div>
+                      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm">
+                        {item.isConstructor ? (item as FantasyTeam).name : `${(item as FantasyPlayer).firstName} ${(item as FantasyPlayer).lastName}`}
+                      </p>
+                      <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+                    </div>
+                  </div>
+                  <span className="text-green-600 dark:text-green-400 font-bold text-sm">
+                    {formatChange(item.priceChange)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Fallers */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingDown className="w-5 h-5 text-red-500" />
+            <h3 className="font-semibold text-slate-800 dark:text-slate-200">Price Fallers</h3>
+          </div>
+          {priceFallers.length === 0 ? (
+            <p className="text-sm text-slate-500 text-center py-4">No price decreases yet</p>
+          ) : (
+            <div className="space-y-2">
+              {priceFallers.map((item, idx) => (
+                <div key={`faller-${idx}`} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{item.isConstructor ? '🏎️' : '👤'}</span>
+                    <div>
+                      <p className="font-medium text-slate-800 dark:text-slate-200 text-sm">
+                        {item.isConstructor ? (item as FantasyTeam).name : `${(item as FantasyPlayer).firstName} ${(item as FantasyPlayer).lastName}`}
+                      </p>
+                      <p className="text-xs text-slate-500">{formatPrice(item.price)}</p>
+                    </div>
+                  </div>
+                  <span className="text-red-600 dark:text-red-400 font-bold text-sm">
+                    {formatChange(item.priceChange)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Full Stats Table */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
+        {/* Header with toggle and sort */}
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowDrivers(true)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                showDrivers ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              Drivers ({sortedPlayers.length})
+            </button>
+            <button
+              onClick={() => setShowDrivers(false)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                !showDrivers ? 'bg-red-100 dark:bg-red-900/30 text-red-600' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              Teams ({sortedTeams.length})
+            </button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500">Sort by:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="text-sm border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-200"
+            >
+              <option value="change">Price Change</option>
+              <option value="price">Price</option>
+              <option value="points">Points</option>
+              <option value="value">Value (Pts/£m)</option>
+            </select>
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-700/50">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                  {showDrivers ? 'Driver' : 'Team'}
+                </th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Price</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Change</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Points</th>
+                <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase hidden sm:table-cell">Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(showDrivers ? sortedPlayers : sortedTeams).map((item, index) => {
+                const value = item.seasonPoints > 0 ? (item.seasonPoints / item.price).toFixed(1) : '—'
+                return (
+                  <tr
+                    key={item.id}
+                    className="border-t border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {item.isConstructor ? (
+                          <span className="text-lg">🏎️</span>
+                        ) : (
+                          <span className="text-lg">👤</span>
+                        )}
+                        <div>
+                          <p className="font-medium text-slate-800 dark:text-slate-200">
+                            {item.isConstructor
+                              ? (item as FantasyTeam).name
+                              : `${(item as FantasyPlayer).firstName} ${(item as FantasyPlayer).lastName}`}
+                          </p>
+                          {!item.isConstructor && (
+                            <p className="text-xs text-slate-500">{(item as FantasyPlayer).teamName}</p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right font-medium text-slate-800 dark:text-slate-200">
+                      {formatPrice(item.price)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`font-medium flex items-center justify-end gap-1 ${
+                        item.priceChange > 0 ? 'text-green-600 dark:text-green-400' :
+                        item.priceChange < 0 ? 'text-red-600 dark:text-red-400' :
+                        'text-slate-400'
+                      }`}>
+                        {item.priceChange > 0 && <TrendingUp className="w-3 h-3" />}
+                        {item.priceChange < 0 && <TrendingDown className="w-3 h-3" />}
+                        {item.priceChange === 0 && <Minus className="w-3 h-3" />}
+                        {formatChange(item.priceChange)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-800 dark:text-slate-200">
+                      {item.seasonPoints}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400 hidden sm:table-cell">
+                      {value} pts/£m
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Cache info */}
+        {fantasy.cached && (
+          <div className="px-4 py-2 bg-slate-50 dark:bg-slate-700/50 text-xs text-slate-500 text-center">
+            Data cached • Last updated: {new Date(fantasy.timestamp).toLocaleTimeString()}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
