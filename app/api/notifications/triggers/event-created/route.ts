@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Calendar Event Created notification trigger
-// Called when a new calendar event is created
+// Called when a new calendar event is created - notifies ALL family members
 
 interface EventData {
   id: string;
@@ -16,12 +16,6 @@ interface EventData {
   color: string;
   member_ids?: string[];
   source?: 'manual' | 'ai' | 'google';
-}
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  color: string;
 }
 
 // Format time for display
@@ -81,7 +75,7 @@ function getSourceDescription(source?: string): string {
     case 'google':
       return '🔄 Synced from Google';
     default:
-      return '✅ Event added';
+      return '📆 New event';
   }
 }
 
@@ -103,19 +97,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing event data' }, { status: 400 });
     }
 
-    // Check if user wants calendar creation notifications
-    const { data: prefs } = await supabase
-      .from('notification_preferences')
-      .select('calendar_enabled, calendar_event_created')
-      .eq('user_id', event.user_id)
-      .single();
+    // Get ALL users with push tokens (to notify everyone in the family)
+    const { data: tokens } = await supabase
+      .from('push_tokens')
+      .select('user_id')
+      .not('user_id', 'is', null);
 
-    // Default: send notification unless explicitly disabled
-    const shouldNotify = !prefs || (prefs.calendar_enabled !== false && prefs.calendar_event_created !== false);
-
-    if (!shouldNotify) {
-      return NextResponse.json({ message: 'Notifications disabled', sent: false });
+    if (!tokens || tokens.length === 0) {
+      return NextResponse.json({ message: 'No users with push tokens', sent: 0 });
     }
+
+    // Get unique user IDs
+    const userIds = [...new Set(tokens.map(t => t.user_id))];
 
     // Get member names if provided
     let memberNames = '';
@@ -149,48 +142,82 @@ export async function POST(request: NextRequest) {
       body += `\n📝 ${event.description.substring(0, 60)}${event.description.length > 60 ? '...' : ''}`;
     }
 
-    // Send notification
-    const response = await fetch(new URL('/api/notifications/send', request.url), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_id: event.user_id,
-        title,
-        body,
-        data: {
-          type: 'event_created',
-          event_id: event.id,
-          event_title: event.title,
-          start_time: event.start_time,
-          deep_link: `/calendar?event=${event.id}`,
-        },
-      }),
-    });
+    let sentCount = 0;
+    const results: { user_id: string; sent: boolean; reason?: string }[] = [];
 
-    if (response.ok) {
-      // Log notification
-      await supabase
-        .from('notification_log')
-        .insert({
-          user_id: event.user_id,
-          category: 'calendar',
-          notification_type: 'event_created',
-          title,
-          body,
-          data: { event_id: event.id, event_title: event.title },
+    // Send to each user (except the creator - they know they made the event)
+    for (const userId of userIds) {
+      // Skip the user who created the event
+      if (userId === event.user_id) {
+        results.push({ user_id: userId, sent: false, reason: 'creator' });
+        continue;
+      }
+
+      // Check user's notification preferences
+      const { data: prefs } = await supabase
+        .from('notification_preferences')
+        .select('calendar_enabled, calendar_event_created')
+        .eq('user_id', userId)
+        .single();
+
+      // Default: send unless explicitly disabled
+      const shouldNotify = !prefs || (prefs.calendar_enabled !== false && prefs.calendar_event_created !== false);
+
+      if (!shouldNotify) {
+        results.push({ user_id: userId, sent: false, reason: 'disabled' });
+        continue;
+      }
+
+      // Send notification
+      try {
+        const response = await fetch(new URL('/api/notifications/send', request.url), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId,
+            title,
+            body,
+            data: {
+              type: 'event_created',
+              event_id: event.id,
+              event_title: event.title,
+              start_time: event.start_time,
+              deep_link: `/calendar?event=${event.id}`,
+            },
+          }),
         });
 
-      return NextResponse.json({
-        message: 'Event creation notification sent',
-        sent: true,
-        event_id: event.id,
-      });
-    } else {
-      return NextResponse.json({
-        message: 'Failed to send notification',
-        sent: false,
-      });
+        if (response.ok) {
+          sentCount++;
+
+          // Log notification
+          await supabase
+            .from('notification_log')
+            .insert({
+              user_id: userId,
+              category: 'calendar',
+              notification_type: 'event_created',
+              title,
+              body,
+              data: { event_id: event.id, event_title: event.title, created_by: event.user_id },
+            });
+
+          results.push({ user_id: userId, sent: true });
+        } else {
+          results.push({ user_id: userId, sent: false, reason: 'send_failed' });
+        }
+      } catch (error) {
+        console.error('Error sending to user:', userId, error);
+        results.push({ user_id: userId, sent: false, reason: 'error' });
+      }
     }
+
+    return NextResponse.json({
+      message: `Sent ${sentCount} event notifications`,
+      sent: sentCount,
+      total: userIds.length,
+      event_id: event.id,
+    });
 
   } catch (error) {
     console.error('Error in event created notification:', error);

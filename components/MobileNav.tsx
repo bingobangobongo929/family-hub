@@ -1,9 +1,12 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Calendar, ListChecks, ShoppingCart, Menu } from 'lucide-react'
+import { Home, Calendar, ListChecks, Bell, Menu } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n-context'
+import { useAuth } from '@/lib/auth-context'
+import { supabase } from '@/lib/supabase'
 
 interface MobileNavProps {
   onMoreClick: () => void
@@ -14,12 +17,35 @@ const MOBILE_NAV_ITEMS = [
   { href: '/', labelKey: 'nav.dashboard', icon: Home },
   { href: '/calendar', labelKey: 'nav.calendar', icon: Calendar },
   { href: '/routines', labelKey: 'nav.routines', icon: ListChecks },
-  { href: '/shopping', labelKey: 'nav.shopping', icon: ShoppingCart },
+  { href: '/notifications', labelKey: 'nav.notifications', icon: Bell, showBadge: true },
 ]
 
 export default function MobileNav({ onMoreClick }: MobileNavProps) {
   const pathname = usePathname()
   const { t } = useTranslation()
+  const { user } = useAuth()
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Fetch unread notification count
+  useEffect(() => {
+    if (!user) return
+
+    const fetchUnreadCount = async () => {
+      const { count } = await supabase
+        .from('notification_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('status', 'sent')
+
+      setUnreadCount(count || 0)
+    }
+
+    fetchUnreadCount()
+
+    // Refresh count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000)
+    return () => clearInterval(interval)
+  }, [user])
 
   // Check if current path is one of the "more" items (not in main nav)
   const isMoreActive = !MOBILE_NAV_ITEMS.some(item => item.href === pathname)
@@ -30,6 +56,7 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
         {MOBILE_NAV_ITEMS.map(item => {
           const Icon = item.icon
           const isActive = pathname === item.href
+          const showBadge = item.showBadge && unreadCount > 0
 
           return (
             <Link
@@ -41,8 +68,13 @@ export default function MobileNav({ onMoreClick }: MobileNavProps) {
                   : 'text-slate-500 dark:text-slate-400 active:bg-slate-100 dark:active:bg-slate-800'
               }`}
             >
-              <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
+              <div className={`relative p-1.5 rounded-xl transition-all ${isActive ? 'bg-teal-500 text-white shadow-sm' : ''}`}>
                 <Icon className="w-5 h-5" />
+                {showBadge && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px] font-bold bg-red-500 text-white rounded-full">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </div>
               <span className={`text-xs font-medium ${isActive ? 'text-teal-700 dark:text-teal-300' : ''}`}>{t(item.labelKey)}</span>
             </Link>

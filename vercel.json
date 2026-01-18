@@ -19,6 +19,18 @@
     {
       "path": "/api/notifications/triggers/shopping-list",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/f1-news",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/f1-sessions",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/notifications/triggers/f1-results",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

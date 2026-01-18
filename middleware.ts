@@ -10,14 +10,22 @@ const PUBLIC_API_ROUTES = [
   '/api/f1/news',
 ]
 
-// Routes that use CRON_SECRET instead of user auth
+// Routes that use CRON_SECRET instead of user auth (cron jobs only)
 const CRON_ROUTES = [
-  '/api/notifications/triggers/',
+  '/api/notifications/triggers/bins',
+  '/api/notifications/triggers/chores',
+  '/api/notifications/triggers/events',
+  '/api/notifications/triggers/routines',
+  '/api/notifications/triggers/shopping-list',
+  '/api/notifications/triggers/f1-sessions',
+  '/api/notifications/triggers/f1-news',
+  '/api/notifications/triggers/f1-results',
 ]
 
-// Routes that allow either user auth OR cron auth
+// Routes that allow either user auth OR cron auth (can be called from app or cron)
 const DUAL_AUTH_ROUTES = [
   '/api/notifications/send',
+  '/api/notifications/triggers/event-created',
 ]
 
 export async function middleware(req: NextRequest) {

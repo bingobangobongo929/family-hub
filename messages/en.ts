@@ -95,6 +95,7 @@ export const en = {
     tasks: 'Tasks',
     rewards: 'Rewards',
     shopping: 'Shopping',
+    notifications: 'Alerts',
     gallery: 'Gallery',
     history: 'History',
     bindicator: 'Bindicator',

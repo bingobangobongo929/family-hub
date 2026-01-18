@@ -97,6 +97,7 @@ export const da: Translations = {
     tasks: 'Opgaver',
     rewards: 'Belønninger',
     shopping: 'Indkøb',
+    notifications: 'Beskeder',
     gallery: 'Galleri',
     history: 'Historik',
     bindicator: 'Affaldskalender',
