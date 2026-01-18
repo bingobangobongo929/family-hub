@@ -449,8 +449,34 @@ export default function CalendarPage() {
       return
     }
 
+    // Get event data before deleting for notification
+    const eventToDelete = events.find(e => e.id === eventId)
+
     try {
       await supabase.from('calendar_events').delete().eq('id', eventId)
+
+      // Send deletion notification
+      if (eventToDelete) {
+        try {
+          await fetch('/api/notifications/triggers/event-deleted', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event: {
+                id: eventToDelete.id,
+                title: eventToDelete.title,
+                start_time: eventToDelete.start_time,
+                all_day: eventToDelete.all_day,
+                location: eventToDelete.location,
+              },
+              deleted_by: user.id,
+            }),
+          })
+        } catch (notifyError) {
+          console.error('Failed to send deletion notification:', notifyError)
+        }
+      }
+
       await fetchEvents()
       setShowEventModal(false)
     } catch (error) {
@@ -472,6 +498,9 @@ export default function CalendarPage() {
       return
     }
 
+    // Get original event to track changes
+    const originalEvent = events.find(e => e.id === eventId)
+
     try {
       await supabase.from('calendar_events').update(updates).eq('id', eventId)
 
@@ -490,6 +519,58 @@ export default function CalendarPage() {
           await supabase.from('event_contacts').insert(
             contactIds.map(contactId => ({ event_id: eventId, contact_id: contactId }))
           )
+        }
+      }
+
+      // Send update notification if there were meaningful changes
+      if (originalEvent) {
+        const changes: { field: string; oldValue?: string; newValue?: string }[] = []
+
+        if (updates.title && updates.title !== originalEvent.title) {
+          changes.push({ field: 'title', oldValue: originalEvent.title, newValue: updates.title })
+        }
+        if (updates.start_time && updates.start_time !== originalEvent.start_time) {
+          changes.push({
+            field: 'start_time',
+            oldValue: originalEvent.start_time,
+            newValue: updates.start_time
+          })
+        }
+        if (updates.location !== undefined && updates.location !== originalEvent.location) {
+          changes.push({
+            field: 'location',
+            oldValue: originalEvent.location || undefined,
+            newValue: updates.location || undefined
+          })
+        }
+        if (updates.description !== undefined && updates.description !== originalEvent.description) {
+          changes.push({ field: 'description' })
+        }
+
+        if (changes.length > 0) {
+          try {
+            await fetch('/api/notifications/triggers/event-changed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                event: {
+                  id: eventId,
+                  user_id: originalEvent.user_id,
+                  title: updates.title || originalEvent.title,
+                  description: updates.description ?? originalEvent.description,
+                  start_time: updates.start_time || originalEvent.start_time,
+                  end_time: updates.end_time ?? originalEvent.end_time,
+                  all_day: updates.all_day ?? originalEvent.all_day,
+                  location: updates.location ?? originalEvent.location,
+                  color: updates.color || originalEvent.color,
+                },
+                changes,
+                updated_by: user.id,
+              }),
+            })
+          } catch (notifyError) {
+            console.error('Failed to send update notification:', notifyError)
+          }
         }
       }
 

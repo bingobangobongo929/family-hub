@@ -26,6 +26,8 @@ const CRON_ROUTES = [
 const DUAL_AUTH_ROUTES = [
   '/api/notifications/send',
   '/api/notifications/triggers/event-created',
+  '/api/notifications/triggers/event-changed',
+  '/api/notifications/triggers/event-deleted',
 ]
 
 export async function middleware(req: NextRequest) {

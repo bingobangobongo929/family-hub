@@ -19,6 +19,8 @@ interface NotificationPrefs {
   // Calendar
   calendar_enabled: boolean
   calendar_event_created: boolean
+  calendar_event_changed: boolean
+  calendar_event_deleted: boolean
   calendar_reminder_15m: boolean
   calendar_reminder_30m: boolean
   calendar_reminder_1h: boolean
@@ -67,6 +69,8 @@ const DEFAULT_PREFS: NotificationPrefs = {
   bin_reminder_morning: false,
   calendar_enabled: true,
   calendar_event_created: true,
+  calendar_event_changed: true,
+  calendar_event_deleted: true,
   calendar_reminder_15m: true,
   calendar_reminder_30m: false,
   calendar_reminder_1h: true,
@@ -418,6 +422,18 @@ export default function NotificationPreferences() {
             description="Notify when events are created"
             enabled={prefs.calendar_event_created}
             onChange={(v) => updatePref('calendar_event_created', v)}
+          />
+          <ToggleItem
+            label="Event Updated"
+            description="Notify when events are changed"
+            enabled={prefs.calendar_event_changed}
+            onChange={(v) => updatePref('calendar_event_changed', v)}
+          />
+          <ToggleItem
+            label="Event Cancelled"
+            description="Notify when events are deleted"
+            enabled={prefs.calendar_event_deleted}
+            onChange={(v) => updatePref('calendar_event_deleted', v)}
           />
           <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Reminder Times</p>
