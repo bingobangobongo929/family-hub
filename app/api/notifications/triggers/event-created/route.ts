@@ -155,18 +155,24 @@ export async function POST(request: NextRequest) {
 
     // Send to each user
     for (const userId of userIds) {
-      // Skip the user who created the event
-      if (userId === event.user_id) {
-        results.push({ user_id: userId, sent: false, reason: 'creator' });
-        continue;
-      }
-
       // Check user's notification preferences
       const { data: prefs } = await supabase
         .from('notification_preferences')
-        .select('calendar_enabled, calendar_event_created')
+        .select('calendar_enabled, calendar_event_created, calendar_notify_own_changes')
         .eq('user_id', userId)
         .single();
+
+      // Check if this is the user who created the event
+      const isCreator = userId === event.user_id;
+
+      // Skip creator unless they want to be notified of their own changes
+      if (isCreator) {
+        const notifyOwnChanges = !prefs || prefs.calendar_notify_own_changes !== false;
+        if (!notifyOwnChanges) {
+          results.push({ user_id: userId, sent: false, reason: 'creator_opted_out' });
+          continue;
+        }
+      }
 
       // Default: send unless explicitly disabled
       const shouldNotify = !prefs || (prefs.calendar_enabled !== false && prefs.calendar_event_created !== false);

@@ -21,6 +21,7 @@ interface NotificationPrefs {
   calendar_event_created: boolean
   calendar_event_changed: boolean
   calendar_event_deleted: boolean
+  calendar_notify_own_changes: boolean
   calendar_reminder_15m: boolean
   calendar_reminder_30m: boolean
   calendar_reminder_1h: boolean
@@ -71,10 +72,11 @@ const DEFAULT_PREFS: NotificationPrefs = {
   calendar_event_created: true,
   calendar_event_changed: true,
   calendar_event_deleted: true,
+  calendar_notify_own_changes: true,
   calendar_reminder_15m: true,
   calendar_reminder_30m: false,
   calendar_reminder_1h: true,
-  calendar_reminder_1d: false,
+  calendar_reminder_1d: true,
   routines_enabled: true,
   routine_start_reminder: true,
   chores_enabled: true,
@@ -445,6 +447,16 @@ export default function NotificationPreferences() {
             enabled={prefs.calendar_event_deleted}
             onChange={(v) => updatePref('calendar_event_deleted', v)}
           />
+          <div className="pt-3 mt-3 border-t border-slate-200 dark:border-slate-700">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+              <ToggleItem
+                label="Include My Own Changes"
+                description="Also notify me when I add, edit, or delete events"
+                enabled={prefs.calendar_notify_own_changes}
+                onChange={(v) => updatePref('calendar_notify_own_changes', v)}
+              />
+            </div>
+          </div>
           <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3">Reminder Times</p>
           </div>

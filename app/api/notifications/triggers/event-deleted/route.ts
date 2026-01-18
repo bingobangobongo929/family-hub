@@ -88,15 +88,21 @@ export async function POST(request: NextRequest) {
     let sentCount = 0;
 
     for (const userId of userIds) {
-      // Skip the user who deleted the event
-      if (userId === deleted_by) continue;
-
       // Check user's notification preferences
       const { data: prefs } = await supabase
         .from('notification_preferences')
-        .select('calendar_enabled, calendar_event_deleted')
+        .select('calendar_enabled, calendar_event_deleted, calendar_notify_own_changes')
         .eq('user_id', userId)
         .single();
+
+      // Check if this is the user who deleted the event
+      const isDeleter = userId === deleted_by;
+
+      // Skip deleter unless they want to be notified of their own changes
+      if (isDeleter) {
+        const notifyOwnChanges = !prefs || prefs.calendar_notify_own_changes !== false;
+        if (!notifyOwnChanges) continue;
+      }
 
       const shouldNotify = !prefs || (prefs.calendar_enabled !== false && prefs.calendar_event_deleted !== false);
 
