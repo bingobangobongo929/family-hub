@@ -71,19 +71,25 @@ export async function POST(request: NextRequest) {
 
     const userIds = [...new Set(tokens.map(t => t.user_id))];
 
-    // Build notification content
-    const title = `🗑️ Event Cancelled: ${event.title}`;
-    let body = `❌ This event has been removed\n📅 Was scheduled: ${formatEventTime(event.start_time, event.all_day)}`;
+    // Build clean notification
+    const title = `Event Cancelled`;
+
+    const bodyParts: string[] = [
+      event.title,
+      `Was: ${formatEventTime(event.start_time, event.all_day)}`,
+    ];
 
     if (event.location) {
-      body += `\n📍 ${event.location}`;
+      bodyParts.push(event.location);
     }
+
+    const body = bodyParts.join('\n');
 
     let sentCount = 0;
 
     for (const userId of userIds) {
-      // TODO: Re-enable after testing - skip the user who deleted the event
-      // if (userId === deleted_by) continue;
+      // Skip the user who deleted the event
+      if (userId === deleted_by) continue;
 
       // Check user's notification preferences
       const { data: prefs } = await supabase

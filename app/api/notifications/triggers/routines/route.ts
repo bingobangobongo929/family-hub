@@ -234,29 +234,32 @@ export async function GET(request: NextRequest) {
       const routineSteps = stepsMap.get(routine.id) || [];
       const routineMembersList = routineMembersMap.get(routine.id) || [];
 
-      // Build rich notification
-      let title = `${routine.emoji || typeInfo.emoji} ${typeInfo.greeting} ${routine.title}`;
-      let body = '';
+      // Build clean notification
+      let title = `${routine.emoji || typeInfo.emoji} ${routine.title}`;
+      const bodyParts: string[] = [];
 
       // Add member names
       if (routineMembersList.length > 0) {
         const names = routineMembersList.map(m => m.name).join(' & ');
-        body = `👶 Time for ${names}'s routine!`;
+        bodyParts.push(`Time for ${names}'s routine`);
       }
 
-      // Add first few steps preview
+      // Add first few steps preview (just titles, cleaner)
       if (routineSteps.length > 0) {
-        const stepPreviews = routineSteps.slice(0, 3).map(s => `${s.emoji} ${s.title}`);
-        body += `\n${stepPreviews.join(' → ')}`;
+        const stepPreviews = routineSteps.slice(0, 3).map(s => s.title);
+        let stepsLine = stepPreviews.join(' → ');
         if (routineSteps.length > 3) {
-          body += ` +${routineSteps.length - 3} more`;
+          stepsLine += ` +${routineSteps.length - 3} more`;
         }
+        bodyParts.push(stepsLine);
       }
 
       // Add points reward
       if (routine.points_reward > 0) {
-        body += `\n⭐ ${routine.points_reward} stars on completion!`;
+        bodyParts.push(`${routine.points_reward} stars on completion`);
       }
+
+      const body = bodyParts.join('\n');
 
       try {
         const response = await fetch(new URL('/api/notifications/send', request.url), {

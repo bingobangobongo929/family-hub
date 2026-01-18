@@ -219,31 +219,31 @@ export async function GET(request: NextRequest) {
         const state = stateMap.get(pref.user_id);
         if (state?.last_session_reminded_key === session.session_key) continue;
 
-        // Build rich notification content
+        // Build clean notification content
         let title: string;
         let body: string;
 
         if (reminderType === '15m') {
           // Urgent - race starting soon!
-          title = `${sessionInfo.emoji} ${sessionInfo.name} IN ${minutesUntil} MIN!`;
-          body = `${countryFlag} ${meeting.meeting_name} • ${meeting.circuit_short_name}\n🕐 ${localTime} local time`;
+          title = `${sessionInfo.emoji} ${sessionInfo.name} in ${minutesUntil} min`;
+          body = `${countryFlag} ${meeting.meeting_name}\n${meeting.circuit_short_name} • ${localTime}`;
         } else if (reminderType === '1h') {
           // 1 hour warning
-          title = `${sessionInfo.emoji} ${sessionInfo.name} in 1 Hour`;
-          body = `${countryFlag} ${meeting.meeting_name}\n📍 ${meeting.circuit_short_name} • 🕐 ${localTime}`;
+          title = `${sessionInfo.emoji} ${sessionInfo.name} in 1 hour`;
+          body = `${countryFlag} ${meeting.meeting_name}\n${meeting.circuit_short_name} • ${localTime}`;
         } else {
           // 1 day reminder
-          title = `${countryFlag} ${sessionInfo.name} Tomorrow!`;
-          body = `${meeting.meeting_name}\n📍 ${meeting.circuit_short_name} • 🕐 ${localTime}`;
+          title = `${countryFlag} ${sessionInfo.name} Tomorrow`;
+          body = `${meeting.meeting_name}\n${meeting.circuit_short_name} • ${localTime}`;
         }
 
         // Add favorite driver context if set
         if (pref.f1_favorite_driver) {
           const driverName = pref.f1_favorite_driver.charAt(0).toUpperCase() + pref.f1_favorite_driver.slice(1);
           if (sessionInfo.type === 'race') {
-            body += `\n🏆 Will ${driverName} take the win?`;
+            body += `\nWill ${driverName} take the win?`;
           } else if (sessionInfo.type === 'quali') {
-            body += `\n⏱️ Can ${driverName} grab pole?`;
+            body += `\nCan ${driverName} grab pole?`;
           }
         }
 

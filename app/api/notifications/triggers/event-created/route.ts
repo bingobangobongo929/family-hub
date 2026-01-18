@@ -67,15 +67,15 @@ function getEventEmoji(title: string, description: string | null): string {
   return '📌';
 }
 
-// Get source description
-function getSourceDescription(source?: string): string {
+// Get source label (clean, no emoji)
+function getSourceLabel(source?: string): string | null {
   switch (source) {
     case 'ai':
-      return '✨ Added by AI';
+      return 'Added by AI';
     case 'google':
-      return '🔄 Synced from Google';
+      return 'Synced from Google';
     default:
-      return '📆 New event';
+      return null;
   }
 }
 
@@ -124,34 +124,42 @@ export async function POST(request: NextRequest) {
     }
 
     const emoji = getEventEmoji(event.title, event.description);
-    const sourceDesc = getSourceDescription(event.source);
+    const sourceLabel = getSourceLabel(event.source);
 
-    // Build rich notification
-    let title = `${emoji} ${event.title}`;
-    let body = `${sourceDesc}\n📅 ${formatEventTime(event.start_time, event.all_day)}`;
+    // Build clean notification
+    const title = `${emoji} ${event.title}`;
+
+    // Body: time first, then details on separate lines
+    const bodyParts: string[] = [formatEventTime(event.start_time, event.all_day)];
 
     if (event.location) {
-      body += `\n📍 ${event.location}`;
+      bodyParts.push(event.location);
     }
 
     if (memberNames) {
-      body += `\n👤 ${memberNames}`;
+      bodyParts.push(`With: ${memberNames}`);
     }
 
     if (event.description && event.description.length > 0) {
-      body += `\n📝 ${event.description.substring(0, 60)}${event.description.length > 60 ? '...' : ''}`;
+      bodyParts.push(event.description.substring(0, 80) + (event.description.length > 80 ? '...' : ''));
     }
+
+    if (sourceLabel) {
+      bodyParts.push(sourceLabel);
+    }
+
+    const body = bodyParts.join('\n');
 
     let sentCount = 0;
     const results: { user_id: string; sent: boolean; reason?: string }[] = [];
 
     // Send to each user
     for (const userId of userIds) {
-      // TODO: Re-enable after testing - skip the user who created the event
-      // if (userId === event.user_id) {
-      //   results.push({ user_id: userId, sent: false, reason: 'creator' });
-      //   continue;
-      // }
+      // Skip the user who created the event
+      if (userId === event.user_id) {
+        results.push({ user_id: userId, sent: false, reason: 'creator' });
+        continue;
+      }
 
       // Check user's notification preferences
       const { data: prefs } = await supabase

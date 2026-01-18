@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
     const { names, emojis, details } = formatBinsList(binsDue);
     const dayName = isEvening ? getTomorrowDayName() : 'today';
 
-    // Build rich notification
+    // Build clean notification
     let title: string;
     let body: string;
 
@@ -149,24 +149,22 @@ export async function GET(request: NextRequest) {
       // Evening reminder - night before
       if (binsDue.length === 1) {
         const binInfo = getBinInfo(binsDue[0]);
-        title = `${binInfo.emoji} Put Out The ${binInfo.shortName} Bin Tonight!`;
-        body = `📅 Collection tomorrow (${dayName})\n${binInfo.description}`;
+        title = `${binInfo.emoji} ${binInfo.shortName} Bin Tonight`;
+        body = `Collection tomorrow (${dayName})\n${binInfo.description}\nPut out before bed`;
       } else {
-        title = `${emojis} Bin Day Tomorrow!`;
-        body = `📅 ${dayName} collection:\n${details}`;
+        title = `${emojis} Bins Tomorrow`;
+        body = `${dayName} collection:\n${details}\nPut out before bed`;
       }
-      body += '\n\n💡 Put them out before bed!';
     } else {
       // Morning reminder - same day
       if (binsDue.length === 1) {
         const binInfo = getBinInfo(binsDue[0]);
-        title = `${binInfo.emoji} ${binInfo.shortName} Bin Day Today!`;
-        body = `🚛 Collection happening today\n${binInfo.description}`;
+        title = `${binInfo.emoji} ${binInfo.shortName} Bin Today`;
+        body = `Collection happening today\n${binInfo.description}\nMake sure it's out!`;
       } else {
-        title = `${emojis} Bin Collection Today!`;
-        body = `🚛 Today's collection:\n${details}`;
+        title = `${emojis} Bins Today`;
+        body = `Today's collection:\n${details}\nMake sure they're out!`;
       }
-      body += '\n\n⏰ Make sure they\'re out!';
     }
 
     let sentCount = 0;

@@ -130,9 +130,9 @@ export async function GET(request: NextRequest) {
         const teamEmoji = getTeamEmoji(currentLeader.constructorId);
         const gap = currentLeader.points - secondPlace.points;
 
-        const title = `👑 NEW CHAMPIONSHIP LEADER`;
-        const body = `${teamEmoji} ${formatDriverName(currentLeader)} takes the lead!\n` +
-                     `📊 ${currentLeader.points} pts (+${gap} over ${secondPlace.familyName})`;
+        const title = `👑 New Championship Leader`;
+        const body = `${teamEmoji} ${formatDriverName(currentLeader)} takes the lead\n` +
+                     `${currentLeader.points} pts (+${gap} over ${secondPlace.familyName})`;
 
         try {
           const response = await fetch(new URL('/api/notifications/send', request.url), {
@@ -174,10 +174,9 @@ export async function GET(request: NextRequest) {
           if (pref.f1_favorite_win && favoriteDriver.position === 1 && previousLeader !== favoriteDriver.driverId) {
             const gap = favoriteDriver.points - secondPlace.points;
 
-            const title = `🏆 ${favoriteDriver.familyName.toUpperCase()} LEADS THE CHAMPIONSHIP!`;
+            const title = `🏆 ${favoriteDriver.familyName} Leads!`;
             const body = `${teamEmoji} ${formatDriverName(favoriteDriver)}\n` +
-                        `📊 ${favoriteDriver.points} points (+${gap} gap)\n` +
-                        `🏆 ${favoriteDriver.wins} wins this season`;
+                        `${favoriteDriver.points} pts (+${gap} gap) • ${favoriteDriver.wins} wins`;
 
             try {
               const response = await fetch(new URL('/api/notifications/send', request.url), {

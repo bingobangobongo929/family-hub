@@ -44,3 +44,6 @@ ios/App/DerivedData/
 android/app/build/
 android/.gradle/
 supabase/.temp/
+
+.vercel
+.env*.local

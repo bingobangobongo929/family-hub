@@ -136,10 +136,10 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      // Format notification
+      // Format clean notification
       const { summary, details } = formatChanges(changesToNotify);
-      const title = `🛒 Shopping List Updated`;
-      const body = `${details}\n\n📝 ${changesToNotify.length} change${changesToNotify.length > 1 ? 's' : ''} in the last 10 minutes`;
+      const title = `🛒 Shopping List`;
+      const body = `${details}\n${changesToNotify.length} change${changesToNotify.length > 1 ? 's' : ''}`;
 
       // Send notification
       try {

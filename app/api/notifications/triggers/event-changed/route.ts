@@ -45,35 +45,35 @@ function formatEventTime(dateStr: string, allDay: boolean): string {
   });
 }
 
-// Format changes for notification body
+// Format changes for notification body (clean, minimal emojis)
 function formatChanges(changes: ChangeSummary[]): string {
   const changeLines: string[] = [];
 
   for (const change of changes.slice(0, 3)) { // Max 3 changes shown
     switch (change.field) {
       case 'title':
-        changeLines.push(`📝 Title: "${change.newValue}"`);
+        changeLines.push(`New title: ${change.newValue}`);
         break;
       case 'start_time':
-        changeLines.push(`📅 New time: ${change.newValue}`);
+        changeLines.push(`New time: ${change.newValue}`);
         break;
       case 'location':
         if (change.newValue) {
-          changeLines.push(`📍 Location: ${change.newValue}`);
+          changeLines.push(`Location: ${change.newValue}`);
         } else {
-          changeLines.push(`📍 Location removed`);
+          changeLines.push(`Location removed`);
         }
         break;
       case 'description':
-        changeLines.push(`📝 Description updated`);
+        changeLines.push(`Description updated`);
         break;
       default:
-        changeLines.push(`✏️ ${change.field} updated`);
+        changeLines.push(`${change.field} updated`);
     }
   }
 
   if (changes.length > 3) {
-    changeLines.push(`+${changes.length - 3} more changes`);
+    changeLines.push(`+${changes.length - 3} more`);
   }
 
   return changeLines.join('\n');
@@ -117,20 +117,23 @@ export async function POST(request: NextRequest) {
 
     const userIds = [...new Set(tokens.map(t => t.user_id))];
 
-    // Build notification content
-    const title = `✏️ Event Updated: ${event.title}`;
-    let body = formatChanges(changes);
-    body += `\n📅 ${formatEventTime(event.start_time, event.all_day)}`;
+    // Build clean notification
+    const title = `✏️ ${event.title}`;
+
+    const bodyParts: string[] = [formatChanges(changes)];
+    bodyParts.push(formatEventTime(event.start_time, event.all_day));
 
     if (event.location) {
-      body += `\n📍 ${event.location}`;
+      bodyParts.push(event.location);
     }
+
+    const body = bodyParts.join('\n');
 
     let sentCount = 0;
 
     for (const userId of userIds) {
-      // TODO: Re-enable after testing - skip the user who made the change
-      // if (userId === updated_by) continue;
+      // Skip the user who made the change
+      if (userId === updated_by) continue;
 
       // Check user's notification preferences
       const { data: prefs } = await supabase
