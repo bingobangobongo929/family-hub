@@ -22,6 +22,7 @@ interface SettingsContextType {
   googlePhotosRotationInterval: number
   // Sidebar settings
   sidebarNavOrder: string[] | null
+  sidebarPinnedItems: string[]
   // F1 Spoiler-Free settings
   f1SpoilerFreeEnabled: boolean
   f1SpoilerFreeAutoWeekend: boolean
@@ -130,6 +131,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
         googlePhotosRotationInterval: (settings.google_photos_rotation_interval as number) ?? 10,
         // Sidebar settings
         sidebarNavOrder: (settings.sidebar_nav_order as string[] | null) ?? null,
+        sidebarPinnedItems: (settings.sidebar_pinned_items as string[]) ?? ['/', '/calendar', '/tasks', '/routines', '/shopping', '/f1'],
         // F1 Spoiler-Free settings
         f1SpoilerFreeEnabled: (settings.f1_spoiler_free_enabled as boolean) ?? false,
         f1SpoilerFreeAutoWeekend: (settings.f1_spoiler_free_auto_weekend as boolean) ?? true,
@@ -154,6 +156,7 @@ const defaultSettingsState: SettingsContextType = {
   googlePhotosAlbumTitle: null,
   googlePhotosRotationInterval: 30,
   sidebarNavOrder: null,
+  sidebarPinnedItems: ['/', '/calendar', '/tasks', '/routines', '/shopping', '/f1'],
   f1SpoilerFreeEnabled: false,
   f1SpoilerFreeAutoWeekend: false,
   f1SpoilerFreeManualOverride: null,
