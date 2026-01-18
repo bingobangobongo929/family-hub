@@ -13,6 +13,10 @@ const PUBLIC_API_ROUTES = [
 // Routes that use CRON_SECRET instead of user auth
 const CRON_ROUTES = [
   '/api/notifications/triggers/',
+]
+
+// Routes that allow either user auth OR cron auth
+const DUAL_AUTH_ROUTES = [
   '/api/notifications/send',
 ]
 
@@ -50,6 +54,18 @@ export async function middleware(req: NextRequest) {
     }
 
     return res
+  }
+
+  // Dual auth routes: allow CRON_SECRET OR user session
+  if (DUAL_AUTH_ROUTES.some(route => pathname.startsWith(route))) {
+    const authHeader = req.headers.get('authorization')
+    const cronSecret = process.env.CRON_SECRET
+
+    // If valid cron secret provided, allow through
+    if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+      return res
+    }
+    // Otherwise, fall through to user auth check below
   }
 
   // OAuth callback routes - these handle their own auth via cookies/state
