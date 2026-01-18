@@ -237,9 +237,11 @@ export default function RoutinesPage() {
   }, [loadCompletions])
 
   // Real-time subscription for completions sync across devices
-  // Instead of reloading all completions, merge the specific change to avoid race conditions
+  // DISABLED FOR DEBUGGING - this might be the cause of the issue
   useEffect(() => {
     if (!user) return
+
+    console.log('[REALTIME] Setting up subscription for date:', today)
 
     const channel = supabase
       .channel('completions-sync')
@@ -252,15 +254,16 @@ export default function RoutinesPage() {
           filter: `completed_date=eq.${today}`
         },
         (payload) => {
-          // Another device completed a step - ADD to our local state
           const { step_id, member_id } = payload.new as { step_id: string; member_id: string }
           const key = `${step_id}:${member_id}`
-          setCompletedSteps(prev => {
-            if (prev.has(key)) return prev // Already have it
-            const newSet = new Set(prev)
-            newSet.add(key)
-            return newSet
-          })
+          console.log('[REALTIME] INSERT event received:', { key, payload })
+          // DON'T update state - let's see if this fixes it
+          // setCompletedSteps(prev => {
+          //   if (prev.has(key)) return prev
+          //   const newSet = new Set(prev)
+          //   newSet.add(key)
+          //   return newSet
+          // })
         }
       )
       .on(
@@ -272,20 +275,22 @@ export default function RoutinesPage() {
           filter: `completed_date=eq.${today}`
         },
         (payload) => {
-          // Another device uncompleted a step - REMOVE from our local state
           const { step_id, member_id } = payload.old as { step_id: string; member_id: string }
           const key = `${step_id}:${member_id}`
-          setCompletedSteps(prev => {
-            if (!prev.has(key)) return prev // Already removed
-            const newSet = new Set(prev)
-            newSet.delete(key)
-            return newSet
-          })
+          console.log('[REALTIME] DELETE event received:', { key, payload })
+          // DON'T update state - let's see if this fixes it
+          // setCompletedSteps(prev => {
+          //   if (!prev.has(key)) return prev
+          //   const newSet = new Set(prev)
+          //   newSet.delete(key)
+          //   return newSet
+          // })
         }
       )
       .subscribe()
 
     return () => {
+      console.log('[REALTIME] Cleaning up subscription')
       supabase.removeChannel(channel)
     }
   }, [user, today])
@@ -348,68 +353,61 @@ export default function RoutinesPage() {
 
     const todayStr = new Date().toISOString().split('T')[0]
     const key = `${stepId}:${memberId}`
-
-    // Mark as pending to prevent double-toggle
-    pendingToggle.current.add(key)
-
-    // Use functional setState to get CURRENT state, not stale closure
-    let wasCompleted = false
-    setCompletedSteps(prev => {
-      wasCompleted = prev.has(key)
-      const newSet = new Set(prev)
-      if (wasCompleted) {
-        newSet.delete(key)
-      } else {
-        newSet.add(key)
-      }
-      return newSet
-    })
-
-    // Haptics and celebration AFTER determining wasCompleted
-    if (wasCompleted) {
-      hapticLight()
-    } else {
-      hapticSuccess()
-      const step = selectedRoutine.steps.find(s => s.id === stepId)
-      setCelebratingStep(stepId)
-      setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
-      setConfettiTrigger(t => t + 1)
-      playSound('complete')
-      setTimeout(() => setCelebratingStep(null), 600)
-    }
-
-    // Database operations in background
     const routineId = selectedRoutine.id
 
-    if (wasCompleted) {
-      // Uncomplete
-      supabase
+    // Check current state ONCE
+    const isCurrentlyCompleted = completedSteps.has(key)
+
+    console.log('[TOGGLE] Start:', { key, isCurrentlyCompleted, stateSize: completedSteps.size })
+
+    if (isCurrentlyCompleted) {
+      // === UNCOMPLETE ===
+      hapticLight()
+
+      // Update UI
+      setCompletedSteps(prev => {
+        const next = new Set(prev)
+        next.delete(key)
+        console.log('[TOGGLE] UI updated (uncomplete):', { key, prevSize: prev.size, nextSize: next.size })
+        return next
+      })
+
+      // Update DB
+      const { error } = await supabase
         .from('routine_completions')
         .delete()
         .eq('step_id', stepId)
         .eq('member_id', memberId)
         .eq('completed_date', todayStr)
-        .then(({ error }) => {
-          pendingToggle.current.delete(key)
-          if (error) {
-            console.error('Error deleting completion:', error)
-            // Revert on error
-            setCompletedSteps(prev => new Set([...prev, key]))
-          }
-        })
 
-      // Log uncomplete action
-      supabase.from('routine_completion_log').insert({
-        routine_id: routineId,
-        step_id: stepId,
-        member_id: memberId,
-        completed_date: todayStr,
-        completed_by: user.id,
-        action: 'uncompleted'
-      })
+      if (error) {
+        console.error('[TOGGLE] DB delete error:', error)
+        setCompletedSteps(prev => new Set([...prev, key])) // Revert
+      } else {
+        console.log('[TOGGLE] DB delete success')
+      }
     } else {
-      // Complete
-      supabase
+      // === COMPLETE ===
+      hapticSuccess()
+      playSound('complete')
+
+      // Celebration
+      const step = selectedRoutine.steps.find(s => s.id === stepId)
+      setCelebratingStep(stepId)
+      setConfettiConfig({ intensity: 'small', emoji: step?.emoji })
+      setConfettiTrigger(t => t + 1)
+      setTimeout(() => setCelebratingStep(null), 600)
+
+      // Update UI
+      setCompletedSteps(prev => {
+        const next = new Set(prev)
+        next.add(key)
+        console.log('[TOGGLE] UI updated (complete):', { key, prevSize: prev.size, nextSize: next.size })
+        return next
+      })
+
+      // Update DB
+      const { error } = await supabase
         .from('routine_completions')
         .upsert({
           routine_id: routineId,
@@ -417,75 +415,36 @@ export default function RoutinesPage() {
           member_id: memberId,
           completed_date: todayStr
         }, { onConflict: 'routine_id,step_id,member_id,completed_date' })
-        .then(({ error }) => {
-          pendingToggle.current.delete(key)
-          if (error) {
-            console.error('Error saving completion:', error)
-            // Revert on error
-            setCompletedSteps(prev => {
-              const reverted = new Set(prev)
-              reverted.delete(key)
-              return reverted
-            })
-          }
-        })
 
-      // Log complete action
-      supabase.from('routine_completion_log').insert({
-        routine_id: routineId,
-        step_id: stepId,
-        member_id: memberId,
-        completed_date: todayStr,
-        completed_by: user.id,
-        action: 'completed'
-      })
+      if (error) {
+        console.error('[TOGGLE] DB upsert error:', error)
+        setCompletedSteps(prev => {
+          const next = new Set(prev)
+          next.delete(key)
+          return next
+        }) // Revert
+      } else {
+        console.log('[TOGGLE] DB upsert success')
 
-      // Check completion using visible steps and per-member assignments
-      const visibleSteps = getVisibleSteps(selectedRoutine)
-      const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
+        // Check for routine completion
+        const visibleSteps = getVisibleSteps(selectedRoutine)
+        const memberSteps = visibleSteps.filter(s => stepAppliesToMember(s, memberId))
 
-      // Need to check with updated state - use a small timeout to let state settle
-      setTimeout(() => {
-        setCompletedSteps(currentCompleted => {
-          const memberCompletedAll = memberSteps.every(
-            s => currentCompleted.has(`${s.id}:${memberId}`)
-          )
+        setCompletedSteps(current => {
+          const memberCompletedAll = memberSteps.every(s => current.has(`${s.id}:${memberId}`))
           if (memberCompletedAll && memberSteps.length > 0 && selectedRoutine.points_reward > 0) {
             const member = getMember(memberId)
             if (member?.stars_enabled) {
               updateMemberPoints(memberId, selectedRoutine.points_reward)
-              supabase.from('points_history').insert({
-                member_id: memberId,
-                points_change: selectedRoutine.points_reward,
-                reason: 'routine_completed',
-                reference_id: routineId,
-                reference_type: 'routine',
-                created_by: user.id
-              })
             }
             updateStreak(memberId, routineId, todayStr)
             setConfettiConfig({ intensity: 'big', emoji: '⭐' })
             setConfettiTrigger(t => t + 1)
             playSound('allDone')
           }
-
-          // Check if ALL members completed ALL their applicable steps
-          const routineMembers = selectedRoutine.member_ids || []
-          const allMembersCompletedAll = routineMembers.length > 0 && visibleSteps.length > 0 && routineMembers.every(mid => {
-            const memberSpecificSteps = visibleSteps.filter(s => stepAppliesToMember(s, mid))
-            return memberSpecificSteps.every(s => currentCompleted.has(`${s.id}:${mid}`))
-          })
-          if (allMembersCompletedAll) {
-            setTimeout(() => {
-              setConfettiConfig({ intensity: 'epic', emoji: '🎉' })
-              setConfettiTrigger(t => t + 1)
-              playSound('epic')
-            }, 200)
-          }
-
-          return currentCompleted // Don't change state, just read it
+          return current // Don't modify
         })
-      }, 50)
+      }
     }
   }
 
