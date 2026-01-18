@@ -2,7 +2,7 @@
 
 // Randers Kommune waste collection types
 // Based on actual containers at Ebbeshøjvej 3, Virring, 8960 Randers SØ
-export type BinType = 'madaffald' | 'restaffald' | 'papir_pap' | 'plast_metal_glas'
+export type BinType = 'madaffald' | 'restaffald' | 'papir_pap' | 'plast_metal_glas' | 'storskrald'
 
 export interface BinInfo {
   id: BinType
@@ -26,7 +26,7 @@ export const BIN_TYPES: BinInfo[] = [
     bgColor: 'bg-green-500',
     borderColor: 'border-green-500',
     description: 'Food waste',
-    frequency: 'Every 14 days'
+    frequency: 'Every 14 days (Mondays)'
   },
   {
     id: 'restaffald',
@@ -37,7 +37,7 @@ export const BIN_TYPES: BinInfo[] = [
     bgColor: 'bg-slate-700',
     borderColor: 'border-slate-700',
     description: 'General waste',
-    frequency: 'Every 14 days'
+    frequency: 'Every 14 days (Mondays)'
   },
   {
     id: 'papir_pap',
@@ -48,7 +48,7 @@ export const BIN_TYPES: BinInfo[] = [
     bgColor: 'bg-blue-500',
     borderColor: 'border-blue-500',
     description: 'Paper & cardboard',
-    frequency: 'Every 4 weeks'
+    frequency: 'Every 4 weeks (Tuesdays)'
   },
   {
     id: 'plast_metal_glas',
@@ -59,49 +59,54 @@ export const BIN_TYPES: BinInfo[] = [
     bgColor: 'bg-emerald-500',
     borderColor: 'border-emerald-500',
     description: 'Plastic, metal & glass',
-    frequency: 'Every 4 weeks'
+    frequency: 'Every 3-4 weeks (Wednesdays)'
+  },
+  {
+    id: 'storskrald',
+    name: 'Storskrald',
+    shortName: 'Stor',
+    emoji: '🛋️',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-500',
+    borderColor: 'border-purple-500',
+    description: 'Large items',
+    frequency: 'Monthly (Wednesdays)'
   },
 ]
 
 // 2026 schedule - dates as DD/MM format
-// ============================================================================
-// HOW TO UPDATE YOUR BIN SCHEDULE:
-// 1. Open the AffaldRanders app on your phone
-// 2. Select your address (Ebbeshøjvej 3, Virring)
-// 3. View the tømningskalender for each bin type
-// 4. Update the dates below to match your actual schedule
-//
-// OR log in to randers.renoweb.dk with MitID to see your schedule
-// ============================================================================
-// Current: PLACEHOLDER DATES - Please update with actual dates from your app
-// Collection typically: every 14 days for mad/rest, every 4 weeks for papir/PMG
+// Actual dates from AffaldRanders app for Ebbeshøjvej 3, 8960 Randers SØ
+// Last updated: January 2026
 export const BIN_SCHEDULE_2026: Record<BinType, string[]> = {
-  // Madaffald & Restaffald collected together every 14 days
-  // UPDATE: Replace these with your actual collection Tuesdays from the app
+  // Madaffald - Mondays, every 14 days
   madaffald: [
-    '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
-    '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
-    '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
-    '28/10', '11/11', '25/11', '09/12', '23/12'
+    '12/01', '26/01', '09/02', '23/02', '09/03', '23/03', '06/04',
+    '20/04', '04/05', '18/05', '01/06', '15/06', '29/06', '13/07',
+    '27/07', '10/08', '24/08', '07/09', '21/09', '05/10', '19/10',
+    '02/11', '16/11', '30/11', '14/12', '28/12'
   ],
+  // Restaffald - Mondays, every 14 days (same as madaffald)
   restaffald: [
-    // Same schedule as madaffald (collected together)
-    '21/01', '04/02', '18/02', '04/03', '18/03', '01/04',
-    '15/04', '29/04', '13/05', '27/05', '10/06', '24/06', '08/07',
-    '22/07', '05/08', '19/08', '02/09', '16/09', '30/09', '14/10',
-    '28/10', '11/11', '25/11', '09/12', '23/12'
+    '12/01', '26/01', '09/02', '23/02', '09/03', '23/03', '06/04',
+    '20/04', '04/05', '18/05', '01/06', '15/06', '29/06', '13/07',
+    '27/07', '10/08', '24/08', '07/09', '21/09', '05/10', '19/10',
+    '02/11', '16/11', '30/11', '14/12', '28/12'
   ],
-  // Papir & Pap collected every 4 weeks
-  // UPDATE: Replace these with your actual collection dates from the app
+  // Papir & Pap - Tuesdays, every 4 weeks
   papir_pap: [
-    '28/01', '25/02', '25/03', '22/04', '20/05', '17/06', '15/07',
-    '12/08', '09/09', '07/10', '04/11', '02/12', '30/12'
+    '27/01', '24/02', '24/03', '21/04', '19/05', '16/06', '14/07',
+    '11/08', '08/09', '06/10', '03/11', '01/12', '29/12'
   ],
-  // Plast, Metal & Glas collected every 4 weeks (different week from papir)
-  // UPDATE: Replace these with your actual collection dates from the app
+  // Plast, Metal & Glas - Wednesdays, every 3 weeks
   plast_metal_glas: [
-    '21/01', '18/02', '18/03', '15/04', '13/05', '10/06', '08/07',
-    '05/08', '02/09', '30/09', '28/10', '25/11', '23/12'
+    '14/01', '04/02', '25/02', '18/03', '08/04', '29/04', '20/05',
+    '10/06', '01/07', '22/07', '12/08', '02/09', '23/09', '14/10',
+    '04/11', '25/11', '16/12'
+  ],
+  // Storskrald - Wednesdays, monthly
+  storskrald: [
+    '28/01', '25/02', '25/03', '22/04', '27/05', '24/06', '29/07',
+    '26/08', '30/09', '28/10', '25/11', '30/12'
   ],
 }
 
