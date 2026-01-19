@@ -30,8 +30,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # App icon is already in the repo - don't regenerate it
-      # The generate-icon script creates a simpler version than the designed icon
+      - name: Generate App Icon
+        run: npm run generate-icon
 
       # App loads from Vercel URL, so we just need to sync the native wrapper
       - name: Sync Capacitor iOS
