@@ -159,8 +159,8 @@ struct FamilyHubShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: AddShoppingItemIntent(),
             phrases: [
-                "Add \(\.$itemName) to shopping list in \(.applicationName)",
-                "Add \(\.$itemName) to \(.applicationName) shopping"
+                "Add item to shopping list in \(.applicationName)",
+                "Add to \(.applicationName) shopping list"
             ],
             shortTitle: "Add Shopping Item",
             systemImageName: "cart.badge.plus"
