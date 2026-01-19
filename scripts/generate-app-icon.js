@@ -31,9 +31,11 @@ async function generateIcon() {
   try {
     const sharp = require('sharp');
 
-    // Generate main iOS icon (1024x1024) - ensure it's the right size
+    // Generate main iOS icon (1024x1024) - MUST be opaque (no alpha channel)
+    // Flatten onto teal background to remove any transparency (matches icon design)
     await sharp(logoPath)
       .resize(1024, 1024)
+      .flatten({ background: { r: 20, g: 184, b: 166 } }) // #14b8a6 - teal-500
       .png()
       .toFile(iosIconPath);
     console.log('iOS App icon (1024x1024) created at:', iosIconPath);
