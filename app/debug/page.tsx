@@ -81,15 +81,24 @@ export default function NotificationDebugPage() {
     setLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) return
+      if (!session?.access_token) {
+        setStatus(null)
+        return
+      }
 
       const response = await fetch('/api/notifications/status', {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       })
       const data = await response.json()
-      setStatus(data)
+      if (response.ok && data.checks) {
+        setStatus(data)
+      } else {
+        console.error('Status API error:', data)
+        setStatus(null)
+      }
     } catch (error) {
       console.error('Error fetching status:', error)
+      setStatus(null)
     } finally {
       setLoading(false)
     }
@@ -276,7 +285,7 @@ export default function NotificationDebugPage() {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
           </div>
-        ) : status ? (
+        ) : status?.checks ? (
           <div className="space-y-3">
             {status.checks.map((check, i) => (
               <div key={i} className="flex items-start gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
@@ -324,7 +333,7 @@ export default function NotificationDebugPage() {
       </Card>
 
       {/* F1 Notification State */}
-      {status?.data.f1_notification_state && (
+      {status?.data?.f1_notification_state && (
         <Card className="mb-4">
           <CardHeader title="F1 Notification State" icon={<span className="text-lg">🏎️</span>} />
           <div className="mt-4 space-y-3">
