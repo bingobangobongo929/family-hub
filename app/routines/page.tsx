@@ -92,6 +92,14 @@ export default function RoutinesPage() {
   const touchStartPos = useRef<{ x: number, y: number } | null>(null) // Track touch start for movement detection
   const lastCompletionTime = useRef<number>(0) // Track last completion for cooldown
 
+  // Focus Mode navigation - swipe between steps
+  const [focusedStepIndex, setFocusedStepIndex] = useState<number>(0) // Which step is currently in view
+  const focusSwipeStartX = useRef<number>(0)
+  const focusSwipeStartY = useRef<number>(0)
+  const [focusSwipeOffset, setFocusSwipeOffset] = useState(0)
+  const focusSwipeLocked = useRef<'horizontal' | 'vertical' | null>(null)
+  const FOCUS_SWIPE_THRESHOLD = 80 // pixels to trigger step change
+
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
   const today = new Date().toISOString().split('T')[0]
@@ -122,6 +130,8 @@ export default function RoutinesPage() {
         return today === 0 || today === 6 // Sat-Sun
       case 'custom':
         return routine.schedule_days?.includes(today) ?? true
+      case 'manual':
+        return false // Manual routines don't auto-apply - must be triggered
       default:
         return true
     }
@@ -1242,6 +1252,69 @@ export default function RoutinesPage() {
     })
   }
 
+  // Focus Mode swipe handlers - navigate between steps
+  const handleFocusSwipeStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    focusSwipeStartX.current = touch.clientX
+    focusSwipeStartY.current = touch.clientY
+    focusSwipeLocked.current = null
+    setFocusSwipeOffset(0)
+  }
+
+  const handleFocusSwipeMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0]
+    const dx = touch.clientX - focusSwipeStartX.current
+    const dy = touch.clientY - focusSwipeStartY.current
+
+    // Determine swipe direction if not locked
+    if (!focusSwipeLocked.current) {
+      if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+        focusSwipeLocked.current = Math.abs(dx) > Math.abs(dy) ? 'horizontal' : 'vertical'
+      }
+    }
+
+    // Only track horizontal swipes
+    if (focusSwipeLocked.current === 'horizontal') {
+      e.preventDefault() // Prevent scroll
+      setFocusSwipeOffset(dx)
+    }
+  }
+
+  const handleFocusSwipeEnd = (visibleStepsCount: number) => {
+    if (focusSwipeLocked.current === 'horizontal') {
+      if (focusSwipeOffset < -FOCUS_SWIPE_THRESHOLD && focusedStepIndex < visibleStepsCount - 1) {
+        // Swipe left - next step
+        setFocusedStepIndex(prev => Math.min(prev + 1, visibleStepsCount - 1))
+        hapticLight()
+      } else if (focusSwipeOffset > FOCUS_SWIPE_THRESHOLD && focusedStepIndex > 0) {
+        // Swipe right - previous step
+        setFocusedStepIndex(prev => Math.max(prev - 1, 0))
+        hapticLight()
+      }
+    }
+    setFocusSwipeOffset(0)
+    focusSwipeLocked.current = null
+  }
+
+  // Reset focused step index when routine changes or auto-advance after completion
+  useEffect(() => {
+    if (selectedRoutine) {
+      const visibleSteps = getVisibleSteps(selectedRoutine).filter(s => !isStepSkipped(s.id))
+      const routineMembers = selectedRoutine.members || []
+
+      // Find first incomplete step
+      let firstIncompleteIndex = visibleSteps.findIndex(step => {
+        const stepMembers = getStepMembers(step, routineMembers)
+        return !stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
+      })
+
+      // If all complete, stay on last step
+      if (firstIncompleteIndex === -1) firstIncompleteIndex = Math.max(0, visibleSteps.length - 1)
+
+      setFocusedStepIndex(firstIncompleteIndex)
+    }
+  }, [selectedRoutine?.id]) // Only reset when routine changes
+
   // Drag and drop handlers for routine reordering
   const handleDragStart = (e: React.DragEvent, routineId: string) => {
     setDraggingRoutine(routineId)
@@ -1579,40 +1652,67 @@ export default function RoutinesPage() {
 
           {/* ====================================================================
               MOBILE FOCUS MODE - Toddler-proof single-step view
-              Shows only current step, no scrolling, huge tap targets
+              Shows current step with swipe navigation, timeline header
               ==================================================================== */}
           {isMobile && selectedRoutine && (() => {
-            const currentStep = getCurrentStep(selectedRoutine)
             const routineComplete = isRoutineComplete(selectedRoutine)
             const visibleSteps = getVisibleSteps(selectedRoutine).filter(s => !isStepSkipped(s.id))
-            const currentStepIndex = currentStep ? visibleSteps.findIndex(s => s.id === currentStep.id) : visibleSteps.length
-            const currentStepMembers = currentStep ? getStepMembers(currentStep, selectedRoutine.members || []) : []
-            const remainingSteps = visibleSteps.length - currentStepIndex - 1
+
+            // Clamp focusedStepIndex to valid range
+            const safeIndex = Math.max(0, Math.min(focusedStepIndex, visibleSteps.length - 1))
+            const focusedStep = visibleSteps[safeIndex]
+            const focusedStepMembers = focusedStep ? getStepMembers(focusedStep, selectedRoutine.members || []) : []
 
             return (
               <div
                 className="min-h-[60vh] flex flex-col select-none"
                 style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                onTouchStart={handleFocusSwipeStart}
+                onTouchMove={handleFocusSwipeMove}
+                onTouchEnd={() => handleFocusSwipeEnd(visibleSteps.length)}
               >
-                {/* Progress dots */}
-                <div className="flex items-center justify-center gap-2 mb-6">
+                {/* Timeline header with emojis - tappable */}
+                <div className="flex items-center justify-center gap-1 mb-4 px-2 overflow-x-auto">
                   {visibleSteps.map((step, idx) => {
                     const stepMembers = getStepMembers(step, selectedRoutine.members || [])
                     const stepDone = stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
-                    const isCurrent = currentStep?.id === step.id
+                    const isFocused = idx === safeIndex
+
                     return (
-                      <div
+                      <button
                         key={step.id}
-                        className={`rounded-full transition-all duration-300 ${
-                          stepDone
-                            ? 'w-3 h-3 bg-green-500'
-                            : isCurrent
-                            ? 'w-4 h-4 bg-violet-500 animate-pulse'
-                            : 'w-2 h-2 bg-slate-300 dark:bg-slate-600'
+                        onClick={() => {
+                          setFocusedStepIndex(idx)
+                          hapticLight()
+                        }}
+                        className={`flex flex-col items-center p-1.5 rounded-xl transition-all duration-200 min-w-[44px] ${
+                          isFocused
+                            ? 'bg-violet-100 dark:bg-violet-900/50 scale-110 shadow-md'
+                            : stepDone
+                            ? 'bg-green-50 dark:bg-green-900/30 opacity-80'
+                            : 'opacity-50'
                         }`}
-                      />
+                      >
+                        <span className={`text-xl ${stepDone && !isFocused ? 'grayscale' : ''}`}>
+                          {stepDone && !isFocused ? '✓' : step.emoji}
+                        </span>
+                        <span className={`w-2 h-2 rounded-full mt-1 ${
+                          stepDone ? 'bg-green-500' : isFocused ? 'bg-violet-500' : 'bg-slate-300 dark:bg-slate-600'
+                        }`} />
+                      </button>
                     )
                   })}
+                </div>
+
+                {/* Swipe hint */}
+                <div className="text-center text-xs text-slate-400 dark:text-slate-500 mb-4">
+                  {focusSwipeOffset !== 0 ? (
+                    <span className="text-violet-500">
+                      {focusSwipeOffset < 0 ? '→ Next' : '← Previous'}
+                    </span>
+                  ) : (
+                    <span>Swipe to see other steps</span>
+                  )}
                 </div>
 
                 {routineComplete ? (
@@ -1642,24 +1742,32 @@ export default function RoutinesPage() {
                       ))}
                     </div>
                   </div>
-                ) : currentStep ? (
-                  /* Current step - Focus Mode */
-                  <div className="flex-1 flex flex-col items-center justify-center">
+                ) : focusedStep ? (
+                  /* Focused step - swipeable Focus Mode */
+                  <div
+                    className="flex-1 flex flex-col items-center justify-center transition-transform duration-200"
+                    style={{ transform: `translateX(${focusSwipeOffset * 0.3}px)` }}
+                  >
                     {/* Big emoji */}
-                    <div className={`text-7xl mb-4 ${celebratingStep === currentStep.id ? 'animate-bounce' : ''}`}>
-                      {currentStep.emoji}
+                    <div className={`text-7xl mb-4 ${celebratingStep === focusedStep.id ? 'animate-bounce' : ''}`}>
+                      {focusedStep.emoji}
                     </div>
 
                     {/* Step title */}
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6 text-center px-4">
-                      {currentStep.title}
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center px-4">
+                      {focusedStep.title}
                     </h2>
+
+                    {/* Step counter */}
+                    <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">
+                      Step {safeIndex + 1} of {visibleSteps.length}
+                    </p>
 
                     {/* Large avatar buttons - 80px minimum */}
                     <div className="flex items-center justify-center gap-6 flex-wrap px-4">
-                      {currentStepMembers.map(member => {
-                        const memberDone = isStepCompleteForMember(currentStep.id, member.id)
-                        const pressKey = `${currentStep.id}:${member.id}`
+                      {focusedStepMembers.map(member => {
+                        const memberDone = isStepCompleteForMember(focusedStep.id, member.id)
+                        const pressKey = `${focusedStep.id}:${member.id}`
                         const isLongPressing = longPressActive === pressKey
 
                         // Calculate countdown for undo (5 seconds)
@@ -1671,11 +1779,16 @@ export default function RoutinesPage() {
                         return (
                           <div key={member.id} className="flex flex-col items-center select-none">
                             <button
-                              onClick={(e) => handleMemberClick(e, currentStep.id, member.id)}
-                              onTouchStart={(e) => handleStepPressStart(e, currentStep.id, member.id)}
-                              onTouchMove={(e) => handleStepPressMove(e, currentStep.id, member.id)}
-                              onTouchEnd={() => handleStepPressEnd(currentStep.id, member.id)}
-                              onTouchCancel={() => handleStepPressCancel(currentStep.id, member.id)}
+                              onClick={(e) => handleMemberClick(e, focusedStep.id, member.id)}
+                              onTouchStart={(e) => {
+                                // Only handle if not swiping
+                                if (!focusSwipeLocked.current) {
+                                  handleStepPressStart(e, focusedStep.id, member.id)
+                                }
+                              }}
+                              onTouchMove={(e) => handleStepPressMove(e, focusedStep.id, member.id)}
+                              onTouchEnd={() => handleStepPressEnd(focusedStep.id, member.id)}
+                              onTouchCancel={() => handleStepPressCancel(focusedStep.id, member.id)}
                               onContextMenu={(e) => e.preventDefault()}
                               disabled={celebrationPause}
                               style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
@@ -1746,11 +1859,11 @@ export default function RoutinesPage() {
                       })}
                     </div>
 
-                    {/* Remaining steps indicator */}
-                    {remainingSteps > 0 && (
-                      <div className="mt-8 text-center">
-                        <span className="text-slate-400 dark:text-slate-500 text-sm">
-                          {remainingSteps} more step{remainingSteps > 1 ? 's' : ''} to go
+                    {/* Navigation hint when step is complete */}
+                    {focusedStepMembers.every(m => isStepCompleteForMember(focusedStep.id, m.id)) && safeIndex < visibleSteps.length - 1 && (
+                      <div className="mt-6 text-center animate-pulse">
+                        <span className="text-violet-500 dark:text-violet-400 text-sm font-medium">
+                          ← Swipe for next step →
                         </span>
                       </div>
                     )}

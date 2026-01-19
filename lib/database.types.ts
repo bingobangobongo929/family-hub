@@ -310,7 +310,8 @@ export function getChoreCategoryConfig(categoryId: string) {
 // ============================================
 // ROUTINES
 // ============================================
-export type ScheduleType = 'daily' | 'weekdays' | 'weekends' | 'custom'
+export type ScheduleType = 'daily' | 'weekdays' | 'weekends' | 'custom' | 'manual'
+export type CompletionMode = 'sequential' | 'flexible'
 
 export interface Routine {
   id: string
@@ -322,8 +323,9 @@ export interface Routine {
   points_reward: number          // Stars awarded when all steps completed
   is_active: boolean
   sort_order: number
-  schedule_type: ScheduleType    // When routine applies: daily, weekdays, weekends, custom
+  schedule_type: ScheduleType    // When routine applies: daily, weekdays, weekends, custom, manual
   schedule_days: number[] | null // For custom schedules: [0,1,2,3,4,5,6] where 0=Sun
+  completion_mode: CompletionMode // sequential = must complete in order, flexible = any order
   created_at: string
   updated_at: string
   // Legacy field - use routine_members junction table for multi-member support
@@ -339,6 +341,12 @@ export const SCHEDULE_TYPES = [
   { id: 'weekdays' as const, label: 'Weekdays (Mon-Fri)', emoji: '💼' },
   { id: 'weekends' as const, label: 'Weekends (Sat-Sun)', emoji: '🌅' },
   { id: 'custom' as const, label: 'Custom Days', emoji: '⚙️' },
+  { id: 'manual' as const, label: 'Manual (On Demand)', emoji: '👆' },
+]
+
+export const COMPLETION_MODES = [
+  { id: 'sequential' as const, label: 'In Order', emoji: '1️⃣', description: 'Steps must be done in sequence' },
+  { id: 'flexible' as const, label: 'Any Order', emoji: '🔀', description: 'Complete steps in any order' },
 ]
 
 export type InsertRoutine = Omit<Routine, 'id' | 'created_at' | 'updated_at' | 'steps' | 'members'>
