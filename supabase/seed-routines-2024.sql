@@ -14,22 +14,12 @@
 
 DO $$
 DECLARE
-  v_user_id UUID;
+  v_user_id UUID := '02469f58-7ac6-46e9-8fef-7b624dad3855';
   v_olivia_id UUID;
   v_ellie_id UUID;
   v_routine_id UUID;
   v_step_id UUID;
 BEGIN
-  -- Get the authenticated user (you may need to hardcode this or run as that user)
-  -- Option 1: Use current authenticated user
-  v_user_id := auth.uid();
-
-  -- Option 2: If running as admin, find user by email (uncomment and modify):
-  -- SELECT id INTO v_user_id FROM auth.users WHERE email = 'your-email@example.com';
-
-  IF v_user_id IS NULL THEN
-    RAISE EXCEPTION 'No authenticated user found. Run this while logged in or specify user ID.';
-  END IF;
 
   -- Find Olivia and Ellie by name
   SELECT id INTO v_olivia_id FROM family_members

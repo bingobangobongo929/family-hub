@@ -1541,10 +1541,10 @@ export default function RoutinesPage() {
 
       {/* Selected Routine - Simple Checklist */}
       {selectedRoutine && (
-        <Card className="p-3 sm:p-6">
-          <div className="flex items-center justify-between mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center text-xl sm:text-3xl ${
+        <Card className="p-2 sm:p-6">
+          <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl flex items-center justify-center text-lg sm:text-3xl ${
                 selectedRoutine.type === 'morning'
                   ? 'bg-gradient-to-br from-amber-400 to-orange-500'
                   : selectedRoutine.type === 'evening'
@@ -1554,12 +1554,12 @@ export default function RoutinesPage() {
                 {selectedRoutine.emoji}
               </div>
               <div>
-                <h2 className="text-base sm:text-xl font-bold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</h2>
-                <div className="flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-                  {selectedRoutine.type === 'morning' ? <Sun className="w-3 h-3 sm:w-4 sm:h-4 text-amber-500" /> : <Moon className="w-3 h-3 sm:w-4 sm:h-4 text-indigo-500" />}
+                <h2 className="text-sm sm:text-xl font-bold text-slate-800 dark:text-slate-100">{selectedRoutine.title}</h2>
+                <div className="flex items-center gap-1.5 sm:gap-3 text-xs text-slate-500 dark:text-slate-400">
+                  {selectedRoutine.type === 'morning' ? <Sun className="w-3 h-3 text-amber-500" /> : <Moon className="w-3 h-3 text-indigo-500" />}
                   {selectedRoutine.points_reward > 0 && (
-                    <span className="flex items-center gap-1 text-amber-600">
-                      <Star className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <span className="flex items-center gap-0.5 text-amber-600">
+                      <Star className="w-3 h-3" />
                       +{selectedRoutine.points_reward}
                     </span>
                   )}
@@ -1665,14 +1665,14 @@ export default function RoutinesPage() {
 
             return (
               <div
-                className="min-h-[60vh] flex flex-col select-none"
+                className="flex flex-col select-none"
                 style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                 onTouchStart={handleFocusSwipeStart}
                 onTouchMove={handleFocusSwipeMove}
                 onTouchEnd={() => handleFocusSwipeEnd(visibleSteps.length)}
               >
-                {/* Timeline header with emojis - tappable */}
-                <div className="flex items-center justify-center gap-1 mb-4 px-2 overflow-x-auto">
+                {/* Compact timeline header with emojis - tappable */}
+                <div className="flex items-center justify-center gap-0.5 mb-2 px-1 overflow-x-auto">
                   {visibleSteps.map((step, idx) => {
                     const stepMembers = getStepMembers(step, selectedRoutine.members || [])
                     const stepDone = stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
@@ -1685,49 +1685,32 @@ export default function RoutinesPage() {
                           setFocusedStepIndex(idx)
                           hapticLight()
                         }}
-                        className={`flex flex-col items-center p-1.5 rounded-xl transition-all duration-200 min-w-[44px] ${
+                        className={`flex flex-col items-center p-1 rounded-lg transition-all duration-200 min-w-[40px] ${
                           isFocused
-                            ? 'bg-violet-100 dark:bg-violet-900/50 scale-110 shadow-md'
+                            ? 'bg-violet-100 dark:bg-violet-900/50 scale-105'
                             : stepDone
-                            ? 'bg-green-50 dark:bg-green-900/30 opacity-80'
-                            : 'opacity-50'
+                            ? 'bg-green-50 dark:bg-green-900/30 opacity-70'
+                            : 'opacity-40'
                         }`}
                       >
-                        <span className={`text-xl ${stepDone && !isFocused ? 'grayscale' : ''}`}>
+                        <span className={`text-lg ${stepDone && !isFocused ? 'grayscale' : ''}`}>
                           {stepDone && !isFocused ? '✓' : step.emoji}
                         </span>
-                        <span className={`w-2 h-2 rounded-full mt-1 ${
-                          stepDone ? 'bg-green-500' : isFocused ? 'bg-violet-500' : 'bg-slate-300 dark:bg-slate-600'
-                        }`} />
                       </button>
                     )
                   })}
                 </div>
 
-                {/* Swipe hint */}
-                <div className="text-center text-xs text-slate-400 dark:text-slate-500 mb-4">
-                  {focusSwipeOffset !== 0 ? (
-                    <span className="text-violet-500">
-                      {focusSwipeOffset < 0 ? '→ Next' : '← Previous'}
-                    </span>
-                  ) : (
-                    <span>Swipe to see other steps</span>
-                  )}
-                </div>
-
                 {routineComplete ? (
-                  /* All done celebration */
-                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                    <div className="text-8xl mb-4 animate-bounce">
+                  /* All done celebration - compact */
+                  <div className="flex flex-col items-center justify-center text-center py-4">
+                    <div className="text-6xl mb-2 animate-bounce">
                       {selectedRoutine.type === 'morning' ? '🌟' : '🌙'}
                     </div>
-                    <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
-                      All done!
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">
+                      All done! 🎉
                     </h2>
-                    <p className="text-lg text-slate-500 dark:text-slate-400">
-                      Great job everyone! 🎉
-                    </p>
-                    <div className="flex items-center gap-3 mt-6">
+                    <div className="flex items-center gap-2 mt-3">
                       {selectedRoutine.members?.map(m => (
                         <div key={m.id} className="relative">
                           <AvatarDisplay
@@ -1735,36 +1718,32 @@ export default function RoutinesPage() {
                             emoji={m.avatar}
                             name={m.name}
                             color={m.color}
-                            size="lg"
+                            size="md"
                           />
-                          <span className="absolute -bottom-1 -right-1 text-xl">⭐</span>
+                          <span className="absolute -bottom-1 -right-1 text-sm">⭐</span>
                         </div>
                       ))}
                     </div>
                   </div>
                 ) : focusedStep ? (
-                  /* Focused step - swipeable Focus Mode */
+                  /* Focused step - compact swipeable Focus Mode */
                   <div
-                    className="flex-1 flex flex-col items-center justify-center transition-transform duration-200"
+                    className="flex flex-col items-center transition-transform duration-200 py-2"
                     style={{ transform: `translateX(${focusSwipeOffset * 0.3}px)` }}
                   >
-                    {/* Big emoji */}
-                    <div className={`text-7xl mb-4 ${celebratingStep === focusedStep.id ? 'animate-bounce' : ''}`}>
+                    {/* Emoji + Title on same area */}
+                    <div className={`text-5xl mb-1 ${celebratingStep === focusedStep.id ? 'animate-bounce' : ''}`}>
                       {focusedStep.emoji}
                     </div>
-
-                    {/* Step title */}
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2 text-center px-4">
+                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center px-4">
                       {focusedStep.title}
                     </h2>
-
-                    {/* Step counter */}
-                    <p className="text-sm text-slate-400 dark:text-slate-500 mb-6">
-                      Step {safeIndex + 1} of {visibleSteps.length}
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mb-3">
+                      {safeIndex + 1} / {visibleSteps.length}
                     </p>
 
-                    {/* Large avatar buttons - 80px minimum */}
-                    <div className="flex items-center justify-center gap-6 flex-wrap px-4">
+                    {/* Avatar buttons - compact but tappable */}
+                    <div className="flex items-center justify-center gap-4 flex-wrap px-2">
                       {focusedStepMembers.map(member => {
                         const memberDone = isStepCompleteForMember(focusedStep.id, member.id)
                         const pressKey = `${focusedStep.id}:${member.id}`

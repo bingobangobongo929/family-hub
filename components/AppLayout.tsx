@@ -8,7 +8,6 @@ import { usePush } from '@/lib/push-context'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
-import LoadingScreen from './LoadingScreen'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
 import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
 
@@ -83,6 +82,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [loading, appReady])
 
+  // Hide the initial CSS loader when app is ready
+  useEffect(() => {
+    if (appReady) {
+      const loader = document.getElementById('initial-loader')
+      if (loader) {
+        loader.classList.add('hidden')
+        // Remove from DOM after transition completes
+        setTimeout(() => loader.remove(), 300)
+      }
+    }
+  }, [appReady])
+
   useEffect(() => {
     // Only redirect if Supabase is configured
     if (!loading && isSupabaseConfigured) {
@@ -111,9 +122,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false)
   }, [])
 
-  // Show loading screen while checking auth or app not ready
+  // Don't render anything while app is loading - CSS loader handles it
   if (!appReady && isSupabaseConfigured) {
-    return <LoadingScreen />
+    return null
   }
 
   // Login page - no sidebar

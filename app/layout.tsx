@@ -53,7 +53,75 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Inline CSS for instant loading screen - no React needed */}
+        <style dangerouslySetInnerHTML={{ __html: `
+          #initial-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f0fdfa 0%, #faf5f0 50%, #f0fdf4 100%);
+            transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+          }
+          #initial-loader.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+          }
+          #initial-loader .loader-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, #14b8a6, #65a30d);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            animation: pulse 1.5s ease-in-out infinite;
+          }
+          #initial-loader .loader-dots {
+            display: flex;
+            gap: 6px;
+            margin-top: 20px;
+          }
+          #initial-loader .loader-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #14b8a6;
+            animation: bounce 0.6s ease-in-out infinite;
+          }
+          #initial-loader .loader-dot:nth-child(2) { animation-delay: 0.15s; }
+          #initial-loader .loader-dot:nth-child(3) { animation-delay: 0.3s; }
+          @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(0.95); opacity: 0.8; }
+          }
+          @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+          }
+          @media (prefers-color-scheme: dark) {
+            #initial-loader {
+              background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            }
+          }
+        `}} />
+      </head>
       <body className={`${inter.variable} ${poppins.variable} font-sans`}>
+        {/* Instant loading screen - hidden by AppLayout when ready */}
+        <div id="initial-loader">
+          <div className="loader-icon">🏠</div>
+          <div className="loader-dots">
+            <div className="loader-dot"></div>
+            <div className="loader-dot"></div>
+            <div className="loader-dot"></div>
+          </div>
+        </div>
         <ThemeProvider>
           <I18nProvider>
             <AuthProvider>
