@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useDevice, getDeviceCSSVars } from '@/lib/device-context'
@@ -8,8 +8,9 @@ import { usePush } from '@/lib/push-context'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
-import { RefreshCw } from 'lucide-react'
+import LoadingScreen from './LoadingScreen'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
+import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -19,6 +20,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [appReady, setAppReady] = useState(false)
+  const hasRestoredRoute = useRef(false)
+  const initialLoadComplete = useRef(false)
 
   const isLoginPage = pathname === '/login'
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -31,6 +35,53 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setSettings(prev => ({ ...prev, ...JSON.parse(saved) }))
     }
   }, [])
+
+  // Save current route whenever pathname changes (for persistence)
+  useEffect(() => {
+    if (pathname && initialLoadComplete.current) {
+      saveCurrentRoute(pathname)
+    }
+  }, [pathname])
+
+  // Restore saved route on initial load
+  useEffect(() => {
+    if (!hasRestoredRoute.current && !loading && user) {
+      hasRestoredRoute.current = true
+      const savedRoute = getSavedRoute()
+
+      // If we're on homepage but have a saved route, restore it
+      if (savedRoute && pathname === '/' && savedRoute !== '/') {
+        console.log('[Route Restore] Restoring to:', savedRoute)
+        router.replace(savedRoute)
+      }
+
+      // Mark initial load as complete (so we start saving routes)
+      setTimeout(() => {
+        initialLoadComplete.current = true
+      }, 500)
+    }
+  }, [loading, user, pathname, router])
+
+  // App ready state - show loading screen until ready
+  useEffect(() => {
+    // Give a minimum display time for the loading screen (prevents flash)
+    const minDisplayTimer = setTimeout(() => {
+      if (!loading) {
+        setAppReady(true)
+      }
+    }, 300)
+
+    return () => clearTimeout(minDisplayTimer)
+  }, [loading])
+
+  // Also set ready when loading completes
+  useEffect(() => {
+    if (!loading && !appReady) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => setAppReady(true), 100)
+      return () => clearTimeout(timer)
+    }
+  }, [loading, appReady])
 
   useEffect(() => {
     // Only redirect if Supabase is configured
@@ -60,13 +111,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setSidebarOpen(false)
   }, [])
 
-  // Show loading spinner while checking auth
-  if (loading && isSupabaseConfigured) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-warm-50 to-warm-100 dark:from-slate-900 dark:to-slate-800">
-        <RefreshCw className="w-8 h-8 animate-spin text-teal-500" />
-      </div>
-    )
+  // Show loading screen while checking auth or app not ready
+  if (!appReady && isSupabaseConfigured) {
+    return <LoadingScreen />
   }
 
   // Login page - no sidebar
