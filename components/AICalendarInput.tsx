@@ -324,6 +324,12 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         hapticSuccess()
       }
     } catch (e: any) {
+      // If plugin not available, fall back to file input
+      if (e?.message && (e.message.includes('not implemented') || e.message.includes('only available on iOS'))) {
+        console.warn('[Camera] Native plugin not available, using file input')
+        fileInputRef.current?.click()
+        return
+      }
       // Show error to user if it's not just a cancellation
       if (e?.message && !e.message.includes('cancelled')) {
         setError(`Camera: ${e.message}`)
@@ -350,6 +356,12 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         hapticSuccess()
       }
     } catch (e: any) {
+      // If plugin not available, fall back to file input
+      if (e?.message && (e.message.includes('not implemented') || e.message.includes('only available on iOS'))) {
+        console.warn('[Photos] Native plugin not available, using file input')
+        fileInputRef.current?.click()
+        return
+      }
       // Show error to user if it's not just a cancellation
       if (e?.message && !e.message.includes('cancelled')) {
         setError(`Photos: ${e.message}`)
@@ -364,8 +376,8 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
     // Check if native iOS features are available
     if (!isNativeIOS()) {
-      setError('Document scanner is only available on iOS')
-      hapticError()
+      // Fall back to file input on non-iOS
+      fileInputRef.current?.click()
       return
     }
 
@@ -376,12 +388,44 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         hapticSuccess()
       }
     } catch (e: any) {
+      // If plugin not available, fall back to file input
+      if (e?.message && (e.message.includes('not implemented') || e.message.includes('only available on iOS'))) {
+        console.warn('[Scanner] Native plugin not available, using file input')
+        fileInputRef.current?.click()
+        return
+      }
       // Show error to user if it's not just a cancellation
       if (e?.message && !e.message.includes('cancelled')) {
         setError(`Scanner: ${e.message}`)
         hapticError()
       }
     }
+  }
+
+  // Helper to start web speech recognition
+  const startWebSpeech = () => {
+    if (!isWebSpeechAvailable()) {
+      setError('Voice input is not available on this device')
+      hapticError()
+      return
+    }
+
+    setIsRecording(true)
+    setVoiceText('')
+
+    startWebSpeechRecognition(
+      t('locale') === 'da' ? 'da-DK' : 'en-US',
+      (text, isFinal) => {
+        setVoiceText(text)
+        if (isFinal) {
+          setInputText(prev => prev ? `${prev}\n${text}` : text)
+        }
+      },
+      (error) => {
+        setError(error)
+        setIsRecording(false)
+      }
+    )
   }
 
   // Voice input handlers
@@ -418,31 +462,19 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         setIsRecording(false)
         listener.remove()
         hapticSuccess()
-      } catch (e) {
+      } catch (e: any) {
         setIsRecording(false)
+        // If plugin not available, fall back to Web Speech API
+        if (e?.message && (e.message.includes('not implemented') || e.message.includes('only available on iOS'))) {
+          console.warn('[Voice] Native plugin not available, using Web Speech API')
+          startWebSpeech()
+          return
+        }
         console.error('Voice recognition error:', e)
       }
-    } else if (isWebSpeechAvailable()) {
-      // Web Speech API fallback
-      setIsRecording(true)
-      setVoiceText('')
-
-      startWebSpeechRecognition(
-        t('locale') === 'da' ? 'da-DK' : 'en-US',
-        (text, isFinal) => {
-          setVoiceText(text)
-          if (isFinal) {
-            setInputText(prev => prev ? `${prev}\n${text}` : text)
-          }
-        },
-        (error) => {
-          setError(error)
-          setIsRecording(false)
-        }
-      )
     } else {
-      setError('Voice input is not available on this device')
-      hapticError()
+      // Web Speech API fallback for non-iOS
+      startWebSpeech()
     }
   }
 
