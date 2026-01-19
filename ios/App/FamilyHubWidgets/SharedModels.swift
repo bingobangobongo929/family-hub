@@ -12,8 +12,8 @@ struct AppGroupConstants {
 
 // MARK: - Shopping List Models
 struct ShoppingWidgetData: Codable {
-    let items: [ShoppingItem]
-    let lastUpdated: Date
+    var items: [ShoppingItem]
+    var lastUpdated: Date
 
     static let placeholder = ShoppingWidgetData(
         items: [
@@ -30,7 +30,7 @@ struct ShoppingItem: Codable, Identifiable {
     let name: String
     let quantity: Int?
     let unit: String?
-    let isCompleted: Bool
+    var isCompleted: Bool
     let category: String?
 }
 
@@ -69,8 +69,8 @@ struct CalendarEvent: Codable, Identifiable {
 
 // MARK: - Routines Models
 struct RoutinesWidgetData: Codable {
-    let routines: [RoutineStatus]
-    let lastUpdated: Date
+    var routines: [RoutineStatus]
+    var lastUpdated: Date
 
     static let placeholder = RoutinesWidgetData(
         routines: [
@@ -85,7 +85,7 @@ struct RoutineStatus: Codable, Identifiable {
     let id: String
     let title: String
     let emoji: String
-    let completedSteps: Int
+    var completedSteps: Int
     let totalSteps: Int
     let memberName: String
     let memberColor: String
@@ -192,7 +192,7 @@ struct DeepLinks {
 // MARK: - Color Extensions
 extension String {
     var asColor: (red: Double, green: Double, blue: Double)? {
-        var hex = self.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        let hex = self.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         if hex.count == 6 {
             var rgbValue: UInt64 = 0
             Scanner(string: hex).scanHexInt64(&rgbValue)
