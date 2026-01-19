@@ -6,6 +6,7 @@ import Speech
 import AVFoundation
 import WidgetKit
 import PhotosUI
+import SwiftUI  // Required for Xcode 26 - fixes PHPicker + WidgetKit conflict
 
 /// Native plugin for Family Hub providing iOS-specific features
 @objc(FamilyHubNativePlugin)
@@ -343,8 +344,6 @@ extension FamilyHubNativePlugin: VNDocumentCameraViewControllerDelegate {
 }
 
 // MARK: - Photo Picker Delegate
-import PhotosUI
-
 extension FamilyHubNativePlugin: PHPickerViewControllerDelegate {
     public func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
         picker.dismiss(animated: true)
