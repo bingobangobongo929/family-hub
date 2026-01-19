@@ -14,7 +14,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-15  # macOS 15 with Xcode 16 (iOS 18 SDK)
+    runs-on: macos-26  # macOS 26 with Xcode 26 (iOS 26 SDK) - required for App Store after April 2026
     timeout-minutes: 60
 
     steps:
