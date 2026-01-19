@@ -153,6 +153,9 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const [step, setStep] = useState<'input' | 'preview'>('input')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Auto-process flag for share extension content
+  const autoProcessPendingRef = useRef(false)
+
   // Voice input state
   const [isRecording, setIsRecording] = useState(false)
   const [voiceText, setVoiceText] = useState('')
@@ -180,17 +183,25 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
     try {
       const shared = await getSharedContent()
       if (shared.hasContent) {
+        let hasContent = false
         // Process shared images
         if (shared.images && shared.images.length > 0) {
           setImages(shared.images)
+          hasContent = true
         }
         // Process shared text
         if (shared.texts && shared.texts.length > 0) {
           setInputText(shared.texts.join('\n'))
+          hasContent = true
         }
         // Clear shared content after processing
         await clearSharedContent()
-        hapticSuccess()
+
+        // Flag for auto-processing if we received content
+        if (hasContent) {
+          autoProcessPendingRef.current = true
+          hapticSuccess()
+        }
       }
     } catch (e) {
       console.log('No shared content')
@@ -221,6 +232,22 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
     ]
     return eventKeywords.some(keyword => lowerText.includes(keyword))
   }
+
+  // Auto-process content from Share Extension after state is updated
+  useEffect(() => {
+    if (autoProcessPendingRef.current && (images.length > 0 || inputText) && !isProcessing) {
+      autoProcessPendingRef.current = false
+      // Small delay to ensure all state is settled
+      const timer = setTimeout(() => {
+        // Trigger the process button click programmatically
+        const processBtn = document.querySelector('[data-auto-process="true"]') as HTMLButtonElement
+        if (processBtn) {
+          processBtn.click()
+        }
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [images, inputText, isProcessing])
 
   const useClipboardText = () => {
     if (clipboardText) {
@@ -829,6 +856,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
                 onClick={handleProcess}
                 disabled={isProcessing || isRecording || (!inputText && images.length === 0)}
                 className="px-6 py-3 text-base"
+                data-auto-process="true"
               >
                 {isProcessing ? (
                   <>
