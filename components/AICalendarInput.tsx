@@ -309,42 +309,78 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   // Native camera handler
   const handleOpenCamera = async () => {
     hapticTap()
+
+    // Check if native iOS features are available
+    if (!isNativeIOS()) {
+      // Fallback to file input on non-iOS
+      fileInputRef.current?.click()
+      return
+    }
+
     try {
       const result = await openCamera()
       if (result.image.base64) {
         setImages(prev => [...prev, result.image.base64])
         hapticSuccess()
       }
-    } catch (e) {
-      console.log('Camera cancelled or not available')
+    } catch (e: any) {
+      // Show error to user if it's not just a cancellation
+      if (e?.message && !e.message.includes('cancelled')) {
+        setError(`Camera: ${e.message}`)
+        hapticError()
+      }
     }
   }
 
   // Native photo library handler
   const handleOpenPhotoLibrary = async () => {
     hapticTap()
+
+    // Check if native iOS features are available
+    if (!isNativeIOS()) {
+      // Fallback to file input on non-iOS
+      fileInputRef.current?.click()
+      return
+    }
+
     try {
       const result = await openPhotoLibrary(true) // Allow multiple
       if (result.images.length > 0) {
         setImages(prev => [...prev, ...result.images.map(img => img.base64)])
         hapticSuccess()
       }
-    } catch (e) {
-      console.log('Photo picker cancelled or not available')
+    } catch (e: any) {
+      // Show error to user if it's not just a cancellation
+      if (e?.message && !e.message.includes('cancelled')) {
+        setError(`Photos: ${e.message}`)
+        hapticError()
+      }
     }
   }
 
   // Document scanner handler
   const handleOpenDocumentScanner = async () => {
     hapticTap()
+
+    // Check if native iOS features are available
+    if (!isNativeIOS()) {
+      setError('Document scanner is only available on iOS')
+      hapticError()
+      return
+    }
+
     try {
       const result = await openDocumentScanner()
       if (result.images.length > 0) {
         setImages(prev => [...prev, ...result.images.map(img => img.base64)])
         hapticSuccess()
       }
-    } catch (e) {
-      console.log('Scanner cancelled or not available')
+    } catch (e: any) {
+      // Show error to user if it's not just a cancellation
+      if (e?.message && !e.message.includes('cancelled')) {
+        setError(`Scanner: ${e.message}`)
+        hapticError()
+      }
     }
   }
 
