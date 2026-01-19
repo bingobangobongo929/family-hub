@@ -314,23 +314,51 @@ export const recipeVaultSupabase = createClient(...) // Recipe Vault
 
 ## iOS App (Capacitor)
 
-### Setup
-The app uses Capacitor to wrap the web app for iOS distribution:
+### Build & Deployment
+The app uses a **GitHub Actions CI/CD workflow** for iOS builds - no local Xcode required:
 
-```bash
-npx cap sync ios    # Sync web assets to iOS
-npx cap open ios    # Open in Xcode
-```
+1. **Push to master** triggers `.github/workflows/ios-testflight.yml`
+2. Workflow runs on macOS 15 (Xcode 16, iOS 18 SDK)
+3. Automatically builds and uploads to TestFlight
+4. Build number uses `GITHUB_RUN_NUMBER`
+
+Triggers on changes to: `app/`, `components/`, `lib/`, `ios/`, `capacitor.config.ts`
+
+### Architecture
+- **Server Mode**: App loads web content from Vercel URL (not bundled)
+- **Native Code**: Swift plugins in `ios/App/App/Plugins/` for:
+  - Document scanner (VisionKit)
+  - Photo library picker
+  - Camera access
+  - Voice recognition (Speech framework)
+  - Widget data (App Group UserDefaults)
+  - Share extension support
+- **Widgets**: iOS home screen widgets in `ios/App/FamilyHubWidgets/`
+- **Share Extension**: `ios/App/FamilyHubShare/` for sharing to app
 
 ### Configuration (`capacitor.config.ts`)
-- **Server Mode**: Loads from Vercel URL (not bundled assets)
+- **App ID**: `app.familyhub.home`
+- **Server URL**: `https://family-hub-sage.vercel.app`
 - **Push Notifications**: Configured for APNs
-- **App ID**: `com.familyhub.app`
+
+### Native Plugin (`FamilyHubNativePlugin`)
+Located in `ios/App/App/Plugins/`:
+- `FamilyHubNativePlugin.swift` - Swift implementation
+- `FamilyHubNativePlugin.m` - Objective-C registration
+
+Methods: `openDocumentScanner`, `openPhotoLibrary`, `openCamera`, `startVoiceRecognition`, `stopVoiceRecognition`, `checkVoicePermission`, `requestVoicePermission`, `getSharedContent`, `clearSharedContent`, `checkReduceMotion`, `writeWidgetData`, `refreshWidgets`
 
 ### Push Notifications
 - Event reminders (15 min before)
 - Bin day reminders (7pm night before)
 - Chore reminders (9am daily)
+- F1 news updates
+- Shopping list changes
+
+### App Store Submission
+- Builds auto-upload to TestFlight via Fastlane
+- Provisioning profiles needed for: main app, widgets extension, share extension
+- Code signing handled in GitHub workflow with secrets
 
 See `IOS_SETUP.md` for complete setup guide.
 
