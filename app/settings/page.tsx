@@ -257,7 +257,7 @@ function PushNotificationSettings() {
             </div>
           )}
           <a
-            href="/settings/notifications/debug"
+            href="/debug"
             className="mt-3 inline-flex items-center gap-2 text-xs text-teal-600 dark:text-teal-400 hover:underline"
           >
             <Settings className="w-3 h-3" />
