@@ -4,24 +4,43 @@ import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 export async function GET(request: NextRequest) {
-  const cookieStore = await cookies();
+  // Try Bearer token auth first, then fall back to cookie auth
+  const authHeader = request.headers.get('authorization');
+  let user = null;
 
-  // Create authenticated client to get current user
-  const supabaseAuth = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-      },
+  if (authHeader?.startsWith('Bearer ')) {
+    const supabaseAuth = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user: tokenUser }, error } = await supabaseAuth.auth.getUser(
+      authHeader.substring(7)
+    );
+    if (!error && tokenUser) {
+      user = tokenUser;
     }
-  );
+  }
 
-  const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+  if (!user) {
+    const cookieStore = await cookies();
+    const supabaseAuth = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+        },
+      }
+    );
+    const { data: { user: cookieUser }, error } = await supabaseAuth.auth.getUser();
+    if (!error && cookieUser) {
+      user = cookieUser;
+    }
+  }
 
-  if (authError || !user) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
