@@ -27,6 +27,16 @@
 		FHW0001010 /* QuickActionsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0000010 /* QuickActionsWidget.swift */; };
 		FHW0001011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = FHW0000011 /* Assets.xcassets */; };
 		FHW0001012 /* FamilyHubWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FHW0002001 /* FamilyHubWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FHW0001013 /* InteractiveWidgetIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0000014 /* InteractiveWidgetIntents.swift */; };
+		FHW0101001 /* FamilyHubNativePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100001 /* FamilyHubNativePlugin.swift */; };
+		FHW0101002 /* FamilyHubNativePlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100002 /* FamilyHubNativePlugin.m */; };
+		FHW0101003 /* LiveActivityPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100003 /* LiveActivityPlugin.swift */; };
+		FHW0101004 /* LiveActivityPlugin.m in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100004 /* LiveActivityPlugin.m */; };
+		FHW0101005 /* FamilyHubIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100005 /* FamilyHubIntents.swift */; };
+		FHW0101006 /* TimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHW0100006 /* TimerLiveActivity.swift */; };
+		FHS0001001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = FHS0000001 /* ShareViewController.swift */; };
+		FHS0001002 /* MainInterface.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = FHS0000004 /* MainInterface.storyboard */; };
+		FHS0001003 /* FamilyHubShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FHS0002001 /* FamilyHubShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -36,6 +46,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = FHW0004001;
 			remoteInfo = FamilyHubWidgetsExtension;
+		};
+		FHS0005001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FHS0004001;
+			remoteInfo = FamilyHubShare;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +64,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				FHW0001012 /* FamilyHubWidgetsExtension.appex in Embed Foundation Extensions */,
+				FHS0001003 /* FamilyHubShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -78,7 +96,19 @@
 		FHW0000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		FHW0000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		FHW0000013 /* FamilyHubWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FamilyHubWidgets.entitlements; sourceTree = "<group>"; };
+		FHW0000014 /* InteractiveWidgetIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InteractiveWidgetIntents.swift; sourceTree = "<group>"; };
 		FHW0002001 /* FamilyHubWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FamilyHubWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		FHW0100001 /* FamilyHubNativePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyHubNativePlugin.swift; sourceTree = "<group>"; };
+		FHW0100002 /* FamilyHubNativePlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FamilyHubNativePlugin.m; sourceTree = "<group>"; };
+		FHW0100003 /* LiveActivityPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityPlugin.swift; sourceTree = "<group>"; };
+		FHW0100004 /* LiveActivityPlugin.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LiveActivityPlugin.m; sourceTree = "<group>"; };
+		FHW0100005 /* FamilyHubIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyHubIntents.swift; sourceTree = "<group>"; };
+		FHW0100006 /* TimerLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimerLiveActivity.swift; sourceTree = "<group>"; };
+		FHS0000001 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		FHS0000002 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		FHS0000003 /* FamilyHubShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = FamilyHubShare.entitlements; sourceTree = "<group>"; };
+		FHS0000004 /* MainInterface.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = MainInterface.storyboard; path = Base.lproj/MainInterface.storyboard; sourceTree = "<group>"; };
+		FHS0002001 /* FamilyHubShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FamilyHubShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,6 +127,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FHS0007001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -106,6 +143,7 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				FHW0007001 /* FamilyHubWidgets */,
+				FHS0003001 /* FamilyHubShare */,
 				504EC3051FED79650016851F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -115,6 +153,7 @@
 			children = (
 				504EC3041FED79650016851F /* App.app */,
 				FHW0002001 /* FamilyHubWidgetsExtension.appex */,
+				FHS0002001 /* FamilyHubShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -131,6 +170,9 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				FHW0102001 /* Plugins */,
+				FHW0102002 /* Intents */,
+				FHW0102003 /* LiveActivity */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -149,10 +191,49 @@
 				FHW0000008 /* F1CountdownWidget.swift */,
 				FHW0000009 /* BinDayWidget.swift */,
 				FHW0000010 /* QuickActionsWidget.swift */,
+				FHW0000014 /* InteractiveWidgetIntents.swift */,
 				FHW0000011 /* Assets.xcassets */,
 				FHW0000012 /* Info.plist */,
 			);
 			path = FamilyHubWidgets;
+			sourceTree = "<group>";
+		};
+		FHW0102001 /* Plugins */ = {
+			isa = PBXGroup;
+			children = (
+				FHW0100001 /* FamilyHubNativePlugin.swift */,
+				FHW0100002 /* FamilyHubNativePlugin.m */,
+				FHW0100003 /* LiveActivityPlugin.swift */,
+				FHW0100004 /* LiveActivityPlugin.m */,
+			);
+			path = Plugins;
+			sourceTree = "<group>";
+		};
+		FHW0102002 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				FHW0100005 /* FamilyHubIntents.swift */,
+			);
+			path = Intents;
+			sourceTree = "<group>";
+		};
+		FHW0102003 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				FHW0100006 /* TimerLiveActivity.swift */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		FHS0003001 /* FamilyHubShare */ = {
+			isa = PBXGroup;
+			children = (
+				FHS0000001 /* ShareViewController.swift */,
+				FHS0000004 /* MainInterface.storyboard */,
+				FHS0000002 /* Info.plist */,
+				FHS0000003 /* FamilyHubShare.entitlements */,
+			);
+			path = FamilyHubShare;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -171,6 +252,7 @@
 			);
 			dependencies = (
 				FHW0003002 /* PBXTargetDependency */,
+				FHS0005002 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -197,6 +279,23 @@
 			productReference = FHW0002001 /* FamilyHubWidgetsExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		FHS0004001 /* FamilyHubShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FHS0009001 /* Build configuration list for PBXNativeTarget "FamilyHubShare" */;
+			buildPhases = (
+				FHS0006001 /* Sources */,
+				FHS0007001 /* Frameworks */,
+				FHS0008001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FamilyHubShare;
+			productName = FamilyHubShare;
+			productReference = FHS0002001 /* FamilyHubShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -212,6 +311,10 @@
 						ProvisioningStyle = Automatic;
 					};
 					FHW0004001 = {
+						CreatedOnToolsVersion = 15.0;
+						ProvisioningStyle = Automatic;
+					};
+					FHS0004001 = {
 						CreatedOnToolsVersion = 15.0;
 						ProvisioningStyle = Automatic;
 					};
@@ -235,6 +338,7 @@
 			targets = (
 				504EC3031FED79650016851F /* App */,
 				FHW0004001 /* FamilyHubWidgetsExtension */,
+				FHS0004001 /* FamilyHubShare */,
 			);
 		};
 /* End PBXProject section */
@@ -261,6 +365,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		FHS0008001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FHS0001002 /* MainInterface.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -269,6 +381,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				FHW0101001 /* FamilyHubNativePlugin.swift in Sources */,
+				FHW0101002 /* FamilyHubNativePlugin.m in Sources */,
+				FHW0101003 /* LiveActivityPlugin.swift in Sources */,
+				FHW0101004 /* LiveActivityPlugin.m in Sources */,
+				FHW0101005 /* FamilyHubIntents.swift in Sources */,
+				FHW0101006 /* TimerLiveActivity.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,6 +404,15 @@
 				FHW0001008 /* F1CountdownWidget.swift in Sources */,
 				FHW0001009 /* BinDayWidget.swift in Sources */,
 				FHW0001010 /* QuickActionsWidget.swift in Sources */,
+				FHW0001013 /* InteractiveWidgetIntents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FHS0006001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FHS0001001 /* ShareViewController.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -296,6 +423,11 @@
 			isa = PBXTargetDependency;
 			target = FHW0004001 /* FamilyHubWidgetsExtension */;
 			targetProxy = FHW0003001 /* PBXContainerItemProxy */;
+		};
+		FHS0005002 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FHS0004001 /* FamilyHubShare */;
+			targetProxy = FHS0005001 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -530,6 +662,58 @@
 			};
 			name = Release;
 		};
+		FHS0010001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FamilyHubShare/FamilyHubShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FamilyHubShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Family Hub";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.familyhub.home.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FHS0010002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = FamilyHubShare/FamilyHubShare.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FamilyHubShare/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Family Hub";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.familyhub.home.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -556,6 +740,15 @@
 			buildConfigurations = (
 				FHW0011001 /* Debug */,
 				FHW0011002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FHS0009001 /* Build configuration list for PBXNativeTarget "FamilyHubShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FHS0010001 /* Debug */,
+				FHS0010002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
