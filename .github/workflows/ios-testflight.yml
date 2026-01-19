@@ -103,7 +103,9 @@ jobs:
                   signingStyle: "manual",
                   teamID: ENV["APPLE_TEAM_ID"],
                   provisioningProfiles: {
-                    "app.familyhub.home" => "Family Hub App Store"
+                    "app.familyhub.home" => "Family Hub App Store",
+                    "app.familyhub.home.widgets" => "Family Hub Widgets App Store",
+                    "app.familyhub.home.share" => "Family Hub Share App Store"
                   }
                 }
               )
@@ -139,16 +141,28 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-      - name: Install Provisioning Profile
+      - name: Install Provisioning Profiles
         env:
           PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          WIDGETS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_WIDGETS_PROVISIONING_PROFILE_BASE64 }}
+          SHARE_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_SHARE_PROVISIONING_PROFILE_BASE64 }}
         run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          # Install main app profile
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           echo "$PROVISIONING_PROFILE_BASE64" | base64 -D > $PP_PATH
-
-          # Install provisioning profile
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          # Install widgets extension profile
+          WIDGETS_PP_PATH=$RUNNER_TEMP/widgets_pp.mobileprovision
+          echo "$WIDGETS_PROVISIONING_PROFILE_BASE64" | base64 -D > $WIDGETS_PP_PATH
+          cp $WIDGETS_PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          # Install share extension profile
+          SHARE_PP_PATH=$RUNNER_TEMP/share_pp.mobileprovision
+          echo "$SHARE_PROVISIONING_PROFILE_BASE64" | base64 -D > $SHARE_PP_PATH
+          cp $SHARE_PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
       - name: Build and Upload to TestFlight
         env:
