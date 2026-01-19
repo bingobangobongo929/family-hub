@@ -14,4 +14,6 @@ CAP_PLUGIN(FamilyHubNativePlugin, "FamilyHubNative",
     CAP_PLUGIN_METHOD(getSharedContent, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(clearSharedContent, CAPPluginReturnPromise);
     CAP_PLUGIN_METHOD(checkReduceMotion, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(writeWidgetData, CAPPluginReturnPromise);
+    CAP_PLUGIN_METHOD(refreshWidgets, CAPPluginReturnPromise);
 )

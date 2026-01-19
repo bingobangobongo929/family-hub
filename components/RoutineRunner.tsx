@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Check, ChevronRight, Star, Moon, Sun, Clock, PartyPopper } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -35,8 +35,67 @@ export default function RoutineRunner({ routine, completions: initialCompletions
   const [showCelebration, setShowCelebration] = useState(false)
   const [celebratingMember, setCelebratingMember] = useState<FamilyMember | null>(null)
   const [routineComplete, setRoutineComplete] = useState(false)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
   const today = new Date().toISOString().split('T')[0]
+
+  // Play celebration sound using Web Audio API
+  const playCelebrationSound = useCallback(() => {
+    try {
+      // Create or reuse audio context
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      }
+      const ctx = audioContextRef.current
+
+      // Resume if suspended (browser autoplay policy)
+      if (ctx.state === 'suspended') {
+        ctx.resume()
+      }
+
+      // Play a triumphant ascending arpeggio
+      const notes = [523.25, 659.25, 783.99, 1046.50] // C5, E5, G5, C6
+      const now = ctx.currentTime
+
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0, now + i * 0.15)
+        gain.gain.linearRampToValueAtTime(0.3, now + i * 0.15 + 0.05)
+        gain.gain.linearRampToValueAtTime(0, now + i * 0.15 + 0.4)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        osc.start(now + i * 0.15)
+        osc.stop(now + i * 0.15 + 0.5)
+      })
+
+      // Final flourish chord
+      const chordFreqs = [523.25, 659.25, 783.99, 1046.50]
+      chordFreqs.forEach(freq => {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'triangle'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0, now + 0.6)
+        gain.gain.linearRampToValueAtTime(0.15, now + 0.7)
+        gain.gain.linearRampToValueAtTime(0, now + 1.5)
+
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+
+        osc.start(now + 0.6)
+        osc.stop(now + 1.6)
+      })
+    } catch (e) {
+      console.log('Could not play celebration sound:', e)
+    }
+  }, [])
 
   useEffect(() => {
     setMounted(true)
@@ -133,6 +192,9 @@ export default function RoutineRunner({ routine, completions: initialCompletions
   // Handle routine completion
   const handleRoutineComplete = async () => {
     setRoutineComplete(true)
+
+    // Play celebration sound
+    playCelebrationSound()
 
     // Award stars to members with stars_enabled
     if (rewardsEnabled && routine.points_reward > 0) {

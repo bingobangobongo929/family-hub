@@ -199,7 +199,7 @@ export default function PhotoUpload({
       <button
         type="button"
         onClick={() => setShowOptions(true)}
-        className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center transition-all hover:scale-105 active:scale-95 ring-4 ring-white dark:ring-slate-700 shadow-lg relative group`}
+        className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center transition-all hover:scale-105 active:scale-95 ring-4 ring-slate-100 dark:ring-slate-700 shadow-lg relative group`}
         style={{ backgroundColor: photoUrl ? 'transparent' : color }}
       >
         {displayContent()}
@@ -370,7 +370,7 @@ export function AvatarDisplay({
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center ring-2 ring-white dark:ring-slate-700 shadow-sm ${className}`}
+      className={`${sizeClasses[size]} rounded-full overflow-hidden flex items-center justify-center ring-2 ring-slate-100 dark:ring-slate-700 shadow-sm ${className}`}
       style={{ backgroundColor: photoUrl ? 'transparent' : color }}
       title={name}
     >

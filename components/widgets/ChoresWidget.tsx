@@ -220,7 +220,7 @@ function ChoreItem({
       </div>
       {member && (
         <div
-          className={`${compact ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center text-white font-medium ring-2 ring-white dark:ring-slate-700`}
+          className={`${compact ? 'w-5 h-5 text-[9px]' : 'w-6 h-6 text-[10px]'} rounded-full flex items-center justify-center text-white font-medium ring-2 ring-slate-100 dark:ring-slate-700`}
           style={{ backgroundColor: member.color }}
         >
           {member.name.charAt(0)}

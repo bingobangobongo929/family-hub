@@ -362,7 +362,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                 {/* Show member avatars preview */}
                 <div className="flex -space-x-1.5">
                   {members.slice(0, 3).map(member => (
-                    <div key={member.id} className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 overflow-hidden">
+                    <div key={member.id} className="w-5 h-5 rounded-full ring-2 ring-slate-100 dark:ring-slate-800 overflow-hidden">
                       <AvatarDisplay
                         photoUrl={member.photo_url}
                         emoji={member.avatar}
@@ -373,7 +373,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
                     </div>
                   ))}
                   {members.length > 3 && (
-                    <div className="w-5 h-5 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300">
+                    <div className="w-5 h-5 rounded-full ring-2 ring-slate-100 dark:ring-slate-800 bg-slate-200 dark:bg-slate-600 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300">
                       +{members.length - 3}
                     </div>
                   )}

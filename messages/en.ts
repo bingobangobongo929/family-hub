@@ -208,6 +208,7 @@ export const en = {
     repeating: 'Repeating',
     noUpcomingEvents: 'No upcoming events',
     noUpcomingEventsDesc: 'Your next 30 days look clear',
+    scrollForMore: 'Showing next {days} days',
     noEventsToday: 'No events today',
     tapToAddEvent: 'Tap to add an event',
     moreEvents: '+{count} more',

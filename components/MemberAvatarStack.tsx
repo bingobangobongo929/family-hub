@@ -44,7 +44,7 @@ export default function MemberAvatarStack({
       {displayMembers.map((member, index) => (
         <div
           key={member.id}
-          className={`${sizeClasses[size]} ${index > 0 ? overlapClasses[size] : ''} rounded-full flex items-center justify-center text-white font-semibold ring-2 ring-white dark:ring-slate-800 flex-shrink-0`}
+          className={`${sizeClasses[size]} ${index > 0 ? overlapClasses[size] : ''} rounded-full flex items-center justify-center text-white font-semibold ring-2 ring-slate-100 dark:ring-slate-800 flex-shrink-0`}
           style={{ backgroundColor: member.color, zIndex: displayMembers.length - index }}
           title={member.name}
         >
@@ -53,7 +53,7 @@ export default function MemberAvatarStack({
       ))}
       {remainingCount > 0 && (
         <div
-          className={`${sizeClasses[size]} ${overlapClasses[size]} rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 font-semibold ring-2 ring-white dark:ring-slate-800 flex-shrink-0`}
+          className={`${sizeClasses[size]} ${overlapClasses[size]} rounded-full flex items-center justify-center bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 font-semibold ring-2 ring-slate-100 dark:ring-slate-800 flex-shrink-0`}
           style={{ zIndex: 0 }}
           title={`${remainingCount} more`}
         >

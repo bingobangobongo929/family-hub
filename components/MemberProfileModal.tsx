@@ -156,7 +156,7 @@ export default function MemberProfileModal({ member, isOpen, onClose }: MemberPr
           {/* Left side - Avatar and identity */}
           <div className="w-2/5 h-full flex flex-col items-center justify-center p-6 border-r border-slate-100 dark:border-slate-700">
             <div
-              className="w-32 h-32 rounded-full ring-4 ring-white dark:ring-slate-600 shadow-xl overflow-hidden flex items-center justify-center text-5xl"
+              className="w-32 h-32 rounded-full ring-4 ring-slate-100 dark:ring-slate-600 shadow-xl overflow-hidden flex items-center justify-center text-5xl"
               style={{ backgroundColor: member.photo_url ? 'transparent' : member.color }}
             >
               {member.photo_url ? (

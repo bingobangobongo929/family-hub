@@ -4,6 +4,7 @@ import UIKit
 import VisionKit
 import Speech
 import AVFoundation
+import WidgetKit
 
 /// Native plugin for Family Hub providing iOS-specific features
 @objc(FamilyHubNativePlugin)
@@ -21,7 +22,11 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getSharedContent", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "clearSharedContent", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "checkReduceMotion", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "writeWidgetData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "refreshWidgets", returnType: CAPPluginReturnPromise),
     ]
+
+    private let appGroupId = "group.app.familyhub.home"
 
     // MARK: - Document Scanner
     private var documentScannerCall: CAPPluginCall?
@@ -263,6 +268,36 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func checkReduceMotion(_ call: CAPPluginCall) {
         let reduceMotion = UIAccessibility.isReduceMotionEnabled
         call.resolve(["reduceMotion": reduceMotion])
+    }
+
+    // MARK: - Widget Data
+    @objc func writeWidgetData(_ call: CAPPluginCall) {
+        guard let key = call.getString("key"),
+              let value = call.getString("value") else {
+            call.reject("Missing key or value")
+            return
+        }
+
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            call.reject("Failed to access App Group")
+            return
+        }
+
+        defaults.set(value, forKey: key)
+        defaults.synchronize()
+
+        call.resolve(["success": true])
+    }
+
+    @objc func refreshWidgets(_ call: CAPPluginCall) {
+        if #available(iOS 14.0, *) {
+            DispatchQueue.main.async {
+                WidgetCenter.shared.reloadAllTimelines()
+                call.resolve(["success": true])
+            }
+        } else {
+            call.resolve(["success": false, "reason": "Widgets require iOS 14+"])
+        }
     }
 }
 

@@ -4,13 +4,10 @@
  * This module handles writing data to the iOS App Group shared container
  * so that widgets can read the data and display it.
  *
- * Data is written to UserDefaults with the App Group suite name.
+ * Data is written to UserDefaults with the App Group suite name via native plugin.
  */
 
-import { Capacitor } from '@capacitor/core';
-import { Preferences } from '@capacitor/preferences';
-
-const APP_GROUP = 'group.app.familyhub.home';
+import { writeWidgetData as nativeWriteWidgetData, refreshWidgets as nativeRefreshWidgets, isNativeIOS } from './native-plugin';
 
 // Data keys matching the Swift SharedModels.swift
 const WIDGET_KEYS = {
@@ -21,9 +18,8 @@ const WIDGET_KEYS = {
   bin: 'bin_widget_data',
 } as const;
 
-// Check if running on native iOS
-export const isNativeIOS = () =>
-  Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+// Re-export for convenience
+export { isNativeIOS };
 
 /**
  * Write data to the App Group shared container for widgets
@@ -36,14 +32,13 @@ async function writeToAppGroup(key: string, data: unknown): Promise<void> {
 
   try {
     const jsonString = JSON.stringify(data);
-    // Using Preferences with group configuration
-    // Note: This requires configuring the Capacitor Preferences plugin
-    // to use the App Group. For now, we'll use a native bridge.
-    await Preferences.set({
-      key,
-      value: jsonString,
-    });
-    console.log(`[WidgetBridge] Wrote ${key} to app group`);
+    // Use native plugin to write to App Group UserDefaults
+    const result = await nativeWriteWidgetData(key, jsonString);
+    if (result.success) {
+      console.log(`[WidgetBridge] Wrote ${key} to app group`);
+    } else {
+      console.error(`[WidgetBridge] Failed to write ${key}`);
+    }
   } catch (error) {
     console.error(`[WidgetBridge] Failed to write ${key}:`, error);
   }
@@ -289,9 +284,16 @@ export async function updateBinWidget(
 export async function refreshWidgets(): Promise<void> {
   if (!isNativeIOS()) return;
 
-  // Widget timeline refresh happens automatically when data changes
-  // For manual refresh, we would need a native plugin
-  console.log('[WidgetBridge] Widget data updated, iOS will refresh on next timeline');
+  try {
+    const result = await nativeRefreshWidgets();
+    if (result.success) {
+      console.log('[WidgetBridge] Triggered widget refresh');
+    } else {
+      console.log('[WidgetBridge] Widget refresh not available:', result.reason);
+    }
+  } catch (error) {
+    console.error('[WidgetBridge] Failed to refresh widgets:', error);
+  }
 }
 
 /**

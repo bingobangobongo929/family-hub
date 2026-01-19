@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday, addWeeks, subWeeks, addDays, isBefore, isAfter } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Repeat } from 'lucide-react'
 import Button from '@/components/ui/Button'
@@ -57,6 +57,36 @@ export default function CalendarPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showAIModal, setShowAIModal] = useState(false)
   const [cellHeight, setCellHeight] = useState(120)
+  const [agendaDays, setAgendaDays] = useState(30) // For infinite scroll
+  const agendaEndRef = useRef<HTMLDivElement>(null)
+
+  // Infinite scroll for agenda view
+  useEffect(() => {
+    if (viewMode !== 'agenda') return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          // Load 30 more days when reaching the bottom
+          setAgendaDays(prev => Math.min(prev + 30, 365)) // Cap at 1 year
+        }
+      },
+      { threshold: 0.1, rootMargin: '100px' }
+    )
+
+    if (agendaEndRef.current) {
+      observer.observe(agendaEndRef.current)
+    }
+
+    return () => observer.disconnect()
+  }, [viewMode])
+
+  // Reset agenda days when switching to agenda view
+  useEffect(() => {
+    if (viewMode === 'agenda') {
+      setAgendaDays(30)
+    }
+  }, [viewMode])
 
   // Detect mobile and set smart default view
   useEffect(() => {
@@ -731,15 +761,15 @@ export default function CalendarPage() {
     }
   }, [currentDate, viewMode])
 
-  // Generate upcoming events for agenda view (next 30 days)
+  // Generate upcoming events for agenda view (with infinite scroll support)
   const agendaEvents = useMemo(() => {
     if (viewMode !== 'agenda') return []
 
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const endDate = addDays(today, 30)
+    const endDate = addDays(today, agendaDays)
 
-    // Get all events within the next 30 days
+    // Get all events within the date range
     const upcoming = events
       .filter(event => {
         const eventDate = parseISO(event.start_time)
@@ -763,7 +793,7 @@ export default function CalendarPage() {
     })
 
     return grouped
-  }, [events, viewMode])
+  }, [events, viewMode, agendaDays])
 
   const getEventsForDay = (date: Date) => {
     return events.filter(event => isSameDay(parseISO(event.start_time), date))
@@ -983,6 +1013,14 @@ export default function CalendarPage() {
                   </div>
                 )
               })}
+              {/* Infinite scroll sentinel */}
+              <div ref={agendaEndRef} className="py-4 text-center">
+                {agendaDays < 365 && (
+                  <p className="text-sm text-slate-400 dark:text-slate-500">
+                    {t('calendar.scrollForMore', { days: agendaDays })}
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>

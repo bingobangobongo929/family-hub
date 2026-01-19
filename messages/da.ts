@@ -210,6 +210,7 @@ export const da: Translations = {
     repeating: 'Gentages',
     noUpcomingEvents: 'Ingen kommende begivenheder',
     noUpcomingEventsDesc: 'De næste 30 dage ser frie ud',
+    scrollForMore: 'Viser de næste {days} dage',
     noEventsToday: 'Ingen begivenheder i dag',
     tapToAddEvent: 'Tryk for at tilføje en begivenhed',
     moreEvents: '+{count} mere',

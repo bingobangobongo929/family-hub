@@ -491,7 +491,7 @@ export default function ShoppingPage() {
         <Card className="mt-4 p-4" hover={false}>
           <div className="flex items-center gap-2 mb-2 text-slate-500">
             <Check className="w-4 h-4" />
-            <span className="text-sm font-medium">{t('shopping.completed')} ({checkedItems.length})</span>
+            <span className="text-sm font-medium">{t('shopping.completed', { count: checkedItems.length })}</span>
           </div>
           <div className="space-y-1">
             {checkedItems.map(item => (
