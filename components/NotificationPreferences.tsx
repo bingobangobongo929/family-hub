@@ -364,19 +364,8 @@ export default function NotificationPreferences() {
     )
   }
 
-  // Show warning if push not enabled
-  if (isNative && permissionStatus !== 'granted') {
-    return (
-      <Card className="mb-6">
-        <CardHeader title="Notification Preferences" icon={<Bell className="w-5 h-5" />} />
-        <div className="mt-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
-          <p className="text-sm text-amber-700 dark:text-amber-300">
-            Enable push notifications above to customize your notification preferences.
-          </p>
-        </div>
-      </Card>
-    )
-  }
+  // Show warning if push not enabled on native, but still show preferences
+  const showPushWarning = isNative && permissionStatus !== 'granted'
 
   return (
     <Card className="mb-6">
@@ -389,6 +378,15 @@ export default function NotificationPreferences() {
           </span>
         )}
       </div>
+
+      {/* Warning if push not enabled - but still show preferences below */}
+      {showPushWarning && (
+        <div className="mb-4 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+          <p className="text-sm text-amber-700 dark:text-amber-300">
+            Enable push notifications above to receive notifications. You can still configure your preferences below.
+          </p>
+        </div>
+      )}
 
       {/* Master Toggle */}
       <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">

@@ -79,24 +79,50 @@ function PushNotificationSettings() {
     setTestSending(false)
   }
 
-  // Don't show on web - only relevant for native app
+  // Show web push option on web browsers
   if (!isNative) {
-    return (
-      <Card className="mb-6">
-        <CardHeader title="Push Notifications" icon={<Bell className="w-5 h-5" />} />
-        <div className="mt-4">
-          <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
-            <Smartphone className="w-8 h-8 text-slate-400" />
-            <div>
-              <p className="font-medium text-slate-700 dark:text-slate-200">iOS App Required</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Push notifications are available in the Family Hub iOS app.
-              </p>
+    const webPushSupported = typeof window !== 'undefined' && 'PushManager' in window && 'serviceWorker' in navigator
+    const vapidConfigured = !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+
+    if (!webPushSupported) {
+      return (
+        <Card className="mb-6">
+          <CardHeader title="Push Notifications" icon={<Bell className="w-5 h-5" />} />
+          <div className="mt-4">
+            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl">
+              <Smartphone className="w-8 h-8 text-slate-400" />
+              <div>
+                <p className="font-medium text-slate-700 dark:text-slate-200">Browser Not Supported</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Your browser doesn't support push notifications. Try Chrome, Firefox, or Edge.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
-    )
+        </Card>
+      )
+    }
+
+    if (!vapidConfigured) {
+      return (
+        <Card className="mb-6">
+          <CardHeader title="Push Notifications" icon={<Bell className="w-5 h-5" />} />
+          <div className="mt-4">
+            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl">
+              <Bell className="w-8 h-8 text-amber-500" />
+              <div>
+                <p className="font-medium text-slate-700 dark:text-slate-200">Web Push Not Configured</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Browser notifications are not yet configured. Use the iOS app for push notifications.
+                </p>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )
+    }
+
+    // Web push is available - show the same UI as native
   }
 
   return (
@@ -230,6 +256,13 @@ function PushNotificationSettings() {
               ))}
             </div>
           )}
+          <a
+            href="/settings/notifications/debug"
+            className="mt-3 inline-flex items-center gap-2 text-xs text-teal-600 dark:text-teal-400 hover:underline"
+          >
+            <Settings className="w-3 h-3" />
+            Open Notification Debug Dashboard
+          </a>
         </div>
       </div>
     </Card>

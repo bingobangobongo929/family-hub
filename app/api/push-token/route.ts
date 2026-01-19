@@ -2,12 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Register push token via API (uses service role to bypass RLS issues)
+// Supports both native iOS tokens and web push subscriptions
 export async function POST(request: NextRequest) {
   try {
-    const { token, platform = 'ios' } = await request.json()
+    const { token, platform = 'ios', web_subscription } = await request.json()
 
     if (!token) {
       return NextResponse.json({ error: 'Token required' }, { status: 400 })
+    }
+
+    // Validate platform
+    if (!['ios', 'android', 'web'].includes(platform)) {
+      return NextResponse.json({ error: 'Invalid platform' }, { status: 400 })
+    }
+
+    // Web push requires subscription data
+    if (platform === 'web' && !web_subscription) {
+      return NextResponse.json({ error: 'Web subscription required for web platform' }, { status: 400 })
     }
 
     // Get user from auth header
@@ -35,14 +46,21 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    const insertData: any = {
+      user_id: user.id,
+      token,
+      platform,
+      updated_at: new Date().toISOString(),
+    }
+
+    // Add web subscription if provided
+    if (web_subscription) {
+      insertData.web_subscription = web_subscription
+    }
+
     const { error } = await supabase
       .from('push_tokens')
-      .upsert({
-        user_id: user.id,
-        token,
-        platform,
-        updated_at: new Date().toISOString(),
-      }, {
+      .upsert(insertData, {
         onConflict: 'user_id,token',
       })
 
@@ -51,7 +69,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save token' }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, user_id: user.id })
+    console.log(`Push token saved for user ${user.id} (${platform})`)
+    return NextResponse.json({ success: true, user_id: user.id, platform })
   } catch (error) {
     console.error('Push token error:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })

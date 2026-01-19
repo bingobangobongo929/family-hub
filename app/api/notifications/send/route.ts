@@ -2,12 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { SignJWT, importPKCS8 } from 'jose';
 import * as http2 from 'http2';
+import webpush from 'web-push';
 
 interface NotificationPayload {
   user_id?: string; // Send to specific user
   title: string;
   body: string;
   data?: Record<string, any>; // e.g., { type: 'event_reminder', event_id: '123' }
+}
+
+interface WebPushSubscription {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+// Configure web-push with VAPID keys
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@familyhub.app';
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 }
 
 // Cache the JWT to avoid regenerating it for every notification
@@ -36,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get push tokens for the target user(s)
-    let query = supabase.from('push_tokens').select('token, platform');
+    let query = supabase.from('push_tokens').select('token, platform, web_subscription');
 
     if (payload.user_id) {
       query = query.eq('user_id', payload.user_id);
@@ -59,11 +77,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Send notifications via APNs
+    // Send notifications via APNs (iOS) or Web Push
     const results = await Promise.all(
-      tokens.map(async ({ token, platform }) => {
+      tokens.map(async ({ token, platform, web_subscription }) => {
         if (platform === 'ios') {
           return sendAPNsNotification(token, payload);
+        } else if (platform === 'web' && web_subscription) {
+          return sendWebPushNotification(web_subscription as WebPushSubscription, payload);
         }
         return { success: false, reason: 'unsupported_platform' };
       })
@@ -248,4 +268,50 @@ async function getAPNsJWT(
 
   console.log('Generated new APNs JWT token');
   return jwt;
+}
+
+// Send notification via Web Push
+async function sendWebPushNotification(
+  subscription: WebPushSubscription,
+  payload: NotificationPayload
+): Promise<{ success: boolean; reason?: string }> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.log('Web Push not configured - would send:', {
+      endpoint: subscription.endpoint.substring(0, 50) + '...',
+      title: payload.title,
+      body: payload.body,
+    });
+    return { success: false, reason: 'web_push_not_configured' };
+  }
+
+  try {
+    const pushPayload = JSON.stringify({
+      title: payload.title,
+      body: payload.body,
+      icon: '/icons/icon-192x192.png',
+      badge: '/icons/icon-192x192.png',
+      data: payload.data || {},
+    });
+
+    console.log('Sending Web Push notification:', {
+      endpoint: subscription.endpoint.substring(0, 50) + '...',
+      title: payload.title,
+    });
+
+    await webpush.sendNotification(subscription, pushPayload);
+
+    console.log('Web Push notification sent successfully');
+    return { success: true };
+
+  } catch (error: any) {
+    console.error('Web Push error:', error);
+
+    // Handle specific web push errors
+    if (error.statusCode === 410 || error.statusCode === 404) {
+      // Subscription expired or not found - should remove from database
+      return { success: false, reason: 'subscription_expired' };
+    }
+
+    return { success: false, reason: error.message || 'web_push_failed' };
+  }
 }
