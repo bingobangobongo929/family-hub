@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 
 interface LoadingScreenProps {
   minimumDisplay?: number // Minimum ms to show loading (prevents flash)
@@ -21,8 +22,15 @@ export default function LoadingScreen({ minimumDisplay = 500 }: LoadingScreenPro
     <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-gradient-to-br from-teal-50 via-warm-50 to-sage-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
       {/* Logo/Icon */}
       <div className="relative mb-6">
-        <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500 to-sage-600 flex items-center justify-center shadow-xl animate-pulse">
-          <span className="text-4xl">🏠</span>
+        <div className="w-20 h-20 rounded-3xl overflow-hidden shadow-xl animate-pulse">
+          <Image
+            src="/icon-512.png"
+            alt="Family Hub"
+            width={80}
+            height={80}
+            className="w-full h-full object-cover"
+            priority
+          />
         </div>
         {/* Glow effect */}
         <div className="absolute inset-0 w-20 h-20 rounded-3xl bg-gradient-to-br from-teal-500 to-sage-600 opacity-30 blur-xl animate-pulse" />
@@ -92,15 +100,12 @@ export function LoadingScreenHTML() {
         width: 80px;
         height: 80px;
         border-radius: 24px;
-        background: linear-gradient(to bottom right, #14b8a6, #65a30d);
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        overflow: hidden;
         box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
         animation: pulse 2s infinite;
         margin-bottom: 24px;
       ">
-        <span style="font-size: 40px;">🏠</span>
+        <img src="/icon-512.png" alt="Family Hub" style="width: 100%; height: 100%; object-fit: cover;" />
       </div>
       <h1 style="
         font-size: 24px;

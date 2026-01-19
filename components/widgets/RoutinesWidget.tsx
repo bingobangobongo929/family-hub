@@ -11,6 +11,7 @@ import { Routine, RoutineStep, RoutineCompletion, FamilyMember, RoutineScenario 
 import Confetti from '@/components/Confetti'
 import { AvatarDisplay } from '@/components/PhotoUpload'
 import { hapticSuccess, hapticLight } from '@/lib/haptics'
+import { updateRoutinesWidget } from '@/lib/widget-bridge'
 
 interface RoutineWithData extends Routine {
   steps: RoutineStep[]
@@ -151,6 +152,35 @@ export default function RoutinesWidget() {
       cooldownTimers.current.forEach(timer => clearTimeout(timer))
     }
   }, [fetchRoutines])
+
+  // Update iOS widget with routine data
+  useEffect(() => {
+    if (routines.length > 0) {
+      // Create widget data for each routine + member combination
+      const widgetData = routines.flatMap(routine =>
+        routine.members.map(member => {
+          const totalSteps = routine.steps.length
+          const completedSteps = routine.steps.filter(step =>
+            completions.some(
+              c => c.routine_id === routine.id && c.step_id === step.id && c.member_id === member.id
+            )
+          ).length
+
+          return {
+            id: `${routine.id}-${member.id}`,
+            title: routine.title,
+            emoji: routine.emoji || '✨',
+            completedSteps,
+            totalSteps,
+            memberName: member.name,
+            memberColor: member.color || '#f472b6',
+          }
+        })
+      )
+
+      updateRoutinesWidget(widgetData)
+    }
+  }, [routines, completions])
 
   const isStepCompletedBy = (routineId: string, stepId: string, memberId: string) => {
     return completions.some(

@@ -502,3 +502,158 @@ textarea:focus-visible,
 .font-display {
   font-family: var(--font-poppins), system-ui, sans-serif;
 }
+
+/* ============================================================
+   Dynamic Type Support (iOS)
+   Respects user's text size preferences from Settings > Accessibility
+   ============================================================ */
+
+/* Base font scaling that respects system preferences */
+html {
+  /* Use -apple-system-body to respect Dynamic Type */
+  font: -apple-system-body;
+  /* Fallback font-size for non-iOS */
+  font-size: 100%;
+}
+
+/* Scale text based on system font size (iOS Dynamic Type) */
+@supports (font: -apple-system-body) {
+  html {
+    font-size: clamp(14px, calc(1rem * var(--system-font-scale, 1)), 24px);
+  }
+}
+
+/* Text size CSS custom properties based on Dynamic Type */
+:root {
+  --text-xs: clamp(0.65rem, 0.7em, 0.75rem);
+  --text-sm: clamp(0.8rem, 0.875em, 0.9rem);
+  --text-base: clamp(0.9rem, 1em, 1.1rem);
+  --text-lg: clamp(1rem, 1.125em, 1.25rem);
+  --text-xl: clamp(1.1rem, 1.25em, 1.5rem);
+  --text-2xl: clamp(1.25rem, 1.5em, 1.875rem);
+  --text-3xl: clamp(1.5rem, 1.875em, 2.25rem);
+}
+
+/* Utility classes for Dynamic Type-aware text */
+.text-dynamic-xs { font-size: var(--text-xs); }
+.text-dynamic-sm { font-size: var(--text-sm); }
+.text-dynamic-base { font-size: var(--text-base); }
+.text-dynamic-lg { font-size: var(--text-lg); }
+.text-dynamic-xl { font-size: var(--text-xl); }
+.text-dynamic-2xl { font-size: var(--text-2xl); }
+.text-dynamic-3xl { font-size: var(--text-3xl); }
+
+/* ============================================================
+   Reduce Motion Support
+   Respects user's motion preferences from Settings > Accessibility
+   ============================================================ */
+
+/* Disable all animations and transitions when user prefers reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keep critical functional animations (like loading spinners) but make them simpler */
+  .animate-spin {
+    animation: none !important;
+  }
+
+  /* Simple fade for elements that would otherwise animate */
+  .motion-reduce\:animate-fade-in {
+    animation: fade-in 0.01ms ease-out !important;
+    opacity: 1;
+  }
+
+  /* Disable parallax effects */
+  .parallax {
+    transform: none !important;
+  }
+
+  /* Disable hover transforms */
+  .hover\:-translate-y-0\.5:hover,
+  .hover\:-translate-y-1:hover,
+  .hover\:scale-105:hover {
+    transform: none !important;
+  }
+
+  /* Disable active scale transforms */
+  .active\:scale-95:active,
+  .active\:scale-97:active,
+  .active\:scale-\[0\.97\]:active {
+    transform: none !important;
+  }
+}
+
+/* Tailwind-style motion-reduce utilities */
+.motion-reduce\:animate-none {
+  animation: none !important;
+}
+
+.motion-reduce\:transition-none {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-reduce\:opacity-100 {
+    opacity: 1 !important;
+  }
+}
+
+/* ============================================================
+   High Contrast Support (iOS Accessibility)
+   ============================================================ */
+
+@media (prefers-contrast: more) {
+  /* Increase contrast for text */
+  :root {
+    --foreground-rgb: 0, 0, 0;
+  }
+
+  .dark {
+    --foreground-rgb: 255, 255, 255;
+  }
+
+  /* Stronger borders */
+  .border,
+  [class*="border-"] {
+    border-width: 2px;
+  }
+
+  /* Darker shadows or no shadows for cleaner look */
+  .shadow-sm,
+  .shadow,
+  .shadow-md,
+  .shadow-lg,
+  .shadow-xl {
+    box-shadow: 0 0 0 2px currentColor;
+  }
+}
+
+/* ============================================================
+   Touch Feedback Improvements
+   ============================================================ */
+
+/* Improved tap feedback for iOS */
+@supports (-webkit-touch-callout: none) {
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: rgba(20, 184, 166, 0.15);
+  }
+}
+
+/* Prevent accidental double-tap zoom on interactive elements */
+button,
+a,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}

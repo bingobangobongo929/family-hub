@@ -22,6 +22,7 @@ import {
 import { useTranslation } from '@/lib/i18n-context'
 import { getDateLocale } from '@/lib/date-locale'
 import { useSettings } from '@/lib/settings-context'
+import { updateF1Widget } from '@/lib/widget-bridge'
 
 // Session icon component
 function SessionIcon({ sessionName, className = "w-5 h-5" }: { sessionName: string; className?: string }) {
@@ -320,6 +321,32 @@ function F1PageContent() {
     const now = new Date()
     return schedule.schedule.filter(m => new Date(m.date_start) >= now)
   }, [schedule])
+
+  // Update iOS widget with F1 data
+  useEffect(() => {
+    if (nextRace) {
+      // Find next session within the race weekend
+      const nextSession = nextRace.sessions?.find(s => new Date(s.date_start) > new Date())
+
+      updateF1Widget(
+        nextSession ? {
+          name: SESSION_NAMES[nextSession.session_name] || nextSession.session_name,
+          raceName: nextRace.meeting_name,
+          startTime: new Date(nextSession.date_start),
+          circuitName: nextRace.circuit_short_name,
+          countryFlag: nextRace.country_flag || '',
+        } : null,
+        {
+          name: nextRace.meeting_name,
+          startTime: new Date(nextRace.date_start),
+          circuitName: nextRace.circuit_short_name,
+          countryFlag: nextRace.country_flag || '',
+        }
+      )
+    } else {
+      updateF1Widget(null, null)
+    }
+  }, [nextRace])
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900">

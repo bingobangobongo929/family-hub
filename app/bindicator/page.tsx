@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Trash2, Info, Calendar, List } from 'lucide-react'
 import Card from '@/components/Card'
@@ -22,6 +22,7 @@ import {
   isCollectionDay,
   getBinsForDate,
 } from '@/lib/bin-schedule'
+import { updateBinWidget } from '@/lib/widget-bridge'
 
 type ViewMode = 'upcoming' | 'calendar' | 'by-bin'
 
@@ -55,6 +56,20 @@ export default function BindicatorPage() {
   // Find today's and tomorrow's bins
   const todayBins = binStatuses.filter(b => b.daysUntil === 0)
   const tomorrowBins = binStatuses.filter(b => b.daysUntil === 1)
+
+  // Update iOS widget with bin data
+  useEffect(() => {
+    updateBinWidget(
+      binStatuses.map(bin => ({
+        id: bin.id,
+        type: bin.id,
+        name: bin.name,
+        emoji: bin.emoji,
+        nextDate: bin.nextDate || new Date(),
+        daysUntil: bin.daysUntil,
+      }))
+    )
+  }, [binStatuses])
 
   // Calendar helpers
   const monthStart = startOfMonth(currentDate)

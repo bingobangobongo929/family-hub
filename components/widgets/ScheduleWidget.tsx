@@ -14,6 +14,7 @@ import EventDetailModal from '@/components/EventDetailModal'
 import { getOccurrences, isRecurrenceActive } from '@/lib/rrule'
 import { useTranslation } from '@/lib/i18n-context'
 import { getDateLocale } from '@/lib/date-locale'
+import { updateEventsWidget } from '@/lib/widget-bridge'
 
 // Helper function since date-fns doesn't export isNextWeek
 function isNextWeek(date: Date, options?: { weekStartsOn?: 0 | 1 | 2 | 3 | 4 | 5 | 6 }): boolean {
@@ -236,6 +237,22 @@ export default function ScheduleWidget() {
   useEffect(() => {
     fetchWeekEvents()
   }, [fetchWeekEvents])
+
+  // Update iOS widget with event data
+  useEffect(() => {
+    if (events.length > 0) {
+      updateEventsWidget(
+        events.map(event => ({
+          id: event.id,
+          title: event.title,
+          start: new Date(event.start_time),
+          end: event.end_time ? new Date(event.end_time) : undefined,
+          allDay: event.all_day || false,
+          color: event.color || undefined,
+        }))
+      )
+    }
+  }, [events])
 
   const handleEventClick = (event: CalendarEvent) => {
     setSelectedEvent(event)

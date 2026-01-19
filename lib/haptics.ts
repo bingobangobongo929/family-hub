@@ -6,7 +6,9 @@ const isNative = Capacitor.isNativePlatform();
 
 // Haptic cooldown to prevent rapid-fire vibrations (toddler-proof)
 const HAPTIC_COOLDOWN_MS = 500;
+const HAPTIC_COOLDOWN_INSTANT_MS = 50; // Minimal cooldown for UI feedback
 let lastHapticTime = 0;
+let lastInstantHapticTime = 0;
 
 function canTriggerHaptic(): boolean {
   const now = Date.now();
@@ -14,6 +16,16 @@ function canTriggerHaptic(): boolean {
     return false;
   }
   lastHapticTime = now;
+  return true;
+}
+
+// Instant haptic check with minimal cooldown (for UI interactions)
+function canTriggerInstantHaptic(): boolean {
+  const now = Date.now();
+  if (now - lastInstantHapticTime < HAPTIC_COOLDOWN_INSTANT_MS) {
+    return false;
+  }
+  lastInstantHapticTime = now;
   return true;
 }
 
@@ -98,6 +110,59 @@ export async function hapticSelection() {
     await Haptics.selectionStart();
     await Haptics.selectionChanged();
     await Haptics.selectionEnd();
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
+// ============================================================
+// Instant haptics (minimal cooldown for UI feedback)
+// These bypass the toddler-proof cooldown for responsive UI
+// ============================================================
+
+/**
+ * Instant light tap - for button presses, no cooldown
+ */
+export async function hapticTap() {
+  if (!isNative || !canTriggerInstantHaptic()) return;
+  try {
+    await Haptics.impact({ style: ImpactStyle.Light });
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
+/**
+ * Instant selection tick - for toggles, switches, selections
+ */
+export async function hapticTick() {
+  if (!isNative || !canTriggerInstantHaptic()) return;
+  try {
+    await Haptics.selectionChanged();
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
+/**
+ * Soft impact - softer than light, for subtle interactions
+ */
+export async function hapticSoft() {
+  if (!isNative || !canTriggerInstantHaptic()) return;
+  try {
+    await Haptics.impact({ style: ImpactStyle.Light });
+  } catch (e) {
+    // Ignore errors
+  }
+}
+
+/**
+ * Rigid impact - firm feel for confirmations
+ */
+export async function hapticRigid() {
+  if (!isNative || !canTriggerInstantHaptic()) return;
+  try {
+    await Haptics.impact({ style: ImpactStyle.Medium });
   } catch (e) {
     // Ignore errors
   }

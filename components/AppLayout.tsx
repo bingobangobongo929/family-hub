@@ -11,6 +11,7 @@ import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
 import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
+import { initDeepLinkHandler, cleanupDeepLinkHandler } from '@/lib/deep-link-handler'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -128,6 +129,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       handleAppStateChange.then(h => h.remove())
     }
   }, [isNative, clearBadge])
+
+  // Handle deep links from iOS widgets
+  useEffect(() => {
+    initDeepLinkHandler((route) => {
+      console.log('[AppLayout] Deep link navigation to:', route)
+      router.push(route)
+    })
+
+    return () => {
+      cleanupDeepLinkHandler()
+    }
+  }, [router])
 
   const handleScreensaverWake = useCallback(() => {
     // Could add analytics or other wake handlers here

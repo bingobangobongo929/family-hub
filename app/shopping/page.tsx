@@ -16,6 +16,7 @@ import {
 } from '@/lib/database.types'
 import { hapticLight } from '@/lib/haptics'
 import { useAuth } from '@/lib/auth-context'
+import { updateShoppingWidget } from '@/lib/widget-bridge'
 
 // Demo data for when Supabase is not configured
 const demoItems: ShoppingListItem[] = [
@@ -144,6 +145,22 @@ export default function ShoppingPage() {
   useEffect(() => {
     fetchShoppingList()
   }, [])
+
+  // Update iOS widget when items change
+  useEffect(() => {
+    if (items.length > 0 || !loading) {
+      updateShoppingWidget(
+        items.map(item => ({
+          id: item.id,
+          name: item.item_name,
+          quantity: item.quantity || undefined,
+          unit: item.unit || undefined,
+          completed: item.is_checked,
+          category: item.category || undefined,
+        }))
+      )
+    }
+  }, [items, loading])
 
   // Toggle item checked status
   const toggleItem = async (id: string) => {

@@ -22,6 +22,19 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>app.familyhub.home</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>familyhub</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -49,5 +62,34 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- Camera Permission -->
+	<key>NSCameraUsageDescription</key>
+	<string>Family Hub needs camera access to scan event flyers, letters, and photos for automatic calendar entry.</string>
+	<!-- Photo Library Permission -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Family Hub needs photo library access to select images for calendar event scanning.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Family Hub needs permission to save photos.</string>
+	<!-- Microphone Permission for Voice Input -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Family Hub needs microphone access for voice input to create calendar events by speaking.</string>
+	<!-- Speech Recognition Permission -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Family Hub uses speech recognition to convert your voice into calendar events.</string>
+	<!-- Siri and Shortcuts -->
+	<key>INIntentsHandlerExtension</key>
+	<string>FamilyHubIntents</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>ScanEventIntent</string>
+		<string>AddShoppingItemIntent</string>
+		<string>CheckEventsIntent</string>
+		<string>StartRoutineIntent</string>
+		<string>CheckBinsIntent</string>
+		<string>CheckF1Intent</string>
+	</array>
+	<!-- Live Activities -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 </dict>
 </plist>

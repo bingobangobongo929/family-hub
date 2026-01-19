@@ -118,20 +118,55 @@ const config: Config = {
       },
       animation: {
         'fade-in': 'fadeIn 0.3s ease-out',
+        'fade-out': 'fadeOut 0.2s ease-in',
         'slide-up': 'slideUp 0.3s ease-out',
         'slide-down': 'slideDown 0.3s ease-out',
         'slide-in-right': 'slideInRight 0.3s ease-out',
         'slide-in-left': 'slideInLeft 0.3s ease-out',
+        'slide-out-right': 'slideOutRight 0.25s ease-in',
+        'slide-out-left': 'slideOutLeft 0.25s ease-in',
         'scale-in': 'scaleIn 0.2s ease-out',
+        'scale-out': 'scaleOut 0.15s ease-in',
         'bounce-in': 'bounceIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)',
         'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
         'check': 'check 0.3s ease-out forwards',
         'tap': 'tap 0.15s ease-out',
+        // Spring animations - iOS-like bouncy feel
+        'spring-in': 'springIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'spring-out': 'springOut 0.3s cubic-bezier(0.36, 0, 0.66, -0.56)',
+        'spring-bounce': 'springBounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'spring-scale': 'springScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        // Micro-interactions
+        'wiggle': 'wiggle 0.5s ease-in-out',
+        'shake': 'shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97)',
+        'pop': 'pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'press': 'press 0.2s ease-out',
+        // Success/completion animations
+        'success-check': 'successCheck 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'confetti-pop': 'confettiPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        // Loading states
+        'shimmer': 'shimmer 1.5s ease-in-out infinite',
+        'pulse-ring': 'pulseRing 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        // Card/modal animations
+        'modal-in': 'modalIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        'modal-out': 'modalOut 0.2s ease-in',
+        'card-hover': 'cardHover 0.3s ease-out forwards',
+        // Swipe feedback
+        'swipe-right': 'swipeRight 0.3s ease-out forwards',
+        'swipe-left': 'swipeLeft 0.3s ease-out forwards',
+        'swipe-complete': 'swipeComplete 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        // Voice input
+        'voice-pulse': 'voicePulse 1s ease-in-out infinite',
+        'voice-wave': 'voiceWave 0.5s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '0' },
         },
         slideUp: {
           '0%': { opacity: '0', transform: 'translateY(10px)' },
@@ -149,9 +184,21 @@ const config: Config = {
           '0%': { opacity: '0', transform: 'translateX(-20px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
+        slideOutRight: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(20px)' },
+        },
+        slideOutLeft: {
+          '0%': { opacity: '1', transform: 'translateX(0)' },
+          '100%': { opacity: '0', transform: 'translateX(-20px)' },
+        },
         scaleIn: {
           '0%': { opacity: '0', transform: 'scale(0.95)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        scaleOut: {
+          '0%': { opacity: '1', transform: 'scale(1)' },
+          '100%': { opacity: '0', transform: 'scale(0.95)' },
         },
         bounceIn: {
           '0%': { opacity: '0', transform: 'scale(0.3)' },
@@ -172,6 +219,101 @@ const config: Config = {
           '0%': { transform: 'scale(1)' },
           '50%': { transform: 'scale(0.97)' },
           '100%': { transform: 'scale(1)' },
+        },
+        // Spring animations
+        springIn: {
+          '0%': { opacity: '0', transform: 'scale(0.8) translateY(20px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        springOut: {
+          '0%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+          '100%': { opacity: '0', transform: 'scale(0.8) translateY(20px)' },
+        },
+        springBounce: {
+          '0%': { transform: 'scale(1)' },
+          '30%': { transform: 'scale(1.1)' },
+          '50%': { transform: 'scale(0.95)' },
+          '70%': { transform: 'scale(1.02)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        springScale: {
+          '0%': { transform: 'scale(0.5)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        // Micro-interactions
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(0deg)' },
+          '25%': { transform: 'rotate(-3deg)' },
+          '75%': { transform: 'rotate(3deg)' },
+        },
+        shake: {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '10%, 30%, 50%, 70%, 90%': { transform: 'translateX(-4px)' },
+          '20%, 40%, 60%, 80%': { transform: 'translateX(4px)' },
+        },
+        pop: {
+          '0%': { transform: 'scale(1)' },
+          '50%': { transform: 'scale(1.15)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        press: {
+          '0%': { transform: 'scale(1)' },
+          '100%': { transform: 'scale(0.95)' },
+        },
+        // Success animations
+        successCheck: {
+          '0%': { transform: 'scale(0) rotate(-45deg)', opacity: '0' },
+          '50%': { transform: 'scale(1.3) rotate(-45deg)', opacity: '1' },
+          '100%': { transform: 'scale(1) rotate(-45deg)', opacity: '1' },
+        },
+        confettiPop: {
+          '0%': { transform: 'scale(0)', opacity: '0' },
+          '50%': { transform: 'scale(1.2)', opacity: '1' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        // Loading
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        pulseRing: {
+          '0%': { transform: 'scale(0.95)', opacity: '1' },
+          '75%, 100%': { transform: 'scale(1.3)', opacity: '0' },
+        },
+        // Modal animations
+        modalIn: {
+          '0%': { opacity: '0', transform: 'scale(0.9) translateY(20px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        modalOut: {
+          '0%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+          '100%': { opacity: '0', transform: 'scale(0.9) translateY(20px)' },
+        },
+        cardHover: {
+          '0%': { transform: 'translateY(0)', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' },
+          '100%': { transform: 'translateY(-4px)', boxShadow: '0 12px 24px rgba(0, 0, 0, 0.1)' },
+        },
+        // Swipe animations
+        swipeRight: {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '100%': { transform: 'translateX(100%)', opacity: '0' },
+        },
+        swipeLeft: {
+          '0%': { transform: 'translateX(0)', opacity: '1' },
+          '100%': { transform: 'translateX(-100%)', opacity: '0' },
+        },
+        swipeComplete: {
+          '0%': { transform: 'scale(0.8)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        // Voice animations
+        voicePulse: {
+          '0%, 100%': { transform: 'scale(1)', opacity: '1' },
+          '50%': { transform: 'scale(1.1)', opacity: '0.8' },
+        },
+        voiceWave: {
+          '0%, 100%': { transform: 'scaleY(1)' },
+          '50%': { transform: 'scaleY(1.5)' },
         },
       },
     },

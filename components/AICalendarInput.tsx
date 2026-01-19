@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat, UserPlus } from 'lucide-react'
+import { Sparkles, Image, X, Loader2, Calendar, Clock, MapPin, Users, Check, Plus, AlertCircle, Tag, Repeat, UserPlus, Camera, ImageIcon, FileText, Mic, MicOff, Clipboard, ScanLine, Images } from 'lucide-react'
 import Modal from '@/components/ui/Modal'
 import Button from '@/components/ui/Button'
 import { useSettings, GeminiModel } from '@/lib/settings-context'
@@ -13,6 +13,23 @@ import { MEMBER_COLORS, RecurrencePattern, RecurrenceFrequency, DAYS_OF_WEEK } f
 import CategorySelector from './CategorySelector'
 import { patternToRRule, describeRecurrence } from '@/lib/rrule'
 import MemberMultiSelect, { getMemberIdsByNames } from './MemberMultiSelect'
+import { hapticTap, hapticSuccess, hapticError } from '@/lib/haptics'
+import {
+  isNativeIOS,
+  openDocumentScanner,
+  openPhotoLibrary,
+  openCamera,
+  checkVoicePermission,
+  requestVoicePermission,
+  startVoiceRecognition,
+  stopVoiceRecognition,
+  addVoiceListener,
+  getSharedContent,
+  clearSharedContent,
+  isWebSpeechAvailable,
+  startWebSpeechRecognition,
+  stopWebSpeechRecognition,
+} from '@/lib/native-plugin'
 
 interface AIRecurrencePattern {
   frequency: 'daily' | 'weekly' | 'monthly' | 'yearly'
@@ -128,8 +145,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   useEffect(() => {
     setAiModel(contextAiModel)
   }, [contextAiModel])
-  const [image, setImage] = useState<string | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [images, setImages] = useState<string[]>([]) // Support multiple images
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [extractedEvents, setExtractedEvents] = useState<ExtractedEvent[]>([])
@@ -137,35 +153,262 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const [step, setStep] = useState<'input' | 'preview'>('input')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Voice input state
+  const [isRecording, setIsRecording] = useState(false)
+  const [voiceText, setVoiceText] = useState('')
+  const [voicePermission, setVoicePermission] = useState<boolean | null>(null)
+
+  // Clipboard detection state
+  const [clipboardText, setClipboardText] = useState<string | null>(null)
+  const [showClipboardPrompt, setShowClipboardPrompt] = useState(false)
+
+  // Check for shared content from Share Extension when modal opens
+  useEffect(() => {
+    if (isOpen && isNativeIOS()) {
+      checkSharedContent()
+    }
+  }, [isOpen])
+
+  // Check clipboard for event-like text when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      checkClipboard()
+    }
+  }, [isOpen])
+
+  const checkSharedContent = async () => {
+    try {
+      const shared = await getSharedContent()
+      if (shared.hasContent) {
+        // Process shared images
+        if (shared.images && shared.images.length > 0) {
+          setImages(shared.images)
+        }
+        // Process shared text
+        if (shared.texts && shared.texts.length > 0) {
+          setInputText(shared.texts.join('\n'))
+        }
+        // Clear shared content after processing
+        await clearSharedContent()
+        hapticSuccess()
+      }
+    } catch (e) {
+      console.log('No shared content')
+    }
+  }
+
+  const checkClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text && isEventLikeText(text)) {
+        setClipboardText(text)
+        setShowClipboardPrompt(true)
+      }
+    } catch (e) {
+      // Clipboard permission denied or empty
+    }
+  }
+
+  // Simple heuristic to detect event-like text
+  const isEventLikeText = (text: string): boolean => {
+    const lowerText = text.toLowerCase()
+    const eventKeywords = [
+      'meeting', 'appointment', 'event', 'party', 'birthday',
+      'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+      'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+      'am', 'pm', ':00', 'tomorrow', 'next week', 'doctor', 'dentist', 'school',
+      'playgroup', 'playdate', 'swimming', 'lesson', 'class'
+    ]
+    return eventKeywords.some(keyword => lowerText.includes(keyword))
+  }
+
+  const useClipboardText = () => {
+    if (clipboardText) {
+      setInputText(prev => prev ? `${prev}\n${clipboardText}` : clipboardText)
+      setShowClipboardPrompt(false)
+      setClipboardText(null)
+      hapticTap()
+    }
+  }
+
+  const dismissClipboardPrompt = () => {
+    setShowClipboardPrompt(false)
+    setClipboardText(null)
+  }
+
+  // Handle file input for multiple images
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = e.target.files
+    if (!files || files.length === 0) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError(t('aiCalendar.imageTooLarge'))
-      return
-    }
+    const newImages: string[] = []
+    let processedCount = 0
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      const base64 = reader.result as string
-      setImage(base64)
-      setImagePreview(base64)
-      setError(null)
-    }
-    reader.readAsDataURL(file)
+    Array.from(files).forEach(file => {
+      if (file.size > 5 * 1024 * 1024) {
+        setError(t('aiCalendar.imageTooLarge'))
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        const base64 = reader.result as string
+        newImages.push(base64)
+        processedCount++
+
+        if (processedCount === files.length) {
+          setImages(prev => [...prev, ...newImages])
+          setError(null)
+          hapticTap()
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }, [t])
+
+  const handleRemoveImage = useCallback((index: number) => {
+    setImages(prev => prev.filter((_, i) => i !== index))
+    hapticTap()
   }, [])
 
-  const handleRemoveImage = useCallback(() => {
-    setImage(null)
-    setImagePreview(null)
+  const handleRemoveAllImages = useCallback(() => {
+    setImages([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
+    hapticTap()
   }, [])
 
+  // Native camera handler
+  const handleOpenCamera = async () => {
+    hapticTap()
+    try {
+      const result = await openCamera()
+      if (result.image.base64) {
+        setImages(prev => [...prev, result.image.base64])
+        hapticSuccess()
+      }
+    } catch (e) {
+      console.log('Camera cancelled or not available')
+    }
+  }
+
+  // Native photo library handler
+  const handleOpenPhotoLibrary = async () => {
+    hapticTap()
+    try {
+      const result = await openPhotoLibrary(true) // Allow multiple
+      if (result.images.length > 0) {
+        setImages(prev => [...prev, ...result.images.map(img => img.base64)])
+        hapticSuccess()
+      }
+    } catch (e) {
+      console.log('Photo picker cancelled or not available')
+    }
+  }
+
+  // Document scanner handler
+  const handleOpenDocumentScanner = async () => {
+    hapticTap()
+    try {
+      const result = await openDocumentScanner()
+      if (result.images.length > 0) {
+        setImages(prev => [...prev, ...result.images.map(img => img.base64)])
+        hapticSuccess()
+      }
+    } catch (e) {
+      console.log('Scanner cancelled or not available')
+    }
+  }
+
+  // Voice input handlers
+  const handleStartVoiceInput = async () => {
+    hapticTap()
+
+    // Check platform
+    if (isNativeIOS()) {
+      // Native iOS voice recognition
+      try {
+        // Check/request permission
+        let permission = await checkVoicePermission()
+        if (!permission.speech || !permission.microphone) {
+          permission = await requestVoicePermission()
+        }
+
+        if (!permission.speech || !permission.microphone) {
+          setError('Voice permission denied. Please enable in Settings.')
+          hapticError()
+          return
+        }
+
+        setIsRecording(true)
+        setVoiceText('')
+
+        // Listen for partial results
+        const listener = await addVoiceListener((data) => {
+          setVoiceText(data.text)
+        })
+
+        // Start recognition
+        const result = await startVoiceRecognition(t('locale') === 'da' ? 'da-DK' : 'en-US')
+        setInputText(prev => prev ? `${prev}\n${result.text}` : result.text)
+        setIsRecording(false)
+        listener.remove()
+        hapticSuccess()
+      } catch (e) {
+        setIsRecording(false)
+        console.error('Voice recognition error:', e)
+      }
+    } else if (isWebSpeechAvailable()) {
+      // Web Speech API fallback
+      setIsRecording(true)
+      setVoiceText('')
+
+      startWebSpeechRecognition(
+        t('locale') === 'da' ? 'da-DK' : 'en-US',
+        (text, isFinal) => {
+          setVoiceText(text)
+          if (isFinal) {
+            setInputText(prev => prev ? `${prev}\n${text}` : text)
+          }
+        },
+        (error) => {
+          setError(error)
+          setIsRecording(false)
+        }
+      )
+    } else {
+      setError('Voice input is not available on this device')
+      hapticError()
+    }
+  }
+
+  const handleStopVoiceInput = async () => {
+    hapticTap()
+
+    if (isNativeIOS()) {
+      try {
+        const result = await stopVoiceRecognition()
+        if (result.text) {
+          setInputText(prev => prev ? `${prev}\n${result.text}` : result.text)
+        }
+        hapticSuccess()
+      } catch (e) {
+        console.error('Stop voice error:', e)
+      }
+    } else {
+      stopWebSpeechRecognition()
+      if (voiceText) {
+        setInputText(prev => prev ? `${prev}\n${voiceText}` : voiceText)
+      }
+    }
+
+    setIsRecording(false)
+    setVoiceText('')
+  }
+
   const handleProcess = async () => {
-    if (!inputText && !image) {
+    if (!inputText && images.length === 0) {
       setError(t('aiCalendar.enterTextOrImage'))
       return
     }
@@ -208,7 +451,8 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           text: inputText,
-          image: image,
+          image: images.length === 1 ? images[0] : undefined, // Single image for backwards compatibility
+          images: images.length > 1 ? images : undefined, // Multiple images
           model: aiModel,
           context: familyContext,
         }),
@@ -355,12 +599,18 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
   const handleReset = () => {
     setInputText('')
-    setImage(null)
-    setImagePreview(null)
+    setImages([])
     setExtractedEvents([])
     setSummary(null)
     setError(null)
     setStep('input')
+    setVoiceText('')
+    setIsRecording(false)
+    setShowClipboardPrompt(false)
+    setClipboardText(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
   }
 
   const handleBack = () => {
@@ -394,46 +644,173 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
               />
             </div>
 
-            {/* Image Upload */}
-            <div>
-              <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
-                {t('aiCalendar.uploadImage')}
-              </label>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-                {t('aiCalendar.uploadDescription')}
-              </p>
+            {/* Clipboard Detection Prompt */}
+            {showClipboardPrompt && clipboardText && (
+              <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-200 dark:border-teal-800 animate-spring-in">
+                <div className="flex items-start gap-3">
+                  <Clipboard className="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-teal-800 dark:text-teal-200 mb-1">
+                      Event detected in clipboard
+                    </p>
+                    <p className="text-xs text-teal-600 dark:text-teal-400 truncate">
+                      {clipboardText.slice(0, 100)}{clipboardText.length > 100 ? '...' : ''}
+                    </p>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={useClipboardText}
+                        className="text-xs px-3 py-1.5 bg-teal-600 text-white rounded-lg hover:bg-teal-700 active:scale-95 transition-all"
+                      >
+                        Use it
+                      </button>
+                      <button
+                        onClick={dismissClipboardPrompt}
+                        className="text-xs px-3 py-1.5 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
-              {imagePreview ? (
-                <div className="relative inline-block">
-                  <img
-                    src={imagePreview}
-                    alt="Uploaded"
-                    className="max-h-64 rounded-xl border border-slate-200 dark:border-slate-600"
-                  />
+            {/* Voice Input */}
+            {isRecording && (
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800 animate-spring-in">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-red-500 rounded-full flex items-center justify-center animate-voice-pulse">
+                      <Mic className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="absolute inset-0 bg-red-500 rounded-full animate-pulse-ring" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                      Listening...
+                    </p>
+                    {voiceText && (
+                      <p className="text-xs text-red-600 dark:text-red-400 mt-1">
+                        {voiceText}
+                      </p>
+                    )}
+                  </div>
                   <button
-                    onClick={handleRemoveImage}
-                    className="absolute -top-3 -right-3 w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                    onClick={handleStopVoiceInput}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 active:scale-95 transition-all flex items-center gap-2"
                   >
-                    <X className="w-5 h-5" />
+                    <MicOff className="w-4 h-4" />
+                    Stop
                   </button>
                 </div>
-              ) : (
+              </div>
+            )}
+
+            {/* Input Methods Grid */}
+            <div>
+              <label className="block text-base font-medium text-slate-700 dark:text-slate-300 mb-3">
+                Add Images or Voice
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Camera */}
+                <button
+                  onClick={handleOpenCamera}
+                  disabled={isRecording}
+                  className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-teal-400 dark:hover:border-teal-500 transition-all flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-400 active:scale-95 disabled:opacity-50"
+                >
+                  <Camera className="w-8 h-8" />
+                  <span className="text-xs font-medium">Camera</span>
+                </button>
+
+                {/* Photo Library */}
+                <button
+                  onClick={handleOpenPhotoLibrary}
+                  disabled={isRecording}
+                  className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-purple-400 dark:hover:border-purple-500 transition-all flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 active:scale-95 disabled:opacity-50"
+                >
+                  <Images className="w-8 h-8" />
+                  <span className="text-xs font-medium">Photos</span>
+                </button>
+
+                {/* Document Scanner */}
+                <button
+                  onClick={handleOpenDocumentScanner}
+                  disabled={isRecording}
+                  className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-orange-400 dark:hover:border-orange-500 transition-all flex flex-col items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-orange-600 dark:hover:text-orange-400 active:scale-95 disabled:opacity-50"
+                >
+                  <ScanLine className="w-8 h-8" />
+                  <span className="text-xs font-medium">Scan Doc</span>
+                </button>
+
+                {/* Voice Input */}
+                <button
+                  onClick={isRecording ? handleStopVoiceInput : handleStartVoiceInput}
+                  className={`p-4 border-2 border-dashed rounded-xl transition-all flex flex-col items-center gap-2 active:scale-95 ${
+                    isRecording
+                      ? 'border-red-400 dark:border-red-500 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+                      : 'border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-400 hover:border-red-400 dark:hover:border-red-500 hover:text-red-600 dark:hover:text-red-400'
+                  }`}
+                >
+                  {isRecording ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                  <span className="text-xs font-medium">{isRecording ? 'Stop' : 'Voice'}</span>
+                </button>
+              </div>
+
+              {/* File input fallback for web */}
+              <div className="mt-3">
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full p-8 border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-xl hover:border-sage-400 dark:hover:border-sage-500 transition-colors flex flex-col items-center gap-3 text-slate-500 dark:text-slate-400"
+                  disabled={isRecording}
+                  className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors flex items-center justify-center gap-2 text-slate-500 dark:text-slate-400 text-sm disabled:opacity-50"
                 >
-                  <Image className="w-12 h-12" />
-                  <span className="text-base">{t('aiCalendar.tapToUpload')}</span>
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Browse Files</span>
                 </button>
-              )}
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 onChange={handleImageSelect}
                 className="hidden"
               />
             </div>
+
+            {/* Image Previews */}
+            {images.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-base font-medium text-slate-700 dark:text-slate-300">
+                    {images.length} image{images.length !== 1 ? 's' : ''} selected
+                  </label>
+                  <button
+                    onClick={handleRemoveAllImages}
+                    className="text-sm text-red-500 hover:text-red-600 flex items-center gap-1"
+                  >
+                    <X className="w-4 h-4" />
+                    Remove all
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {images.map((img, index) => (
+                    <div key={index} className="relative inline-block animate-spring-scale">
+                      <img
+                        src={img}
+                        alt={`Image ${index + 1}`}
+                        className="h-24 w-24 object-cover rounded-xl border border-slate-200 dark:border-slate-600"
+                      />
+                      <button
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-md active:scale-90"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -450,7 +827,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
               </Button>
               <Button
                 onClick={handleProcess}
-                disabled={isProcessing || (!inputText && !image)}
+                disabled={isProcessing || isRecording || (!inputText && images.length === 0)}
                 className="px-6 py-3 text-base"
               >
                 {isProcessing ? (

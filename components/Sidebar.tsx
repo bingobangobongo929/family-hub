@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   Home,
@@ -259,8 +260,15 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           {/* Header */}
           <div className={`flex items-center justify-between ${isKitchen ? 'mb-6' : 'mb-4'}`}>
             <div className="flex items-center gap-3">
-              <div className={`${headerLogoSize} rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-lg shadow-teal-500/20`}>
-                <Users className={`${headerIconSize} text-white`} />
+              <div className={`${headerLogoSize} rounded-xl overflow-hidden shadow-lg shadow-teal-500/20`}>
+                <Image
+                  src="/icon-512.png"
+                  alt="Family Hub"
+                  width={isKitchen ? 44 : 36}
+                  height={isKitchen ? 44 : 36}
+                  className="w-full h-full object-cover"
+                  priority
+                />
               </div>
               <h1 className={`font-display ${headerTextSize} font-semibold bg-gradient-to-r from-teal-600 to-teal-700 dark:from-teal-400 dark:to-teal-500 bg-clip-text text-transparent`}>
                 {t('nav.appName')}
