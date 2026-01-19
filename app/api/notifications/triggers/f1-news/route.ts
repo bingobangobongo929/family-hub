@@ -21,6 +21,7 @@ interface NotificationPrefs {
   user_id: string;
   f1_enabled: boolean;
   f1_news_enabled: boolean;
+  f1_news_ai_curated: boolean;
   f1_spoiler_free: boolean;
   f1_news_race_category: boolean;
   f1_news_driver_category: boolean;
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
     // Get users with F1 news notifications enabled
     const { data: prefs, error: prefsError } = await supabase
       .from('notification_preferences')
-      .select('user_id, f1_enabled, f1_news_enabled, f1_spoiler_free, f1_news_race_category, f1_news_driver_category, f1_news_technical_category, f1_news_calendar_category, f1_favorite_driver')
+      .select('user_id, f1_enabled, f1_news_enabled, f1_news_ai_curated, f1_spoiler_free, f1_news_race_category, f1_news_driver_category, f1_news_technical_category, f1_news_calendar_category, f1_favorite_driver')
       .eq('f1_enabled', true)
       .eq('f1_news_enabled', true);
 
@@ -134,17 +135,20 @@ export async function GET(request: NextRequest) {
         // Skip spoilers if user has spoiler-free mode
         if (pref.f1_spoiler_free && article.isSpoiler) continue;
 
-        // Check category preferences
-        const category = article.category || 'other';
-        const wantsCategory = (
-          (category === 'race' && pref.f1_news_race_category) ||
-          (category === 'driver' && pref.f1_news_driver_category) ||
-          (category === 'technical' && pref.f1_news_technical_category) ||
-          (category === 'calendar' && pref.f1_news_calendar_category) ||
-          (category === 'other')
-        );
+        // If AI-curated is enabled, skip category filtering (notify for all interesting articles)
+        // Otherwise, check category preferences
+        if (!pref.f1_news_ai_curated) {
+          const category = article.category || 'other';
+          const wantsCategory = (
+            (category === 'race' && pref.f1_news_race_category) ||
+            (category === 'driver' && pref.f1_news_driver_category) ||
+            (category === 'technical' && pref.f1_news_technical_category) ||
+            (category === 'calendar' && pref.f1_news_calendar_category) ||
+            (category === 'other')
+          );
 
-        if (!wantsCategory) continue;
+          if (!wantsCategory) continue;
+        }
 
         articlesToNotify.push(article);
 

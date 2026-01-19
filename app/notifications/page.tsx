@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
+import { usePush } from '@/lib/push-context'
 import { formatDistanceToNow } from 'date-fns'
 
 interface NotificationLog {
@@ -43,9 +44,15 @@ const CATEGORY_COLORS: Record<string, string> = {
 export default function NotificationsPage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { clearBadge } = usePush()
   const [notifications, setNotifications] = useState<NotificationLog[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string | null>(null)
+
+  // Clear the app badge when viewing notifications
+  useEffect(() => {
+    clearBadge()
+  }, [clearBadge])
 
   const fetchNotifications = useCallback(async () => {
     if (!user) return

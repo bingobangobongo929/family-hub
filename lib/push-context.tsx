@@ -10,7 +10,8 @@ import {
   removePushListeners,
   isNativeApp,
   getPushPermissionStatus,
-  refreshPushToken
+  refreshPushToken,
+  clearBadge as clearPushBadge
 } from './push-notifications';
 import type { PushNotificationSchema, ActionPerformed } from '@capacitor/push-notifications';
 
@@ -25,6 +26,7 @@ interface PushContextType {
   debugLog: string[];
   requestPermission: () => Promise<boolean>;
   refreshToken: () => Promise<void>;
+  clearBadge: () => Promise<void>;
 }
 
 const PushContext = createContext<PushContextType>({
@@ -36,6 +38,7 @@ const PushContext = createContext<PushContextType>({
   debugLog: [],
   requestPermission: async () => false,
   refreshToken: async () => {},
+  clearBadge: async () => {},
 });
 
 export function PushProvider({ children }: { children: ReactNode }) {
@@ -241,6 +244,12 @@ export function PushProvider({ children }: { children: ReactNode }) {
     await refreshPushToken();
   }, [isNative]);
 
+  // Clear app badge and delivered notifications
+  const clearBadge = useCallback(async (): Promise<void> => {
+    if (!isNative) return;
+    await clearPushBadge();
+  }, [isNative]);
+
   return (
     <PushContext.Provider value={{
       isNative,
@@ -251,6 +260,7 @@ export function PushProvider({ children }: { children: ReactNode }) {
       debugLog,
       requestPermission,
       refreshToken,
+      clearBadge,
     }}>
       {children}
     </PushContext.Provider>

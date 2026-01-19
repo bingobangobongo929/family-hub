@@ -93,3 +93,17 @@ export async function refreshPushToken(): Promise<void> {
   console.log('Forcing push token refresh...');
   await PushNotifications.register();
 }
+
+// Clear app badge and remove delivered notifications
+// Call this when opening the app or notifications page
+export async function clearBadge(): Promise<void> {
+  if (!isNativeApp()) return;
+
+  try {
+    console.log('[Push] Clearing badge and delivered notifications...');
+    await PushNotifications.removeAllDeliveredNotifications();
+    console.log('[Push] Badge cleared');
+  } catch (error) {
+    console.error('[Push] Error clearing badge:', error);
+  }
+}

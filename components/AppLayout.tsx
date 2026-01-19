@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
+import { App } from '@capacitor/app'
 import { useAuth } from '@/lib/auth-context'
 import { useDevice, getDeviceCSSVars } from '@/lib/device-context'
 import { usePush } from '@/lib/push-context'
@@ -14,7 +15,7 @@ import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const { isMobile, isKitchen, device } = useDevice()
-  const { isNative } = usePush()
+  const { isNative, clearBadge } = usePush()
   const pathname = usePathname()
   const router = useRouter()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
@@ -109,6 +110,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setSidebarOpen(false)
   }, [pathname])
+
+  // Clear app badge when app comes to foreground (native only)
+  useEffect(() => {
+    if (!isNative) return
+
+    const handleAppStateChange = App.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        clearBadge()
+      }
+    })
+
+    // Also clear badge on initial mount
+    clearBadge()
+
+    return () => {
+      handleAppStateChange.then(h => h.remove())
+    }
+  }, [isNative, clearBadge])
 
   const handleScreensaverWake = useCallback(() => {
     // Could add analytics or other wake handlers here

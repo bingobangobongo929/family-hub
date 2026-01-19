@@ -54,6 +54,7 @@ interface NotificationPrefs {
 
   // F1 - News
   f1_news_enabled: boolean
+  f1_news_ai_curated: boolean
   f1_news_race_category: boolean
   f1_news_driver_category: boolean
   f1_news_technical_category: boolean
@@ -98,6 +99,7 @@ const DEFAULT_PREFS: NotificationPrefs = {
   f1_sprint_results: false,
   f1_championship_updates: true,
   f1_news_enabled: true,
+  f1_news_ai_curated: true,
   f1_news_race_category: true,
   f1_news_driver_category: true,
   f1_news_technical_category: false,
@@ -627,41 +629,59 @@ export default function NotificationPreferences() {
           {/* News Notifications */}
           <div className="py-4 border-b border-slate-200 dark:border-slate-700">
             <p className="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">
-              News Categories
+              News Notifications
             </p>
             <div className="space-y-2">
               <ToggleItem
-                label="News Notifications"
-                description="AI-filtered interesting F1 news"
+                label="F1 News"
+                description="Get notified about F1 news"
                 enabled={prefs.f1_news_enabled}
                 onChange={(v) => updatePref('f1_news_enabled', v)}
               />
               {prefs.f1_news_enabled && (
-                <div className="ml-4 space-y-2 pt-2">
-                  <ToggleItem
-                    label="Race News"
-                    description="Grand Prix updates"
-                    enabled={prefs.f1_news_race_category}
-                    onChange={(v) => updatePref('f1_news_race_category', v)}
-                  />
-                  <ToggleItem
-                    label="Driver News"
-                    description="Driver transfers and news"
-                    enabled={prefs.f1_news_driver_category}
-                    onChange={(v) => updatePref('f1_news_driver_category', v)}
-                  />
-                  <ToggleItem
-                    label="Technical News"
-                    description="Car developments and regulations"
-                    enabled={prefs.f1_news_technical_category}
-                    onChange={(v) => updatePref('f1_news_technical_category', v)}
-                  />
-                  <ToggleItem
-                    label="Calendar News"
-                    description="Schedule changes and new races"
-                    enabled={prefs.f1_news_calendar_category}
-                    onChange={(v) => updatePref('f1_news_calendar_category', v)}
-                  />
+                <div className="ml-4 space-y-3 pt-2">
+                  {/* AI Curated - Primary Option */}
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <ToggleItem
+                      label="AI-Curated News"
+                      description="Notify me for all articles the AI deems interesting"
+                      enabled={prefs.f1_news_ai_curated}
+                      onChange={(v) => updatePref('f1_news_ai_curated', v)}
+                    />
+                  </div>
+
+                  {/* Category filters - shown when AI curated is off */}
+                  {!prefs.f1_news_ai_curated && (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                        Or choose specific categories:
+                      </p>
+                      <ToggleItem
+                        label="Race News"
+                        description="Grand Prix updates"
+                        enabled={prefs.f1_news_race_category}
+                        onChange={(v) => updatePref('f1_news_race_category', v)}
+                      />
+                      <ToggleItem
+                        label="Driver News"
+                        description="Driver transfers and news"
+                        enabled={prefs.f1_news_driver_category}
+                        onChange={(v) => updatePref('f1_news_driver_category', v)}
+                      />
+                      <ToggleItem
+                        label="Technical News"
+                        description="Car developments and regulations"
+                        enabled={prefs.f1_news_technical_category}
+                        onChange={(v) => updatePref('f1_news_technical_category', v)}
+                      />
+                      <ToggleItem
+                        label="Calendar News"
+                        description="Schedule changes and new races"
+                        enabled={prefs.f1_news_calendar_category}
+                        onChange={(v) => updatePref('f1_news_calendar_category', v)}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
