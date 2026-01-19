@@ -5,6 +5,7 @@ import VisionKit
 import Speech
 import AVFoundation
 import WidgetKit
+import PhotosUI
 
 /// Native plugin for Family Hub providing iOS-specific features
 @objc(FamilyHubNativePlugin)
