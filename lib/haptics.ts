@@ -4,11 +4,24 @@ import { Capacitor } from '@capacitor/core';
 // Check if we're running on a native platform
 const isNative = Capacitor.isNativePlatform();
 
+// Haptic cooldown to prevent rapid-fire vibrations (toddler-proof)
+const HAPTIC_COOLDOWN_MS = 500;
+let lastHapticTime = 0;
+
+function canTriggerHaptic(): boolean {
+  const now = Date.now();
+  if (now - lastHapticTime < HAPTIC_COOLDOWN_MS) {
+    return false;
+  }
+  lastHapticTime = now;
+  return true;
+}
+
 /**
  * Light haptic feedback - for selections, button presses
  */
 export async function hapticLight() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.impact({ style: ImpactStyle.Light });
   } catch (e) {
@@ -20,7 +33,7 @@ export async function hapticLight() {
  * Medium haptic feedback - for confirmations, completions
  */
 export async function hapticMedium() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.impact({ style: ImpactStyle.Medium });
   } catch (e) {
@@ -32,7 +45,7 @@ export async function hapticMedium() {
  * Heavy haptic feedback - for important actions, warnings
  */
 export async function hapticHeavy() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.impact({ style: ImpactStyle.Heavy });
   } catch (e) {
@@ -44,7 +57,7 @@ export async function hapticHeavy() {
  * Success haptic pattern
  */
 export async function hapticSuccess() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.notification({ type: NotificationType.Success });
   } catch (e) {
@@ -56,7 +69,7 @@ export async function hapticSuccess() {
  * Warning haptic pattern
  */
 export async function hapticWarning() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.notification({ type: NotificationType.Warning });
   } catch (e) {
@@ -68,7 +81,7 @@ export async function hapticWarning() {
  * Error haptic pattern
  */
 export async function hapticError() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.notification({ type: NotificationType.Error });
   } catch (e) {
@@ -80,7 +93,7 @@ export async function hapticError() {
  * Selection changed haptic - for picker/toggle changes
  */
 export async function hapticSelection() {
-  if (!isNative) return;
+  if (!isNative || !canTriggerHaptic()) return;
   try {
     await Haptics.selectionStart();
     await Haptics.selectionChanged();

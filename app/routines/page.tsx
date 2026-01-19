@@ -25,9 +25,21 @@ type RoutineWithDetails = Routine & {
   scenarios?: RoutineScenario[]
 }
 
+// =============================================================================
+// TODDLER-PROOF CONSTANTS - Designed for 3-year-olds!
+// =============================================================================
+const TODDLER_MODE = {
+  TAP_DEBOUNCE: 1000,           // 1 second between accepted taps
+  TOUCH_MOVE_THRESHOLD: 30,     // 30px movement = cancel tap (shaky fingers)
+  UNDO_HOLD_DURATION: 5000,     // 5 seconds to undo (practically impossible for kids)
+  POST_COMPLETE_COOLDOWN: 1500, // 1.5s before next tap registers after completion
+  STEP_TRANSITION_DELAY: 800,   // 800ms pause before showing next step
+  CELEBRATION_PAUSE: 1200,      // 1.2s disable inputs during celebration
+}
+
 export default function RoutinesPage() {
   const { user } = useAuth()
-  const { isKitchen, scale } = useDevice()
+  const { isKitchen, isMobile, scale } = useDevice()
   const { members, getMember, updateMemberPoints } = useFamily()
   const { t } = useTranslation()
   const [routines, setRoutines] = useState<RoutineWithDetails[]>([])
@@ -73,6 +85,12 @@ export default function RoutinesPage() {
   // Long-press progress for visual feedback
   const [longPressProgress, setLongPressProgress] = useState<number>(0)
   const longPressInterval = useRef<NodeJS.Timeout | null>(null)
+
+  // Toddler-proof state
+  const [celebrationPause, setCelebrationPause] = useState(false) // Disable inputs during celebration
+  const [tapRipple, setTapRipple] = useState<{ id: string, x: number, y: number } | null>(null) // Visual feedback
+  const touchStartPos = useRef<{ x: number, y: number } | null>(null) // Track touch start for movement detection
+  const lastCompletionTime = useRef<number>(0) // Track last completion for cooldown
 
   const children = members.filter(m => m.role === 'child')
   const isWeekend = [0, 6].includes(new Date().getDay())
@@ -424,37 +442,74 @@ export default function RoutinesPage() {
     }
   }
 
-  // Long-press handling for undo protection (kid-friendly: 3 seconds to undo)
-  const LONG_PRESS_DURATION = 3000 // 3 seconds - prevents accidental undos by kids
+  // Long-press handling for undo protection (toddler-proof: 5 seconds to undo!)
+  const LONG_PRESS_DURATION = TODDLER_MODE.UNDO_HOLD_DURATION
   const lastClickTime = useRef<Map<string, number>>(new Map())
-  const DEBOUNCE_MS = 300 // 300ms debounce - just prevent double-taps
 
-  // Simple tap handler: tap to complete, does nothing if already done
-  const handleMemberClick = (stepId: string, memberId: string) => {
+  // Toddler-proof tap handler with celebration pause and movement detection
+  const handleMemberClick = (e: React.MouseEvent | React.TouchEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     const now = Date.now()
     const lastClick = lastClickTime.current.get(key) || 0
 
-    // Debounce to prevent accidental double-taps
-    if (now - lastClick < DEBOUNCE_MS) {
+    // Block during celebration pause
+    if (celebrationPause) {
+      console.log('[TODDLER] Blocked - celebration in progress')
       return
     }
+
+    // Block if multi-touch detected (2+ fingers)
+    if ('touches' in e && e.touches.length > 1) {
+      console.log('[TODDLER] Blocked - multi-touch detected')
+      return
+    }
+
+    // Toddler-proof debounce (1 second between taps)
+    if (now - lastClick < TODDLER_MODE.TAP_DEBOUNCE) {
+      console.log('[TODDLER] Blocked - debounce')
+      return
+    }
+
+    // Post-completion cooldown (1.5 seconds after any completion)
+    if (now - lastCompletionTime.current < TODDLER_MODE.POST_COMPLETE_COOLDOWN) {
+      console.log('[TODDLER] Blocked - post-completion cooldown')
+      return
+    }
+
     lastClickTime.current.set(key, now)
 
     const isCompleted = completedSteps.has(key)
 
     if (isCompleted) {
-      // Already done - tap does nothing, must long-press 3s to undo
+      // Already done - tap does nothing, must long-press 5s to undo
       return
     }
 
+    // Show tap ripple feedback
+    if ('clientX' in e) {
+      setTapRipple({ id: key, x: e.clientX, y: e.clientY })
+      setTimeout(() => setTapRipple(null), 600)
+    }
+
     // Not completed - mark as done!
+    lastCompletionTime.current = now
     toggleStepForMember(stepId, memberId)
+
+    // Trigger celebration pause
+    setCelebrationPause(true)
+    setTimeout(() => setCelebrationPause(false), TODDLER_MODE.CELEBRATION_PAUSE)
   }
 
   const handleStepPressStart = (e: React.TouchEvent | React.MouseEvent, stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
     const isCompleted = completedSteps.has(key)
+
+    // Track touch start position for movement detection
+    if ('touches' in e) {
+      touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+    } else {
+      touchStartPos.current = { x: e.clientX, y: e.clientY }
+    }
 
     // Only handle long-press for completed steps (to undo)
     if (isCompleted) {
@@ -470,7 +525,7 @@ export default function RoutinesPage() {
         setLongPressProgress(progress)
 
         if (progress >= 1) {
-          // Long press completed (3 seconds) - do the undo
+          // Long press completed (5 seconds) - do the undo
           if (navigator.vibrate) navigator.vibrate([50, 50, 50])
           toggleStepForMember(stepId, memberId)
           setLongPressActive(null)
@@ -483,8 +538,20 @@ export default function RoutinesPage() {
     }
   }
 
+  const handleStepPressMove = (e: React.TouchEvent, stepId: string, memberId: string) => {
+    // Cancel long-press if finger moves too far (toddler shaky fingers)
+    if (touchStartPos.current && 'touches' in e) {
+      const dx = Math.abs(e.touches[0].clientX - touchStartPos.current.x)
+      const dy = Math.abs(e.touches[0].clientY - touchStartPos.current.y)
+      if (dx > TODDLER_MODE.TOUCH_MOVE_THRESHOLD || dy > TODDLER_MODE.TOUCH_MOVE_THRESHOLD) {
+        handleStepPressEnd(stepId, memberId)
+      }
+    }
+  }
+
   const handleStepPressEnd = (stepId: string, memberId: string) => {
     const key = `${stepId}:${memberId}`
+    touchStartPos.current = null
     // Cancel long-press if released early
     if (longPressInterval.current) {
       clearInterval(longPressInterval.current)
@@ -1150,6 +1217,31 @@ export default function RoutinesPage() {
     return { completed, total: visibleSteps.length }
   }
 
+  // Get current step (first step where not all members have completed) - for Focus Mode
+  const getCurrentStep = (routine: RoutineWithDetails): RoutineStep | null => {
+    const visibleSteps = getVisibleSteps(routine).filter(s => !isStepSkipped(s.id))
+    const routineMembers = routine.members || []
+
+    for (const step of visibleSteps) {
+      const stepMembers = getStepMembers(step, routineMembers)
+      const allDone = stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
+      if (!allDone) return step
+    }
+    return null // All done!
+  }
+
+  // Check if routine is fully complete
+  const isRoutineComplete = (routine: RoutineWithDetails): boolean => {
+    const visibleSteps = getVisibleSteps(routine).filter(s => !isStepSkipped(s.id))
+    const routineMembers = routine.members || []
+    if (visibleSteps.length === 0 || routineMembers.length === 0) return false
+
+    return visibleSteps.every(step => {
+      const stepMembers = getStepMembers(step, routineMembers)
+      return stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
+    })
+  }
+
   // Drag and drop handlers for routine reordering
   const handleDragStart = (e: React.DragEvent, routineId: string) => {
     setDraggingRoutine(routineId)
@@ -1485,8 +1577,197 @@ export default function RoutinesPage() {
             </div>
           )}
 
-          {/* Fun Step Checklist - New 2-row card design */}
-          <div className="space-y-3">
+          {/* ====================================================================
+              MOBILE FOCUS MODE - Toddler-proof single-step view
+              Shows only current step, no scrolling, huge tap targets
+              ==================================================================== */}
+          {isMobile && selectedRoutine && (() => {
+            const currentStep = getCurrentStep(selectedRoutine)
+            const routineComplete = isRoutineComplete(selectedRoutine)
+            const visibleSteps = getVisibleSteps(selectedRoutine).filter(s => !isStepSkipped(s.id))
+            const currentStepIndex = currentStep ? visibleSteps.findIndex(s => s.id === currentStep.id) : visibleSteps.length
+            const currentStepMembers = currentStep ? getStepMembers(currentStep, selectedRoutine.members || []) : []
+            const remainingSteps = visibleSteps.length - currentStepIndex - 1
+
+            return (
+              <div
+                className="min-h-[60vh] flex flex-col select-none"
+                style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+              >
+                {/* Progress dots */}
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  {visibleSteps.map((step, idx) => {
+                    const stepMembers = getStepMembers(step, selectedRoutine.members || [])
+                    const stepDone = stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
+                    const isCurrent = currentStep?.id === step.id
+                    return (
+                      <div
+                        key={step.id}
+                        className={`rounded-full transition-all duration-300 ${
+                          stepDone
+                            ? 'w-3 h-3 bg-green-500'
+                            : isCurrent
+                            ? 'w-4 h-4 bg-violet-500 animate-pulse'
+                            : 'w-2 h-2 bg-slate-300 dark:bg-slate-600'
+                        }`}
+                      />
+                    )
+                  })}
+                </div>
+
+                {routineComplete ? (
+                  /* All done celebration */
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
+                    <div className="text-8xl mb-4 animate-bounce">
+                      {selectedRoutine.type === 'morning' ? '🌟' : '🌙'}
+                    </div>
+                    <h2 className="text-3xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                      All done!
+                    </h2>
+                    <p className="text-lg text-slate-500 dark:text-slate-400">
+                      Great job everyone! 🎉
+                    </p>
+                    <div className="flex items-center gap-3 mt-6">
+                      {selectedRoutine.members?.map(m => (
+                        <div key={m.id} className="relative">
+                          <AvatarDisplay
+                            photoUrl={m.photo_url}
+                            emoji={m.avatar}
+                            name={m.name}
+                            color={m.color}
+                            size="lg"
+                          />
+                          <span className="absolute -bottom-1 -right-1 text-xl">⭐</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : currentStep ? (
+                  /* Current step - Focus Mode */
+                  <div className="flex-1 flex flex-col items-center justify-center">
+                    {/* Big emoji */}
+                    <div className={`text-7xl mb-4 ${celebratingStep === currentStep.id ? 'animate-bounce' : ''}`}>
+                      {currentStep.emoji}
+                    </div>
+
+                    {/* Step title */}
+                    <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6 text-center px-4">
+                      {currentStep.title}
+                    </h2>
+
+                    {/* Large avatar buttons - 80px minimum */}
+                    <div className="flex items-center justify-center gap-6 flex-wrap px-4">
+                      {currentStepMembers.map(member => {
+                        const memberDone = isStepCompleteForMember(currentStep.id, member.id)
+                        const pressKey = `${currentStep.id}:${member.id}`
+                        const isLongPressing = longPressActive === pressKey
+
+                        // Calculate countdown for undo (5 seconds)
+                        const ringCircumference = 251.33 // 2 * PI * 40
+                        const ringViewBox = '0 0 88 88'
+                        const ringRadius = 40
+                        const ringCenter = 44
+
+                        return (
+                          <div key={member.id} className="flex flex-col items-center select-none">
+                            <button
+                              onClick={(e) => handleMemberClick(e, currentStep.id, member.id)}
+                              onTouchStart={(e) => handleStepPressStart(e, currentStep.id, member.id)}
+                              onTouchMove={(e) => handleStepPressMove(e, currentStep.id, member.id)}
+                              onTouchEnd={() => handleStepPressEnd(currentStep.id, member.id)}
+                              onTouchCancel={() => handleStepPressCancel(currentStep.id, member.id)}
+                              onContextMenu={(e) => e.preventDefault()}
+                              disabled={celebrationPause}
+                              style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
+                              className={`relative w-20 h-20 rounded-2xl transition-all duration-300 shadow-lg overflow-hidden select-none touch-manipulation ${
+                                celebrationPause
+                                  ? 'opacity-75 pointer-events-none'
+                                  : isLongPressing
+                                  ? 'scale-90 ring-4 ring-red-400'
+                                  : memberDone
+                                  ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 scale-110'
+                                  : 'active:scale-95 ring-2 ring-slate-200 dark:ring-slate-600'
+                              }`}
+                            >
+                              <AvatarDisplay
+                                photoUrl={member.photo_url}
+                                emoji={member.avatar}
+                                name={member.name}
+                                color={member.color}
+                                size="xl"
+                                className="w-full h-full pointer-events-none"
+                              />
+
+                              {/* Completion overlay */}
+                              {memberDone && !isLongPressing && (
+                                <span className="absolute inset-0 flex items-center justify-center bg-green-500/50 pointer-events-none">
+                                  <span className="animate-pop bg-white text-green-500 rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold shadow-lg">✓</span>
+                                </span>
+                              )}
+
+                              {/* Long-press progress ring (5 seconds to undo) */}
+                              {isLongPressing && (
+                                <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <svg className="w-full h-full absolute" viewBox={ringViewBox}>
+                                    <circle
+                                      cx={ringCenter}
+                                      cy={ringCenter}
+                                      r={ringRadius}
+                                      fill="rgba(239, 68, 68, 0.4)"
+                                      stroke="#ef4444"
+                                      strokeWidth="4"
+                                      strokeDasharray={`${longPressProgress * ringCircumference} ${ringCircumference}`}
+                                      strokeLinecap="round"
+                                      transform={`rotate(-90 ${ringCenter} ${ringCenter})`}
+                                    />
+                                  </svg>
+                                  <span className="bg-white text-red-500 rounded-full w-8 h-8 flex items-center justify-center font-bold z-10 text-lg">
+                                    {Math.ceil(5 - longPressProgress * 5)}
+                                  </span>
+                                </span>
+                              )}
+                            </button>
+
+                            {/* Name inside tap area - also tappable */}
+                            <span className={`mt-2 text-base font-semibold ${
+                              memberDone
+                                ? 'text-green-600 dark:text-green-400'
+                                : 'text-slate-700 dark:text-slate-300'
+                            }`}>
+                              {member.name}
+                            </span>
+
+                            {/* Status */}
+                            <span className={`text-2xl ${memberDone ? 'animate-bounce' : 'opacity-30'}`}>
+                              {memberDone ? '✓' : '○'}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {/* Remaining steps indicator */}
+                    {remainingSteps > 0 && (
+                      <div className="mt-8 text-center">
+                        <span className="text-slate-400 dark:text-slate-500 text-sm">
+                          {remainingSteps} more step{remainingSteps > 1 ? 's' : ''} to go
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-slate-500">
+                    Loading...
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* ====================================================================
+              DESKTOP/TABLET STEP LIST - Original 2-row card design
+              ==================================================================== */}
+          {!isMobile && <div className="space-y-3">
             {getVisibleSteps(selectedRoutine)
               .filter(step => !isStepSkipped(step.id)) // Hide skipped steps
               .map((step) => {
@@ -1590,19 +1871,24 @@ export default function RoutinesPage() {
                           const ringCircumference = isKitchen ? 232.48 : 163.36
 
                           return (
-                            <div key={member.id} className="flex flex-col items-center">
-                              {/* Avatar button */}
+                            <div key={member.id} className="flex flex-col items-center select-none">
+                              {/* Avatar button - Toddler-proof with large tap target */}
                               <button
-                                onClick={() => handleMemberClick(step.id, member.id)}
+                                onClick={(e) => handleMemberClick(e, step.id, member.id)}
                                 onTouchStart={(e) => handleStepPressStart(e, step.id, member.id)}
+                                onTouchMove={(e) => handleStepPressMove(e, step.id, member.id)}
                                 onTouchEnd={() => handleStepPressEnd(step.id, member.id)}
                                 onTouchCancel={() => handleStepPressCancel(step.id, member.id)}
                                 onMouseDown={(e) => handleStepPressStart(e, step.id, member.id)}
                                 onMouseUp={() => handleStepPressEnd(step.id, member.id)}
                                 onMouseLeave={() => handleStepPressEnd(step.id, member.id)}
                                 onContextMenu={(e) => e.preventDefault()}
+                                disabled={celebrationPause}
+                                style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
                                 className={`relative ${avatarSize} rounded-2xl transition-all duration-300 shadow-md overflow-hidden select-none touch-manipulation ${
-                                  isLongPressing
+                                  celebrationPause
+                                    ? 'opacity-75 pointer-events-none'
+                                    : isLongPressing
                                     ? 'scale-90'
                                     : memberDone
                                     ? 'ring-4 ring-green-400 ring-offset-2 shadow-green-200 scale-105 animate-success-pulse'
@@ -1615,19 +1901,19 @@ export default function RoutinesPage() {
                                   name={member.name}
                                   color={member.color}
                                   size={isKitchen ? 'xl' : 'lg'}
-                                  className="w-full h-full"
+                                  className="w-full h-full pointer-events-none"
                                 />
 
                                 {/* Completion overlay */}
                                 {memberDone && !isLongPressing && (
-                                  <span className="absolute inset-0 flex items-center justify-center bg-green-500/40">
+                                  <span className="absolute inset-0 flex items-center justify-center bg-green-500/40 pointer-events-none">
                                     <span className={`animate-pop bg-white text-green-500 rounded-full ${checkSize} flex items-center justify-center font-bold shadow-lg`}>✓</span>
                                   </span>
                                 )}
 
-                                {/* Long-press progress ring */}
+                                {/* Long-press progress ring (5 seconds to undo) */}
                                 {isLongPressing && (
-                                  <span className="absolute inset-0 flex items-center justify-center">
+                                  <span className="absolute inset-0 flex items-center justify-center pointer-events-none">
                                     <svg className="w-full h-full absolute" viewBox={ringViewBox}>
                                       <circle
                                         cx={ringCenter}
@@ -1642,7 +1928,7 @@ export default function RoutinesPage() {
                                       />
                                     </svg>
                                     <span className={`bg-white text-red-500 rounded-full ${isKitchen ? 'w-8 h-8 text-sm' : 'w-6 h-6 text-xs'} flex items-center justify-center font-bold z-10`}>
-                                      {Math.ceil(3 - longPressProgress * 3)}
+                                      {Math.ceil(5 - longPressProgress * 5)}
                                     </span>
                                   </span>
                                 )}
@@ -1684,9 +1970,9 @@ export default function RoutinesPage() {
                 </div>
               )
             })}
-          </div>
+          </div>}
 
-          {getProgress(selectedRoutine).completed === getVisibleSteps(selectedRoutine).length && getVisibleSteps(selectedRoutine).length > 0 && (
+          {!isMobile && getProgress(selectedRoutine).completed === getVisibleSteps(selectedRoutine).length && getVisibleSteps(selectedRoutine).length > 0 && (
             <div className="mt-6 p-6 rounded-2xl bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/30 dark:to-emerald-900/30 text-center animate-scale-in">
               <div className="text-5xl mb-3 animate-tada">🎉</div>
               <p className="text-xl font-bold text-green-700 dark:text-green-300 mb-1">{t('routines.allDoneGreat')}</p>
