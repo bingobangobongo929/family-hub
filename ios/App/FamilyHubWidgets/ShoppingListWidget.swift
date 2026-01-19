@@ -58,56 +58,56 @@ struct SmallShoppingView: View {
     let items: [ShoppingItem]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 6) {
+            // Compact header - icon + count only
+            HStack(spacing: 4) {
                 Image(systemName: "cart.fill")
+                    .font(.title3)
                     .foregroundColor(.teal)
-                Text("Shopping")
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Spacer()
                 Text("\(items.count)")
-                    .font(.title2)
+                    .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.teal)
+                Spacer()
             }
 
-            Divider()
-
             if items.isEmpty {
-                VStack {
-                    Spacer()
+                Spacer()
+                VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title)
+                        .font(.largeTitle)
                         .foregroundColor(.green)
-                    Text("All done!")
+                    Text("Done!")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
                 }
                 .frame(maxWidth: .infinity)
+                Spacer()
             } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(items.prefix(3)) { item in
+                Divider()
+
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(items.prefix(4)) { item in
                         HStack(spacing: 6) {
                             Circle()
                                 .fill(Color.teal.opacity(0.3))
                                 .frame(width: 6, height: 6)
                             Text(item.name)
-                                .font(.caption)
+                                .font(.caption2)
                                 .lineLimit(1)
+                            Spacer()
                             if let qty = item.quantity, qty > 1 {
                                 Text("×\(qty)")
-                                    .font(.caption2)
+                                    .font(.system(size: 9))
                                     .foregroundColor(.secondary)
                             }
                         }
                     }
-                    if items.count > 3 {
-                        Text("+\(items.count - 3) more")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                }
+                if items.count > 4 {
+                    Text("+\(items.count - 4)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
                 Spacer()
             }

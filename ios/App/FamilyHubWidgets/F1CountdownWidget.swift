@@ -61,11 +61,11 @@ struct SmallF1View: View {
     let currentDate: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             // F1 Header with racing red
             HStack {
                 Text("F1")
-                    .font(.headline)
+                    .font(.title3)
                     .fontWeight(.black)
                     .foregroundColor(.red)
                 Spacer()
@@ -78,40 +78,36 @@ struct SmallF1View: View {
             if let session = data.nextSession {
                 Spacer()
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(session.name)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.red)
-
-                    Text(session.raceName)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .lineLimit(2)
-                }
+                // Session type (Qualifying, Race, etc)
+                Text(session.name)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
 
                 Spacer()
 
-                // Countdown
+                // Countdown - larger and more prominent
                 HStack {
                     Image(systemName: "timer")
                         .font(.caption)
                     Text(countdownText(to: session.startTime))
-                        .font(.system(.caption, design: .monospaced))
+                        .font(.system(.subheadline, design: .monospaced))
                         .fontWeight(.bold)
                 }
                 .foregroundColor(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
                 .background(Color.red)
-                .cornerRadius(8)
+                .cornerRadius(10)
             } else {
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: "flag.checkered")
                         .font(.title)
                         .foregroundColor(.secondary)
-                    Text("No upcoming session")
+                    Text("Off-season")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

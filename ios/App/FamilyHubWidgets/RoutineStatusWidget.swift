@@ -57,61 +57,74 @@ struct SmallRoutineView: View {
         routines.first { !$0.isComplete }
     }
 
+    // Extract short type from title (e.g., "Morning Routine" -> "Morning")
+    func shortTitle(_ title: String) -> String {
+        let words = title.components(separatedBy: " ")
+        if let first = words.first, first.count <= 8 {
+            return first
+        }
+        return String(title.prefix(7))
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
+            // Compact header
             HStack {
                 Text(activeRoutine?.emoji ?? "✨")
-                    .font(.title2)
-                Text("Routines")
-                    .font(.headline)
+                    .font(.title3)
+                Spacer()
+                if let routine = activeRoutine {
+                    Text("\(routine.completedSteps)/\(routine.totalSteps)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundColor(colorFromHex(routine.memberColor))
+                }
             }
 
             if let routine = activeRoutine {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(routine.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-
-                    // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 8)
-
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(colorFromHex(routine.memberColor))
-                                .frame(width: geometry.size.width * CGFloat(routine.progress), height: 8)
-                        }
-                    }
-                    .frame(height: 8)
-
-                    HStack {
-                        Text(routine.memberName)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Spacer()
-                        Text("\(routine.completedSteps)/\(routine.totalSteps)")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(colorFromHex(routine.memberColor))
-                    }
-                }
+                // Short title only
+                Text(shortTitle(routine.title))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
 
                 Spacer()
+
+                // Progress bar - larger
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(height: 12)
+
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(colorFromHex(routine.memberColor))
+                            .frame(width: geometry.size.width * CGFloat(routine.progress), height: 12)
+                    }
+                }
+                .frame(height: 12)
+
+                // Member name
+                HStack {
+                    Circle()
+                        .fill(colorFromHex(routine.memberColor))
+                        .frame(width: 8, height: 8)
+                    Text(routine.memberName)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             } else {
-                VStack {
-                    Spacer()
+                Spacer()
+                VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title)
+                        .font(.largeTitle)
                         .foregroundColor(.green)
                     Text("All done!")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
                 }
                 .frame(maxWidth: .infinity)
+                Spacer()
             }
         }
         .padding()

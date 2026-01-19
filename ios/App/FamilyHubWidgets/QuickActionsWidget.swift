@@ -118,11 +118,11 @@ struct QuickActionsWidgetEntryView: View {
 // MARK: - Small Widget (2x2 grid)
 struct SmallQuickActionsView: View {
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 20) {
+        VStack(spacing: 10) {
+            HStack(spacing: 16) {
                 QuickActionButton(
                     icon: "cart.fill.badge.plus",
-                    label: "Shopping",
+                    label: "Shop",
                     color: .teal,
                     url: DeepLinks.shoppingAdd
                 )
@@ -135,10 +135,10 @@ struct SmallQuickActionsView: View {
                 )
             }
 
-            HStack(spacing: 20) {
+            HStack(spacing: 16) {
                 QuickActionButton(
                     icon: "list.bullet.clipboard",
-                    label: "Routines",
+                    label: "Tasks",
                     color: .orange,
                     url: DeepLinks.routines
                 )
@@ -151,7 +151,7 @@ struct SmallQuickActionsView: View {
                 )
             }
         }
-        .padding()
+        .padding(12)
     }
 }
 

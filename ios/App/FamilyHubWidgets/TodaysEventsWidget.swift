@@ -61,51 +61,57 @@ struct SmallEventsView: View {
     let events: [CalendarEvent]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 6) {
+            // Compact header - icon with count badge
+            HStack(spacing: 4) {
                 Image(systemName: "calendar")
+                    .font(.title3)
                     .foregroundColor(.orange)
-                Text("Today")
-                    .font(.headline)
-                Spacer()
                 Text("\(events.count)")
-                    .font(.title2)
+                    .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.orange)
+                Spacer()
             }
 
-            Divider()
-
             if events.isEmpty {
-                VStack {
-                    Spacer()
-                    Image(systemName: "calendar.badge.checkmark")
-                        .font(.title)
+                Spacer()
+                VStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.largeTitle)
                         .foregroundColor(.green)
-                    Text("No events")
+                    Text("Free day!")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
                 }
                 .frame(maxWidth: .infinity)
+                Spacer()
             } else {
-                VStack(alignment: .leading, spacing: 6) {
+                Divider()
+
+                VStack(alignment: .leading, spacing: 5) {
                     ForEach(events.prefix(3)) { event in
                         HStack(spacing: 6) {
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(colorFromHex(event.color ?? "#f97316"))
-                                .frame(width: 3, height: 16)
-                            VStack(alignment: .leading, spacing: 0) {
+                                .frame(width: 3, height: 28)
+                            VStack(alignment: .leading, spacing: 1) {
                                 Text(event.title)
-                                    .font(.caption)
+                                    .font(.caption2)
                                     .fontWeight(.medium)
                                     .lineLimit(1)
                                 Text(event.displayTime)
-                                    .font(.caption2)
+                                    .font(.system(size: 9))
                                     .foregroundColor(.secondary)
                             }
+                            Spacer()
                         }
                     }
+                }
+                if events.count > 3 {
+                    Text("+\(events.count - 3)")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
                 Spacer()
             }
