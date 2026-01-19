@@ -146,11 +146,20 @@ export default function NotificationDebugPage() {
         body: JSON.stringify({ type }),
       })
       const data = await response.json()
-      setTestResult(data)
 
-      // Refresh logs after sending
-      if (data.notification_sent) {
-        setTimeout(fetchLogs, 1000)
+      if (response.ok && data.steps) {
+        setTestResult(data)
+        // Refresh logs after sending
+        if (data.notification_sent) {
+          setTimeout(fetchLogs, 1000)
+        }
+      } else {
+        setTestResult({
+          success: false,
+          steps: [],
+          notification_sent: false,
+          error: data.error || `API returned ${response.status}`,
+        })
       }
     } catch (error) {
       console.error('Error sending test:', error)
@@ -411,17 +420,19 @@ export default function NotificationDebugPage() {
                   {testResult.notification_sent ? 'Notification Sent!' : 'Test Failed'}
                 </span>
               </div>
-              <div className="space-y-2">
-                {testResult.steps.map((step, i) => (
-                  <div key={i} className="flex items-start gap-2 text-sm">
-                    <StatusIcon status={step.status} />
-                    <div>
-                      <span className="font-medium">{step.step.replace(/_/g, ' ')}:</span>{' '}
-                      <span className="text-slate-600 dark:text-slate-400">{step.detail}</span>
+              {testResult.steps && testResult.steps.length > 0 && (
+                <div className="space-y-2">
+                  {testResult.steps.map((step, i) => (
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <StatusIcon status={step.status} />
+                      <div>
+                        <span className="font-medium">{step.step.replace(/_/g, ' ')}:</span>{' '}
+                        <span className="text-slate-600 dark:text-slate-400">{step.detail}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
               {testResult.error && (
                 <p className="mt-2 text-sm text-red-600 dark:text-red-400">
                   Error: {testResult.error}
