@@ -64,7 +64,7 @@ export default function RootLayout({
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #f0fdfa 0%, #faf5f0 50%, #f0fdf4 100%);
+            background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 50%, #99f6e4 100%);
             transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
           }
           #initial-loader.hidden {
@@ -73,20 +73,16 @@ export default function RootLayout({
             pointer-events: none;
           }
           #initial-loader .loader-icon {
-            width: 64px;
-            height: 64px;
+            width: 80px;
+            height: 80px;
             border-radius: 20px;
-            background: linear-gradient(135deg, #14b8a6, #65a30d);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 32px;
             animation: pulse 1.5s ease-in-out infinite;
+            box-shadow: 0 10px 40px -10px rgba(20, 184, 166, 0.5);
           }
           #initial-loader .loader-dots {
             display: flex;
             gap: 6px;
-            margin-top: 20px;
+            margin-top: 24px;
           }
           #initial-loader .loader-dot {
             width: 8px;
@@ -98,8 +94,8 @@ export default function RootLayout({
           #initial-loader .loader-dot:nth-child(2) { animation-delay: 0.15s; }
           #initial-loader .loader-dot:nth-child(3) { animation-delay: 0.3s; }
           @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(0.95); opacity: 0.8; }
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(0.95); }
           }
           @keyframes bounce {
             0%, 100% { transform: translateY(0); }
@@ -107,7 +103,7 @@ export default function RootLayout({
           }
           @media (prefers-color-scheme: dark) {
             #initial-loader {
-              background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+              background: linear-gradient(135deg, #0f172a 0%, #134e4a 50%, #0f172a 100%);
             }
           }
         `}} />
@@ -115,7 +111,7 @@ export default function RootLayout({
       <body className={`${inter.variable} ${poppins.variable} font-sans`}>
         {/* Instant loading screen - hidden by AppLayout when ready */}
         <div id="initial-loader">
-          <div className="loader-icon">🏠</div>
+          <img src="/icon-512.png" alt="" className="loader-icon" />
           <div className="loader-dots">
             <div className="loader-dot"></div>
             <div className="loader-dot"></div>
