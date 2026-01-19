@@ -181,9 +181,10 @@ export default function NotificationDebugPage() {
     }
   }
 
-  const StatusIcon = ({ status }: { status: 'pass' | 'fail' | 'warning' }) => {
+  const StatusIcon = ({ status }: { status: 'pass' | 'fail' | 'warning' | 'skip' }) => {
     if (status === 'pass') return <CheckCircle className="w-5 h-5 text-green-500" />
     if (status === 'fail') return <XCircle className="w-5 h-5 text-red-500" />
+    if (status === 'skip') return <AlertTriangle className="w-5 h-5 text-slate-400" />
     return <AlertTriangle className="w-5 h-5 text-yellow-500" />
   }
 
@@ -342,7 +343,7 @@ export default function NotificationDebugPage() {
             )}
             <Button
               onClick={resetF1State}
-              variant="outline"
+              variant="secondary"
               size="sm"
               className="w-full"
               disabled={resetting}
@@ -483,7 +484,7 @@ export default function NotificationDebugPage() {
         <div className="mt-4 space-y-2">
           <Button
             onClick={() => router.push('/settings')}
-            variant="outline"
+            variant="secondary"
             size="sm"
             className="w-full justify-start"
           >

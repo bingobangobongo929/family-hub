@@ -82,7 +82,7 @@ export async function subscribeToWebPush(vapidPublicKey: string): Promise<PushSu
     const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
     subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey,
+      applicationServerKey: applicationServerKey as BufferSource,
     });
 
     console.log('[WebPush] Subscribed:', subscription.endpoint.substring(0, 50));
