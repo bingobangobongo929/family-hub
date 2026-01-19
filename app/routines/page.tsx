@@ -1221,9 +1221,13 @@ export default function RoutinesPage() {
   }
 
   const getProgress = (routine: RoutineWithDetails) => {
-    const memberIds = routine.member_ids || []
+    const routineMembers = routine.members || []
     const visibleSteps = getVisibleSteps(routine)
-    const completed = visibleSteps.filter(s => isStepComplete(s.id, memberIds)).length
+    // Check each step against its applicable members (not all routine members)
+    const completed = visibleSteps.filter(step => {
+      const stepMembers = getStepMembers(step, routineMembers)
+      return stepMembers.every(m => isStepCompleteForMember(step.id, m.id))
+    }).length
     return { completed, total: visibleSteps.length }
   }
 
