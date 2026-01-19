@@ -82,13 +82,34 @@ jobs:
                 build_number: ENV["GITHUB_RUN_NUMBER"]
               )
 
-              # Update code signing settings
+              # Update code signing settings for each target
               update_code_signing_settings(
                 use_automatic_signing: false,
                 path: "App.xcodeproj",
                 team_id: ENV["APPLE_TEAM_ID"],
+                targets: ["App"],
                 bundle_identifier: "app.familyhub.home",
                 profile_name: "Family Hub App Store",
+                code_sign_identity: "Apple Distribution"
+              )
+
+              update_code_signing_settings(
+                use_automatic_signing: false,
+                path: "App.xcodeproj",
+                team_id: ENV["APPLE_TEAM_ID"],
+                targets: ["FamilyHubWidgetsExtension"],
+                bundle_identifier: "app.familyhub.home.widgets",
+                profile_name: "Family Hub Widgets App Store",
+                code_sign_identity: "Apple Distribution"
+              )
+
+              update_code_signing_settings(
+                use_automatic_signing: false,
+                path: "App.xcodeproj",
+                team_id: ENV["APPLE_TEAM_ID"],
+                targets: ["FamilyHubShare"],
+                bundle_identifier: "app.familyhub.home.share",
+                profile_name: "Family Hub Share App Store",
                 code_sign_identity: "Apple Distribution"
               )
 
