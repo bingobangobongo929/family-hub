@@ -58,6 +58,7 @@ interface FamilyHubNativePluginInterface {
     hasContent: boolean;
     images?: string[];
     texts?: string[];
+    intent?: 'task' | 'calendar';  // User's choice from share extension
   }>;
   clearSharedContent(): Promise<void>;
 

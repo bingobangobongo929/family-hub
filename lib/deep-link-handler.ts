@@ -17,6 +17,8 @@
  * - familyhub://bindicator -> Bindicator
  * - familyhub://tasks -> Tasks page
  * - familyhub://tasks/add -> Tasks page with shared content to process
+ * - familyhub://process?intent=task -> Auto-process shared content as task
+ * - familyhub://process?intent=calendar -> Auto-process shared content as calendar event
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -83,6 +85,7 @@ export function getRouteFromDeepLink(link: DeepLinkResult): string {
     '/bindicator': '/bindicator',
     '/tasks': '/tasks',
     '/tasks/add': '/tasks?shared=true',
+    '/process': '/?process=true',  // Auto-process with intent from query param
     '/rewards': '/rewards',
     '/notes': '/notes',
     '/gallery': '/gallery',

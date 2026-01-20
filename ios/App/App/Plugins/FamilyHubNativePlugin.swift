@@ -254,6 +254,11 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
         result["images"] = images
         result["texts"] = texts
 
+        // Include user's intent from share extension (task or calendar)
+        if let intent = sharedData["intent"] as? String {
+            result["intent"] = intent
+        }
+
         call.resolve(result)
     }
 

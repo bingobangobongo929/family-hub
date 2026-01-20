@@ -24,8 +24,10 @@ class ShareViewController: UIViewController {
         return view
     }()
 
-    private lazy var headerView: UIView = {
+    private lazy var dragIndicator: UIView = {
         let view = UIView()
+        view.backgroundColor = UIColor.systemGray4
+        view.layer.cornerRadius = 2.5
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -33,34 +35,16 @@ class ShareViewController: UIViewController {
     private lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.text = "Add to Family Hub"
-        label.font = .systemFont(ofSize: 17, weight: .semibold)
+        label.font = .systemFont(ofSize: 20, weight: .bold)
         label.textColor = .label
+        label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
-    private lazy var cancelButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Cancel", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17)
-        button.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-
-    private lazy var addButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Send", for: .normal)
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        button.setTitleColor(UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0), for: .normal) // Teal
-        button.addTarget(self, action: #selector(addTapped), for: .touchUpInside)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
-    }()
-
     private lazy var previewImageView: UIImageView = {
         let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFit
+        imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 12
         imageView.backgroundColor = .secondarySystemBackground
@@ -71,23 +55,76 @@ class ShareViewController: UIViewController {
 
     private lazy var textPreviewLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 15)
+        label.font = .systemFont(ofSize: 14)
         label.textColor = .secondaryLabel
-        label.numberOfLines = 5
+        label.numberOfLines = 3
+        label.textAlignment = .center
         label.isHidden = true
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
-    private lazy var infoLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Send to Family Hub for AI processing"
-        label.font = .systemFont(ofSize: 13)
-        label.textColor = .tertiaryLabel
-        label.numberOfLines = 0
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
+    private lazy var buttonsStackView: UIStackView = {
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 12
+        stack.distribution = .fillEqually
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        return stack
+    }()
+
+    private lazy var taskButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0) // Teal
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 14
+        button.addTarget(self, action: #selector(taskButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        // Icon + Text
+        var config = UIButton.Configuration.filled()
+        config.title = "Add Task"
+        config.image = UIImage(systemName: "checkmark.circle.fill")
+        config.imagePadding = 8
+        config.baseBackgroundColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0)
+        config.baseForegroundColor = .white
+        config.cornerStyle = .large
+        button.configuration = config
+
+        return button
+    }()
+
+    private lazy var calendarButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = UIColor.systemBlue
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 14
+        button.addTarget(self, action: #selector(calendarButtonTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+
+        // Icon + Text
+        var config = UIButton.Configuration.filled()
+        config.title = "Scan Calendar"
+        config.image = UIImage(systemName: "calendar.badge.plus")
+        config.imagePadding = 8
+        config.baseBackgroundColor = .systemBlue
+        config.baseForegroundColor = .white
+        config.cornerStyle = .large
+        button.configuration = config
+
+        return button
+    }()
+
+    private lazy var cancelButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Cancel", for: .normal)
+        button.setTitleColor(.secondaryLabel, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 15)
+        button.addTarget(self, action: #selector(cancelTapped), for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
     }()
 
     private lazy var activityIndicator: UIActivityIndicatorView = {
@@ -99,10 +136,20 @@ class ShareViewController: UIViewController {
 
     private lazy var successCheckmark: UIImageView = {
         let imageView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
-        imageView.tintColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0) // Teal
+        imageView.tintColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0)
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.isHidden = true
         return imageView
+    }()
+
+    private lazy var statusLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 15, weight: .medium)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
 
     // MARK: - Lifecycle
@@ -118,57 +165,62 @@ class ShareViewController: UIViewController {
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4)
 
         view.addSubview(containerView)
-        containerView.addSubview(headerView)
-        headerView.addSubview(cancelButton)
-        headerView.addSubview(titleLabel)
-        headerView.addSubview(addButton)
+        containerView.addSubview(dragIndicator)
+        containerView.addSubview(titleLabel)
         containerView.addSubview(previewImageView)
         containerView.addSubview(textPreviewLabel)
-        containerView.addSubview(successCheckmark)
-        containerView.addSubview(infoLabel)
+        containerView.addSubview(buttonsStackView)
+        containerView.addSubview(cancelButton)
         containerView.addSubview(activityIndicator)
+        containerView.addSubview(successCheckmark)
+        containerView.addSubview(statusLabel)
+
+        buttonsStackView.addArrangedSubview(taskButton)
+        buttonsStackView.addArrangedSubview(calendarButton)
 
         NSLayoutConstraint.activate([
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            containerView.heightAnchor.constraint(greaterThanOrEqualToConstant: 300),
 
-            headerView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 16),
-            headerView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
-            headerView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -16),
-            headerView.heightAnchor.constraint(equalToConstant: 44),
+            dragIndicator.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            dragIndicator.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            dragIndicator.widthAnchor.constraint(equalToConstant: 36),
+            dragIndicator.heightAnchor.constraint(equalToConstant: 5),
 
-            cancelButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor),
-            cancelButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+            titleLabel.topAnchor.constraint(equalTo: dragIndicator.bottomAnchor, constant: 16),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
 
-            titleLabel.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
-            titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-
-            addButton.trailingAnchor.constraint(equalTo: headerView.trailingAnchor),
-            addButton.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
-
-            previewImageView.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 20),
+            previewImageView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
             previewImageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            previewImageView.widthAnchor.constraint(equalToConstant: 200),
-            previewImageView.heightAnchor.constraint(equalToConstant: 150),
+            previewImageView.widthAnchor.constraint(equalToConstant: 120),
+            previewImageView.heightAnchor.constraint(equalToConstant: 90),
 
-            textPreviewLabel.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 20),
-            textPreviewLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
-            textPreviewLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
+            textPreviewLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 16),
+            textPreviewLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 24),
+            textPreviewLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -24),
+
+            buttonsStackView.topAnchor.constraint(equalTo: previewImageView.bottomAnchor, constant: 20),
+            buttonsStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
+            buttonsStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
+            buttonsStackView.heightAnchor.constraint(equalToConstant: 56),
+
+            cancelButton.topAnchor.constraint(equalTo: buttonsStackView.bottomAnchor, constant: 12),
+            cancelButton.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            cancelButton.bottomAnchor.constraint(equalTo: containerView.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+
+            activityIndicator.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: buttonsStackView.centerYAnchor),
 
             successCheckmark.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            successCheckmark.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 40),
+            successCheckmark.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 30),
             successCheckmark.widthAnchor.constraint(equalToConstant: 64),
             successCheckmark.heightAnchor.constraint(equalToConstant: 64),
 
-            infoLabel.topAnchor.constraint(equalTo: previewImageView.bottomAnchor, constant: 20),
-            infoLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
-            infoLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
-            infoLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-
-            activityIndicator.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            activityIndicator.centerYAnchor.constraint(equalTo: previewImageView.centerYAnchor),
+            statusLabel.topAnchor.constraint(equalTo: successCheckmark.bottomAnchor, constant: 12),
+            statusLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
+            statusLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
         ])
     }
 
@@ -181,22 +233,22 @@ class ShareViewController: UIViewController {
         }
     }
 
-    private func sendProcessingNotification() {
+    private func sendProcessingNotification(forTask: Bool) {
         let content = UNMutableNotificationContent()
         content.title = "Processing..."
-        content.body = "Scanning your shared content with AI"
-        content.sound = nil // Silent - just visual indicator
+        content.body = forTask ? "Creating task from your shared content" : "Scanning for calendar events"
+        content.sound = nil
         content.categoryIdentifier = "PROCESSING"
 
         let request = UNNotificationRequest(
             identifier: "familyhub-processing",
             content: content,
-            trigger: nil // Deliver immediately
+            trigger: nil
         )
 
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
-                print("[ShareExtension] Failed to send processing notification: \(error)")
+                print("[ShareExtension] Failed to send notification: \(error)")
             }
         }
     }
@@ -269,11 +321,9 @@ class ShareViewController: UIViewController {
     }
 
     private func processImage(_ image: UIImage) {
-        // Compress if needed
         var imageData = image.jpegData(compressionQuality: 0.8)
 
         if let data = imageData, data.count > maxImageSize {
-            // Compress further
             imageData = image.jpegData(compressionQuality: 0.5)
         }
 
@@ -285,14 +335,18 @@ class ShareViewController: UIViewController {
             self?.sharedItems.append(.image(image: image, base64: base64))
             self?.previewImageView.image = image
             self?.previewImageView.isHidden = false
+            self?.textPreviewLabel.isHidden = true
         }
     }
 
     private func processText(_ text: String) {
         DispatchQueue.main.async { [weak self] in
             self?.sharedItems.append(.text(text))
-            self?.textPreviewLabel.text = text
+            // Truncate for preview
+            let previewText = text.count > 150 ? String(text.prefix(147)) + "..." : text
+            self?.textPreviewLabel.text = "\"\(previewText)\""
             self?.textPreviewLabel.isHidden = false
+            self?.previewImageView.isHidden = true
         }
     }
 
@@ -306,28 +360,17 @@ class ShareViewController: UIViewController {
             return
         }
 
-        // Update info label based on content type
-        var hasImage = false
-        var hasText = false
-        for item in sharedItems {
-            switch item {
-            case .image: hasImage = true
-            case .text: hasText = true
-            }
-        }
-
-        if hasImage {
-            infoLabel.text = "Tap Send to scan this image for calendar events"
-        } else if hasText {
-            infoLabel.text = "Tap Send to create a task from this text"
-        }
+        // Enable both buttons - user chooses
+        taskButton.isEnabled = true
+        calendarButton.isEnabled = true
     }
 
     private func showError(_ message: String) {
         DispatchQueue.main.async { [weak self] in
             self?.activityIndicator.stopAnimating()
-            self?.infoLabel.text = message
-            self?.addButton.isEnabled = false
+            self?.titleLabel.text = message
+            self?.taskButton.isEnabled = false
+            self?.calendarButton.isEnabled = false
         }
     }
 
@@ -336,43 +379,43 @@ class ShareViewController: UIViewController {
         extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
     }
 
-    @objc private func addTapped() {
-        // Disable button immediately
-        addButton.isEnabled = false
-        addButton.setTitle("Sending...", for: .disabled)
+    @objc private func taskButtonTapped() {
+        processWithIntent(isTask: true)
+    }
 
-        // Show instant feedback
-        showSendingState()
+    @objc private func calendarButtonTapped() {
+        processWithIntent(isTask: false)
+    }
 
-        // Save shared content to App Group for the main app to read
-        saveToAppGroup()
+    private func processWithIntent(isTask: Bool) {
+        // Disable buttons
+        taskButton.isEnabled = false
+        calendarButton.isEnabled = false
+        buttonsStackView.isHidden = true
+        cancelButton.isHidden = true
+
+        // Show processing state
+        activityIndicator.startAnimating()
+        titleLabel.text = isTask ? "Adding Task..." : "Scanning Calendar..."
+
+        // Save to App Group with intent
+        saveToAppGroup(intent: isTask ? "task" : "calendar")
 
         // Send processing notification
-        sendProcessingNotification()
+        sendProcessingNotification(forTask: isTask)
 
-        // Show success after a brief moment, then open app
+        // Brief delay for visual feedback, then open app
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-            self?.showSuccessAndOpenApp()
+            self?.showSuccessAndOpenApp(isTask: isTask)
         }
     }
 
-    private func showSendingState() {
-        // Animate preview fading
-        UIView.animate(withDuration: 0.2) { [weak self] in
-            self?.previewImageView.alpha = 0.5
-            self?.textPreviewLabel.alpha = 0.5
-        }
-
-        // Update info label
-        infoLabel.text = "Sending to Family Hub..."
-        infoLabel.textColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0)
-    }
-
-    private func saveToAppGroup() {
+    private func saveToAppGroup(intent: String) {
         guard let defaults = UserDefaults(suiteName: "group.app.familyhub.home") else { return }
 
         var sharedData: [String: Any] = [
-            "timestamp": Date().timeIntervalSince1970
+            "timestamp": Date().timeIntervalSince1970,
+            "intent": intent  // "task" or "calendar"
         ]
 
         for (index, item) in sharedItems.enumerated() {
@@ -390,70 +433,51 @@ class ShareViewController: UIViewController {
         defaults.synchronize()
     }
 
-    private func showSuccessAndOpenApp() {
-        // Update UI to show success
-        UIView.animate(withDuration: 0.3, animations: { [weak self] in
+    private func showSuccessAndOpenApp(isTask: Bool) {
+        activityIndicator.stopAnimating()
+
+        // Show success state
+        UIView.animate(withDuration: 0.3) { [weak self] in
             self?.previewImageView.isHidden = true
             self?.textPreviewLabel.isHidden = true
-            self?.previewImageView.alpha = 0
-            self?.textPreviewLabel.alpha = 0
             self?.successCheckmark.isHidden = false
             self?.successCheckmark.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
-        }) { [weak self] _ in
+            self?.statusLabel.isHidden = false
+            self?.statusLabel.text = "Processing in background..."
+        } completion: { [weak self] _ in
             UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5) {
                 self?.successCheckmark.transform = .identity
             }
         }
 
-        // Update labels
         titleLabel.text = "Sent!"
-        infoLabel.text = "Opening Family Hub..."
-        infoLabel.font = .systemFont(ofSize: 15, weight: .medium)
-
-        // Hide cancel button, show done state
-        cancelButton.isHidden = true
-        addButton.setTitle("Done", for: .disabled)
 
         // Open app after brief delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.openMainApp()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in
+            self?.openMainApp(isTask: isTask)
         }
     }
 
-    private func openMainApp() {
-        // Determine URL based on content type
-        var hasImage = false
-        var hasText = false
-        for item in sharedItems {
-            switch item {
-            case .image: hasImage = true
-            case .text: hasText = true
-            }
-        }
-
-        // Image -> calendar scan, Text -> tasks
-        let urlString = hasImage ? "familyhub://calendar/scan" : "familyhub://tasks/add"
+    private func openMainApp(isTask: Bool) {
+        // Use a single deep link with intent parameter
+        let urlString = "familyhub://process?intent=\(isTask ? "task" : "calendar")"
 
         guard let url = URL(string: urlString) else {
             closeExtension()
             return
         }
 
-        // Try to open the app via URL scheme
         if #available(iOS 16.0, *) {
             extensionContext?.open(url) { [weak self] success in
-                // Close extension regardless of success
                 self?.closeExtension()
             }
         } else {
-            // Older iOS - just close
             closeExtension()
         }
     }
 
     private func closeExtension() {
-        // Small delay to let success animation complete
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         }
     }
