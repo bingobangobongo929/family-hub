@@ -16,6 +16,12 @@ import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-
 import { setupKeyboardListeners, dismissKeyboard } from '@/lib/keyboard'
 import { NotificationTemplates } from '@/lib/local-notifications'
 import { supabase } from '@/lib/supabase'
+import { initDebugLogger } from '@/lib/debug-logger'
+
+// Initialize debug logger for in-app console viewing
+if (typeof window !== 'undefined') {
+  initDebugLogger()
+}
 
 // Type for pending auto-process request
 interface PendingAutoProcess {

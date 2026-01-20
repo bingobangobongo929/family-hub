@@ -4,10 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Card, { CardHeader } from '@/components/Card'
 import Button from '@/components/ui/Button'
-import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Loader2, RefreshCw, Send, Trash2, Bell, Smartphone, Server, Clock, Zap } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, AlertTriangle, Loader2, RefreshCw, Send, Trash2, Bell, Smartphone, Server, Clock, Zap, Terminal } from 'lucide-react'
 import { usePush } from '@/lib/push-context'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
+import { getDebugLogs, clearDebugLogs } from '@/lib/debug-logger'
 
 interface StatusCheck {
   name: string
@@ -75,6 +76,8 @@ export default function NotificationDebugPage() {
   const [logs, setLogs] = useState<NotificationLog[]>([])
   const [logsLoading, setLogsLoading] = useState(true)
   const [resetting, setResetting] = useState(false)
+  const [consoleLogs, setConsoleLogs] = useState<ReturnType<typeof getDebugLogs>>([])
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(true)
 
   // Fetch notification status
   const fetchStatus = useCallback(async () => {
@@ -127,6 +130,19 @@ export default function NotificationDebugPage() {
     fetchStatus()
     fetchLogs()
   }, [fetchStatus, fetchLogs])
+
+  // Auto-refresh console logs
+  useEffect(() => {
+    setConsoleLogs(getDebugLogs())
+
+    if (!autoRefreshLogs) return
+
+    const interval = setInterval(() => {
+      setConsoleLogs(getDebugLogs())
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [autoRefreshLogs])
 
   // Send test notification
   const sendTestNotification = async (type: string) => {
@@ -230,6 +246,67 @@ export default function NotificationDebugPage() {
           Notification Debugging
         </h1>
       </div>
+
+      {/* Console Logs - Most Important for Debugging */}
+      <Card className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <CardHeader title="Console Logs" icon={<Terminal className="w-5 h-5" />} />
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1 text-xs text-slate-500">
+              <input
+                type="checkbox"
+                checked={autoRefreshLogs}
+                onChange={(e) => setAutoRefreshLogs(e.target.checked)}
+                className="rounded"
+              />
+              Auto
+            </label>
+            <button
+              onClick={() => setConsoleLogs(getDebugLogs())}
+              className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700"
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                clearDebugLogs()
+                setConsoleLogs([])
+              }}
+              className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 text-red-500"
+              title="Clear"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <div className="bg-slate-900 rounded-lg p-3 max-h-80 overflow-auto font-mono text-xs">
+          {consoleLogs.length === 0 ? (
+            <p className="text-slate-500">No logs yet. Share content to the app to see logs here.</p>
+          ) : (
+            consoleLogs.slice().reverse().map((log, i) => (
+              <div
+                key={i}
+                className={`py-0.5 ${
+                  log.level === 'error' ? 'text-red-400' :
+                  log.level === 'warn' ? 'text-yellow-400' :
+                  log.message.includes('[AutoProcess') ? 'text-green-400' :
+                  'text-slate-300'
+                }`}
+              >
+                <span className="text-slate-500">{log.timestamp}</span>{' '}
+                <span>{log.message}</span>
+                {log.data && (
+                  <pre className="text-slate-400 ml-4 whitespace-pre-wrap break-all">{log.data}</pre>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+        <p className="text-xs text-slate-500 mt-2">
+          Logs auto-refresh every second. Green = AutoProcess logs. Look for [AutoProcess] entries after sharing.
+        </p>
+      </Card>
 
       {/* Client-Side Push Status */}
       <Card className="mb-4">
