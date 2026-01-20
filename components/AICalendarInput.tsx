@@ -759,7 +759,7 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents, initialI
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={t('aiCalendar.title')} size="3xl">
-      <div className="space-y-6">
+      <div className="space-y-6 no-select-interactive">
         {/* AI Model Indicator */}
         <div className="flex items-center gap-2 text-base text-slate-500 dark:text-slate-400">
           <Sparkles className="w-5 h-5" />

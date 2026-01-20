@@ -869,8 +869,8 @@ export default function CalendarPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header - Touch friendly */}
-      <div className="flex-shrink-0 px-2 sm:px-4 py-2 sm:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+      {/* Header - Touch friendly with no accidental text selection */}
+      <div className="flex-shrink-0 px-2 sm:px-4 py-2 sm:py-3 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 no-select-interactive">
         <div className="flex items-center justify-between gap-2 sm:gap-4">
           {/* Navigation */}
           <div className="flex items-center gap-1">
