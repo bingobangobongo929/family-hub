@@ -500,7 +500,7 @@ export default function TasksPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
+      <div className="flex flex-wrap items-center gap-2 mb-4 no-select-interactive">
         {/* Status Filter */}
         <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 rounded-xl p-1">
           {(['active', 'completed', 'all'] as StatusFilter[]).map(filter => (
@@ -550,7 +550,7 @@ export default function TasksPage() {
 
       {/* Expanded Filters */}
       {showFilters && (
-        <Card className="mb-4 p-4">
+        <Card className="mb-4 p-4 no-select-interactive">
           <div className="flex flex-wrap gap-4">
             {/* Assignee Filter */}
             <div>

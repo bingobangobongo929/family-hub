@@ -103,7 +103,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', g
         </div>
 
         {title && (
-          <div className={`flex items-center justify-between p-4 border-b ${glass ? 'border-slate-200/50 dark:border-slate-700/50' : 'border-slate-200 dark:border-slate-700'} flex-shrink-0`}>
+          <div className={`flex items-center justify-between p-4 border-b ${glass ? 'border-slate-200/50 dark:border-slate-700/50' : 'border-slate-200 dark:border-slate-700'} flex-shrink-0 no-select-interactive`}>
             <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h2>
             <button
               onClick={handleClose}

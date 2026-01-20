@@ -297,7 +297,7 @@ export default function RewardsPage() {
 
   return (
     <div className="page-container">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 no-select-interactive">
         <div>
           <h1 className="page-header">{t('rewards.title')}</h1>
           <p className="page-subtitle">{t('rewards.subtitle')}</p>

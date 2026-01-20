@@ -54,6 +54,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Theme color meta tags for status bar theming */}
+        {/* Light mode: warm-50 background */}
+        <meta name="theme-color" content="#fffef9" media="(prefers-color-scheme: light)" />
+        {/* Dark mode: slate-900 background */}
+        <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
         {/* Inline CSS for instant loading screen - no React needed */}
         <style dangerouslySetInnerHTML={{ __html: `
           #initial-loader {

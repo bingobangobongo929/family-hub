@@ -234,8 +234,10 @@ textarea:focus-visible,
   }
 
   /* Form input base style for consistency */
+  /* Uses text-base (16px) to prevent iOS zoom on focus */
   .form-input {
     @apply w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 min-h-[44px] transition-all focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500;
+    font-size: 16px; /* Prevents iOS zoom on input focus */
   }
 
   /* Checkbox/toggle container for larger touch area */
@@ -671,4 +673,35 @@ select,
 textarea,
 [role="button"] {
   touch-action: manipulation;
+}
+
+/* ============================================================
+   iOS Input Zoom Prevention
+   iOS Safari zooms when input font size < 16px. Force 16px minimum.
+   ============================================================ */
+@supports (-webkit-touch-callout: none) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* ============================================================
+   Input Mode Styling
+   Visual hints for different input types
+   ============================================================ */
+input[inputmode="numeric"],
+input[inputmode="decimal"],
+input[type="number"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Keyboard Dismissal Helper
+   Allows tapping outside to dismiss keyboard
+   ============================================================ */
+.keyboard-dismissable {
+  /* Applied to containers that should dismiss keyboard on tap */
+  cursor: pointer;
 }

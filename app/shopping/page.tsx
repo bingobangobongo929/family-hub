@@ -301,7 +301,7 @@ export default function ShoppingPage() {
 
   return (
     <div className="page-container">
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-select-interactive">
         <div>
           <h1 className="page-header">{t('shopping.title')}</h1>
           <p className="page-subtitle">

@@ -247,16 +247,16 @@ export default function ContactsPage() {
                         className="mt-1"
                       />
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 no-select">
                       <button
                         onClick={() => handleOpenEdit(contact)}
-                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30 active:bg-teal-100 dark:active:bg-teal-800/40 transition-colors"
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/30 active:bg-teal-100 dark:active:bg-teal-800/40 transition-colors tap-highlight"
                       >
                         <Edit2 className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(contact.id)}
-                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-800/40 transition-colors"
+                        className="p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-800/40 transition-colors tap-highlight"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>

@@ -13,6 +13,7 @@ import { DEFAULT_SETTINGS } from '@/lib/database.types'
 import { saveCurrentRoute, getSavedRoute, markAppBackgrounded } from '@/lib/route-persistence'
 import { initDeepLinkHandler, cleanupDeepLinkHandler } from '@/lib/deep-link-handler'
 import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
+import { setupKeyboardListeners, dismissKeyboard } from '@/lib/keyboard'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -181,6 +182,50 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [router])
 
+  // Handle hardware back button (Android and iOS swipe back)
+  useEffect(() => {
+    if (!isNative) return
+
+    const backButtonListener = App.addListener('backButton', ({ canGoBack }) => {
+      // Close sidebar if open
+      if (sidebarOpen) {
+        setSidebarOpen(false)
+        return
+      }
+
+      // Navigate back if possible
+      if (canGoBack && pathname !== '/') {
+        window.history.back()
+      }
+      // Don't exit app on back - let user use home button
+    })
+
+    return () => {
+      backButtonListener.then(h => h.remove())
+    }
+  }, [isNative, sidebarOpen, pathname])
+
+  // Set up keyboard listeners for better mobile UX
+  useEffect(() => {
+    if (!isNative) return
+
+    const cleanup = setupKeyboardListeners()
+    return cleanup
+  }, [isNative])
+
+  // Dismiss keyboard when tapping outside inputs
+  const handleMainClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement
+    // Don't dismiss if clicking on an input or interactive element
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      return
+    }
+    // Dismiss keyboard if clicking on main content area
+    if (isNative) {
+      dismissKeyboard()
+    }
+  }, [isNative])
+
   const handleScreensaverWake = useCallback(() => {
     // Could add analytics or other wake handlers here
   }, [])
@@ -220,7 +265,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
 
         {/* Main Content */}
-        <main className={`flex-1 ${sidebarMargin} pb-20 lg:pb-0 ${mainPadding} overflow-x-hidden`}>
+        <main
+          className={`flex-1 ${sidebarMargin} pb-20 lg:pb-0 ${mainPadding} overflow-x-hidden`}
+          onClick={handleMainClick}
+        >
           {children}
         </main>
 

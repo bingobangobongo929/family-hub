@@ -425,7 +425,7 @@ function NoteCard({
       style={{ backgroundColor: note.color }}
     >
       {/* Action buttons */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 sm:group-hover:opacity-100 transition-opacity no-select">
         <button
           onClick={onTogglePin}
           className={`p-1.5 rounded-lg ${

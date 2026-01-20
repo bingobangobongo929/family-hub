@@ -449,7 +449,7 @@ export default function Dashboard() {
 
       {/* Edit Mode Toolbar */}
       {isEditMode && (
-        <div className="mb-4 flex items-center gap-3 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-2xl border border-teal-200/50 dark:border-teal-800/50">
+        <div className="mb-4 flex items-center gap-3 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-2xl border border-teal-200/50 dark:border-teal-800/50 no-select-interactive">
           <button
             onClick={() => setShowWidgetPicker(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 rounded-xl text-sm font-medium text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-700 transition-colors shadow-sm"
