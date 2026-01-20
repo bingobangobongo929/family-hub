@@ -26,18 +26,22 @@ export async function GET(request: NextRequest) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
 
-  // Get user from auth header or query
-  const authHeader = request.headers.get('authorization');
-  let userId: string | null = null;
+  // Get user from query param, auth header, or find first F1 user
+  const { searchParams } = new URL(request.url);
+  let userId: string | null = searchParams.get('user_id');
 
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.substring(7);
-    const { data: { user } } = await supabase.auth.getUser(token);
-    userId = user?.id || null;
+  // Try auth header if no query param
+  if (!userId) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      const { data: { user } } = await supabase.auth.getUser(token);
+      userId = user?.id || null;
+    }
   }
 
+  // Fallback: get first user with F1 enabled for debugging
   if (!userId) {
-    // Try to get first user with F1 enabled for debugging
     const { data: prefs } = await supabase
       .from('notification_preferences')
       .select('user_id')
@@ -45,7 +49,14 @@ export async function GET(request: NextRequest) {
       .eq('f1_news_enabled', true)
       .limit(1);
 
-    userId = prefs?.[0]?.user_id;
+    userId = prefs?.[0]?.user_id || null;
+  }
+
+  if (!userId) {
+    return NextResponse.json({
+      error: 'No user found',
+      hint: 'Pass ?user_id=xxx or ensure at least one user has F1 notifications enabled'
+    }, { status: 404 });
   }
 
   const debug: Record<string, any> = {

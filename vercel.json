@@ -5,6 +5,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/notifications/triggers/tasks",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/notifications/triggers/bins?type=evening",
       "schedule": "0 18 * * *"
     },
