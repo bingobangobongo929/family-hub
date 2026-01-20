@@ -13,7 +13,7 @@ private struct F1WidgetColors {
 }
 
 private struct F1AccentBar: View {
-    var color: Color = F1F1WidgetColors.teal
+    var color: Color = F1WidgetColors.teal
     var width: CGFloat = 3
 
     var body: some View {
