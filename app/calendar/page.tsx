@@ -3,11 +3,13 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, startOfWeek, endOfWeek, parseISO, isToday, addWeeks, subWeeks, addDays, isBefore, isAfter } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Sparkles, Repeat } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import AICalendarInput from '@/components/AICalendarInput'
+import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
 import EventDetailModal from '@/components/EventDetailModal'
 import CategorySelector from '@/components/CategorySelector'
 import MemberMultiSelect from '@/components/MemberMultiSelect'
@@ -42,6 +44,7 @@ export default function CalendarPage() {
   const { googleCalendarAutoPush } = useSettings()
   const { t, locale } = useTranslation()
   const dateLocale = getDateLocale(locale)
+  const searchParams = useSearchParams()
 
   const getContact = (id: string) => contacts.find(c => c.id === id)
 
@@ -59,6 +62,37 @@ export default function CalendarPage() {
   const [cellHeight, setCellHeight] = useState(120)
   const [agendaDays, setAgendaDays] = useState(30) // For infinite scroll
   const agendaEndRef = useRef<HTMLDivElement>(null)
+  const [sharedImages, setSharedImages] = useState<string[]>([])
+  const hasHandledScanParam = useRef(false)
+
+  // Handle scan=true URL parameter (from share extension deep link)
+  useEffect(() => {
+    const scanParam = searchParams.get('scan')
+    if (scanParam === 'true' && !hasHandledScanParam.current) {
+      hasHandledScanParam.current = true
+
+      // Check for shared content from share extension
+      const loadSharedContent = async () => {
+        if (isNativeIOS()) {
+          try {
+            const content = await getSharedContent()
+            if (content.hasContent && content.images && content.images.length > 0) {
+              console.log('[Calendar] Loaded shared images:', content.images.length)
+              setSharedImages(content.images)
+              // Clear shared content after loading
+              await clearSharedContent()
+            }
+          } catch (e) {
+            console.error('[Calendar] Failed to load shared content:', e)
+          }
+        }
+        // Open AI modal
+        setShowAIModal(true)
+      }
+
+      loadSharedContent()
+    }
+  }, [searchParams])
 
   // Infinite scroll for agenda view
   useEffect(() => {
@@ -1516,8 +1550,12 @@ export default function CalendarPage() {
 
       <AICalendarInput
         isOpen={showAIModal}
-        onClose={() => setShowAIModal(false)}
+        onClose={() => {
+          setShowAIModal(false)
+          setSharedImages([]) // Clear shared images when modal closes
+        }}
         onAddEvents={handleAIEvents}
+        initialImages={sharedImages}
       />
     </div>
   )

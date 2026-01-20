@@ -322,30 +322,25 @@ class ShareViewController: UIViewController {
             return
         }
 
-        var responder: UIResponder? = self
-        while responder != nil {
-            if let application = responder as? UIApplication {
-                application.open(url, options: [:], completionHandler: nil)
-                break
+        // iOS 16+ method: open URL via extension context
+        if #available(iOS 16.0, *) {
+            // Use the newer open method
+            extensionContext?.open(url) { success in
+                self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
             }
-            responder = responder?.next
-        }
-
-        // Alternative method for iOS 13+
-        extensionContext?.completeRequest(returningItems: nil) { _ in
-            _ = self.openURL(url)
-        }
-    }
-
-    @objc private func openURL(_ url: URL) -> Bool {
-        var responder: UIResponder? = self
-        while responder != nil {
-            if let application = responder as? UIApplication {
-                return application.perform(#selector(openURL(_:)), with: url) != nil
+        } else {
+            // Fallback for older iOS: use selector-based approach
+            let selector = sel_registerName("openURL:")
+            var responder: UIResponder? = self
+            while let r = responder {
+                if r.responds(to: selector) {
+                    r.perform(selector, with: url)
+                    break
+                }
+                responder = r.next
             }
-            responder = responder?.next
+            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         }
-        return false
     }
 }
 

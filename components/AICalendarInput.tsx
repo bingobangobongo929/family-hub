@@ -69,6 +69,7 @@ interface AICalendarInputProps {
   isOpen: boolean
   onClose: () => void
   onAddEvents: (events: ExtractedEvent[]) => void
+  initialImages?: string[]  // Base64 images from share extension
 }
 
 // Convert AI recurrence pattern to UI RecurrencePattern
@@ -112,7 +113,7 @@ function convertAIPatternToUIPattern(aiPattern: AIRecurrencePattern, startDate: 
   return pattern
 }
 
-export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICalendarInputProps) {
+export default function AICalendarInput({ isOpen, onClose, onAddEvents, initialImages }: AICalendarInputProps) {
   const { aiModel: contextAiModel } = useSettings()
   const { members } = useFamily()
   const { categories, getCategoryByName } = useCategories()
@@ -155,6 +156,15 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
 
   // Auto-process flag for share extension content
   const autoProcessPendingRef = useRef(false)
+
+  // Load initial images from share extension when modal opens
+  useEffect(() => {
+    if (isOpen && initialImages && initialImages.length > 0) {
+      setImages(initialImages)
+      // Auto-process shared images after a short delay
+      autoProcessPendingRef.current = true
+    }
+  }, [isOpen, initialImages])
 
   // Voice input state
   const [isRecording, setIsRecording] = useState(false)
@@ -481,20 +491,29 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents }: AICale
   const handleStopVoiceInput = async () => {
     hapticTap()
 
+    // Capture voiceText before clearing - this is what's displayed on screen
+    const currentVoiceText = voiceText
+
     if (isNativeIOS()) {
       try {
         const result = await stopVoiceRecognition()
-        if (result.text) {
-          setInputText(prev => prev ? `${prev}\n${result.text}` : result.text)
+        // Use native result, or fall back to displayed voiceText if empty
+        const textToSave = result.text || currentVoiceText
+        if (textToSave) {
+          setInputText(prev => prev ? `${prev}\n${textToSave}` : textToSave)
         }
         hapticSuccess()
       } catch (e) {
+        // If native call fails, still save the displayed voiceText
+        if (currentVoiceText) {
+          setInputText(prev => prev ? `${prev}\n${currentVoiceText}` : currentVoiceText)
+        }
         console.error('Stop voice error:', e)
       }
     } else {
       stopWebSpeechRecognition()
-      if (voiceText) {
-        setInputText(prev => prev ? `${prev}\n${voiceText}` : voiceText)
+      if (currentVoiceText) {
+        setInputText(prev => prev ? `${prev}\n${currentVoiceText}` : currentVoiceText)
       }
     }
 
