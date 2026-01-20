@@ -1,6 +1,64 @@
 import WidgetKit
 import SwiftUI
 
+// MARK: - Design System (Inline for Widget Target)
+// Note: Duplicated from BinDayWidget.swift since widgets can't share code easily
+private struct F1WidgetColors {
+    // Primary - Teal (matches tailwind teal-500, teal-600)
+    static let teal = Color(red: 0.08, green: 0.72, blue: 0.65)      // #14b8a6
+    static let tealDark = Color(red: 0.05, green: 0.58, blue: 0.53)  // #0d9488
+
+    // F1 specific - keep red for brand recognition
+    static let f1Red = Color(red: 0.89, green: 0.0, blue: 0.13)       // #e30022
+}
+
+private struct F1AccentBar: View {
+    var color: Color = F1F1WidgetColors.teal
+    var width: CGFloat = 3
+
+    var body: some View {
+        Rectangle()
+            .fill(color)
+            .frame(width: width)
+            .cornerRadius(width / 2)
+    }
+}
+
+// String extension for abbreviating race names
+private extension String {
+    func widgetAbbreviated() -> String {
+        self.replacingOccurrences(of: "Grand Prix", with: "GP")
+            .replacingOccurrences(of: "United States", with: "USA")
+            .replacingOccurrences(of: "Great Britain", with: "British")
+            .replacingOccurrences(of: "United Arab Emirates", with: "UAE")
+            .replacingOccurrences(of: "Saudi Arabia", with: "Saudi")
+    }
+}
+
+// Date extension for countdown formatting
+private extension Date {
+    func countdownStringFull() -> String {
+        let now = Date()
+        let interval = self.timeIntervalSince(now)
+
+        if interval <= 0 {
+            return "Now!"
+        }
+
+        let days = Int(interval) / 86400
+        let hours = (Int(interval) % 86400) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+
+        if days > 0 {
+            return "\(days)D \(hours)H \(minutes)M"
+        } else if hours > 0 {
+            return "\(hours)H \(minutes)M"
+        } else {
+            return "\(minutes) MIN"
+        }
+    }
+}
+
 // MARK: - Timeline Provider
 struct F1CountdownProvider: TimelineProvider {
     func placeholder(in context: Context) -> F1CountdownEntry {
@@ -68,7 +126,7 @@ struct SmallF1View: View {
             HStack {
                 Text("F1")
                     .font(.system(size: 16, weight: .black, design: .rounded))
-                    .foregroundColor(WidgetColors.f1Red)
+                    .foregroundColor(F1WidgetColors.f1Red)
                 Spacer()
                 if let session = data.nextSession {
                     Text(session.countryFlag)
@@ -122,7 +180,7 @@ struct SmallF1View: View {
             .foregroundColor(.white)
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
-            .background(WidgetColors.f1Red)
+            .background(F1WidgetColors.f1Red)
             .cornerRadius(8)
     }
 
@@ -154,7 +212,7 @@ struct MediumF1View: View {
                     HStack(spacing: 6) {
                         Text("F1")
                             .font(.system(size: 14, weight: .black, design: .rounded))
-                            .foregroundColor(WidgetColors.f1Red)
+                            .foregroundColor(F1WidgetColors.f1Red)
                         Text(session.countryFlag)
                             .font(.system(size: 18))
                     }
@@ -164,7 +222,7 @@ struct MediumF1View: View {
                     // Session type
                     Text(session.name.uppercased())
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(WidgetColors.f1Red)
+                        .foregroundColor(F1WidgetColors.f1Red)
 
                     // Race name
                     Text(session.raceName.widgetAbbreviated())
@@ -191,7 +249,7 @@ struct MediumF1View: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(WidgetColors.f1Red)
+                    .background(F1WidgetColors.f1Red)
                     .cornerRadius(8)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,7 +257,7 @@ struct MediumF1View: View {
             }
 
             // Teal accent divider
-            WidgetAccentBar(color: WidgetColors.teal.opacity(0.3), width: 2)
+            F1AccentBar(color: F1WidgetColors.teal.opacity(0.3), width: 2)
 
             // Right side - Time details
             if let session = data.nextSession {
@@ -214,7 +272,7 @@ struct MediumF1View: View {
 
                     Text(formatTime(session.startTime))
                         .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(WidgetColors.f1Red)
+                        .foregroundColor(F1WidgetColors.f1Red)
 
                     Text("Local time")
                         .font(.system(size: 9, weight: .medium))
@@ -300,7 +358,7 @@ struct LargeF1View: View {
                     HStack(spacing: 8) {
                         Text("F1")
                             .font(.system(size: 18, weight: .black, design: .rounded))
-                            .foregroundColor(WidgetColors.f1Red)
+                            .foregroundColor(F1WidgetColors.f1Red)
                         Text(session.countryFlag)
                             .font(.system(size: 24))
                     }
@@ -315,7 +373,7 @@ struct LargeF1View: View {
                     .foregroundColor(.white)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(WidgetColors.f1Red)
+                    .background(F1WidgetColors.f1Red)
                     .cornerRadius(10)
                 }
 
@@ -336,7 +394,7 @@ struct LargeF1View: View {
 
                 // Divider
                 Rectangle()
-                    .fill(WidgetColors.teal.opacity(0.2))
+                    .fill(F1WidgetColors.teal.opacity(0.2))
                     .frame(height: 2)
                     .cornerRadius(1)
 
@@ -352,7 +410,7 @@ struct LargeF1View: View {
                         // Session icon
                         ZStack {
                             Circle()
-                                .fill(WidgetColors.f1Red)
+                                .fill(F1WidgetColors.f1Red)
                                 .frame(width: 36, height: 36)
                             Image(systemName: sessionIcon(session.name))
                                 .font(.system(size: 16, weight: .semibold))
@@ -374,7 +432,7 @@ struct LargeF1View: View {
                         VStack(alignment: .trailing, spacing: 0) {
                             Text(formatTime(session.startTime))
                                 .font(.system(size: 28, weight: .bold))
-                                .foregroundColor(WidgetColors.f1Red)
+                                .foregroundColor(F1WidgetColors.f1Red)
                             Text("local")
                                 .font(.system(size: 10, weight: .medium))
                                 .foregroundColor(.secondary)
@@ -400,7 +458,7 @@ struct LargeF1View: View {
 
                         Image(systemName: "flag.checkered")
                             .font(.system(size: 20))
-                            .foregroundColor(WidgetColors.f1Red)
+                            .foregroundColor(F1WidgetColors.f1Red)
                     }
                     .padding(12)
                     .background(Color.secondary.opacity(0.1))

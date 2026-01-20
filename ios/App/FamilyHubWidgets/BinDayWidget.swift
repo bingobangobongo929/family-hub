@@ -1,6 +1,34 @@
 import WidgetKit
 import SwiftUI
 
+// MARK: - Design System (Inline for Widget Target)
+struct WidgetColors {
+    // Primary - Teal (matches tailwind teal-500, teal-600)
+    static let teal = Color(red: 0.08, green: 0.72, blue: 0.65)      // #14b8a6
+    static let tealDark = Color(red: 0.05, green: 0.58, blue: 0.53)  // #0d9488
+
+    // Urgency colors
+    static let urgentRed = Color(red: 0.94, green: 0.27, blue: 0.27)   // #ef4444
+    static let warningOrange = Color(red: 0.98, green: 0.45, blue: 0.09) // #f97316
+    static let cautionYellow = Color(red: 0.98, green: 0.77, blue: 0.14) // #f9c514
+    static let safeGreen = Color(red: 0.13, green: 0.77, blue: 0.37)   // #22c55e
+
+    // F1 specific
+    static let f1Red = Color(red: 0.89, green: 0.0, blue: 0.13)       // #e30022
+}
+
+struct WidgetAccentBar: View {
+    var color: Color = WidgetColors.teal
+    var width: CGFloat = 3
+
+    var body: some View {
+        Rectangle()
+            .fill(color)
+            .frame(width: width)
+            .cornerRadius(width / 2)
+    }
+}
+
 // MARK: - Timeline Provider
 struct BinDayProvider: TimelineProvider {
     func placeholder(in context: Context) -> BinDayEntry {
