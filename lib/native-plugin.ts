@@ -68,6 +68,16 @@ interface FamilyHubNativePluginInterface {
   writeWidgetData(options: { key: string; value: string }): Promise<{ success: boolean }>;
   refreshWidgets(): Promise<{ success: boolean; reason?: string }>;
 
+  // Local Notifications
+  sendLocalNotification(options: {
+    id?: string;
+    title: string;
+    body?: string;
+    sound?: boolean;
+    category?: string;
+    data?: Record<string, unknown>;
+  }): Promise<{ success: boolean; id?: string }>;
+
   // Event listener
   addListener(
     eventName: 'voicePartialResult',
@@ -79,6 +89,9 @@ interface FamilyHubNativePluginInterface {
 const FamilyHubNative = registerPlugin<FamilyHubNativePluginInterface>(
   'FamilyHubNative'
 );
+
+// Export the plugin for use by other modules (e.g., local-notifications)
+export { FamilyHubNative };
 
 // Check if running on iOS
 export const isNativeIOS = () =>
@@ -123,6 +136,10 @@ const webFallback: FamilyHubNativePluginInterface = {
   async refreshWidgets() {
     // Not available on web
     return { success: false, reason: 'Web platform' };
+  },
+  async sendLocalNotification() {
+    // Not available on web
+    return { success: false };
   },
   async addListener() {
     return { remove: () => {} };

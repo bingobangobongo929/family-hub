@@ -3,18 +3,21 @@
 export const dynamic = 'force-dynamic'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { format, isToday, isTomorrow, isPast, addHours, addDays } from 'date-fns'
 import {
   CheckSquare, Plus, Trash2, Send, Sparkles, Clock,
   Archive, Play, Pause, Filter, Edit3, X, Calendar,
-  Bell, BellOff, User, Tag, ChevronDown
+  Bell, BellOff, User, Tag, ChevronDown, Loader2
 } from 'lucide-react'
 import Card, { CardHeader } from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import { useAuth } from '@/lib/auth-context'
 import { useFamily } from '@/lib/family-context'
-import { hapticSuccess, hapticLight, hapticMedium } from '@/lib/haptics'
+import { hapticSuccess, hapticLight, hapticMedium, hapticError } from '@/lib/haptics'
+import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
+import { NotificationTemplates } from '@/lib/local-notifications'
 
 // Types
 interface Task {
@@ -53,6 +56,7 @@ type StatusFilter = 'active' | 'completed' | 'all'
 export default function TasksPage() {
   const { user, session } = useAuth()
   const { members } = useFamily()
+  const searchParams = useSearchParams()
 
   // Tasks state
   const [tasks, setTasks] = useState<Task[]>([])
@@ -60,7 +64,9 @@ export default function TasksPage() {
   const [taskInput, setTaskInput] = useState('')
   const [isParsingTask, setIsParsingTask] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [processingShared, setProcessingShared] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const hasProcessedShared = useRef(false)
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
@@ -123,6 +129,113 @@ export default function TasksPage() {
     fetchTasks()
     fetchCategories()
   }, [fetchTasks, fetchCategories])
+
+  // Handle shared content from share extension
+  useEffect(() => {
+    const handleSharedContent = async () => {
+      // Check if we have the shared param and haven't already processed
+      const isShared = searchParams.get('shared') === 'true'
+      if (!isShared || hasProcessedShared.current || !session?.access_token) return
+
+      hasProcessedShared.current = true
+      setProcessingShared(true)
+
+      try {
+        // Get shared content from native plugin
+        const content = await getSharedContent()
+        if (!content.hasContent || !content.texts || content.texts.length === 0) {
+          console.log('[Tasks] No shared text content found')
+          setProcessingShared(false)
+          return
+        }
+
+        // Process each shared text
+        const sharedText = content.texts.join('\n')
+        console.log('[Tasks] Processing shared text:', sharedText.substring(0, 100))
+
+        // Use the AI parser to create tasks
+        setTaskInput(sharedText)
+
+        // Auto-trigger parsing
+        const response = await fetch('/api/tasks/parse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ text: sharedText }),
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+
+          if (data.tasks && data.tasks.length > 0) {
+            // Create all parsed tasks
+            for (const parsedTask of data.tasks) {
+              await createTask({
+                title: parsedTask.title,
+                description: parsedTask.description,
+                raw_input: sharedText,
+                assignee_id: parsedTask.assignee_match?.id || null,
+                due_date: parsedTask.due_date,
+                due_time: parsedTask.due_time,
+                due_context: parsedTask.due_context,
+                urgency: parsedTask.urgency,
+                category_name: parsedTask.suggested_category,
+                ai_parsed: true,
+                ai_confidence: data.confidence,
+              })
+            }
+
+            // Send success notification
+            if (data.tasks.length === 1) {
+              await NotificationTemplates.taskCreated(data.tasks[0].title)
+            } else {
+              await NotificationTemplates.tasksCreated(data.tasks.length)
+            }
+
+            hapticSuccess()
+            setTaskInput('')
+            await fetchTasks()
+          } else {
+            // AI couldn't parse, create simple task
+            await createTask({
+              title: sharedText.length > 100 ? sharedText.substring(0, 97) + '...' : sharedText,
+              raw_input: sharedText,
+              ai_parsed: false,
+            })
+
+            await NotificationTemplates.taskCreated(sharedText.substring(0, 50))
+            hapticMedium()
+            setTaskInput('')
+            await fetchTasks()
+          }
+        } else {
+          // API error, create simple task
+          await createTask({
+            title: sharedText.length > 100 ? sharedText.substring(0, 97) + '...' : sharedText,
+            raw_input: sharedText,
+            ai_parsed: false,
+          })
+          setTaskInput('')
+          await fetchTasks()
+        }
+
+        // Clear the shared content
+        await clearSharedContent()
+      } catch (error) {
+        console.error('[Tasks] Error processing shared content:', error)
+        await NotificationTemplates.parseFailed('task')
+        hapticError()
+      } finally {
+        setProcessingShared(false)
+      }
+    }
+
+    if (!loading && session?.access_token) {
+      handleSharedContent()
+    }
+  }, [searchParams, loading, session, fetchTasks])
 
   // Parse task with AI
   const handleParseTask = async () => {
@@ -454,11 +567,20 @@ export default function TasksPage() {
           </div>
           <Button
             onClick={handleParseTask}
-            disabled={!taskInput.trim() || isParsingTask}
-            className="gap-2 px-6"
+            disabled={!taskInput.trim() || isParsingTask || processingShared}
+            className="gap-2 px-6 min-w-[100px]"
           >
-            <Send className="w-5 h-5" />
-            <span className="hidden sm:inline">Add</span>
+            {isParsingTask || processingShared ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span className="hidden sm:inline">Processing...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-5 h-5" />
+                <span className="hidden sm:inline">Add</span>
+              </>
+            )}
           </Button>
         </div>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-1">

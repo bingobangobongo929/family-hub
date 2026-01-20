@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import AICalendarInput from '@/components/AICalendarInput'
 import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
+import { NotificationTemplates } from '@/lib/local-notifications'
 import EventDetailModal from '@/components/EventDetailModal'
 import CategorySelector from '@/components/CategorySelector'
 import MemberMultiSelect from '@/components/MemberMultiSelect'
@@ -661,6 +662,8 @@ export default function CalendarPage() {
   }
 
   const handleAIEvents = async (aiEvents: any[]) => {
+    const createdEventTitles: string[] = []
+
     for (const event of aiEvents) {
       console.log('Creating AI event:', event.title)
       console.log('  member_ids:', event.member_ids)
@@ -707,6 +710,7 @@ export default function CalendarPage() {
         if (memberIds.length > 0) {
           setEventMembers(prev => ({ ...prev, [newEventId]: memberIds }))
         }
+        createdEventTitles.push(event.title)
       } else {
         try {
           const { data: insertedEvent } = await supabase
@@ -747,6 +751,8 @@ export default function CalendarPage() {
 
           // Send notification about new AI event
           if (insertedEvent) {
+            createdEventTitles.push(event.title)
+
             try {
               const { data: { session } } = await supabase.auth.getSession()
               const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -773,6 +779,18 @@ export default function CalendarPage() {
 
     if (user) {
       await fetchEvents()
+    }
+
+    // Send local notification about created events
+    if (createdEventTitles.length > 0) {
+      if (createdEventTitles.length === 1) {
+        await NotificationTemplates.eventCreated(createdEventTitles[0])
+      } else {
+        await NotificationTemplates.eventsCreated(createdEventTitles.length)
+      }
+    } else if (aiEvents.length > 0) {
+      // Events were provided but none were created (error)
+      await NotificationTemplates.parseFailed('event')
     }
   }
 

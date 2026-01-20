@@ -15,6 +15,8 @@
  * - familyhub://f1 -> F1 page
  * - familyhub://f1?tab=news -> F1 page news tab
  * - familyhub://bindicator -> Bindicator
+ * - familyhub://tasks -> Tasks page
+ * - familyhub://tasks/add -> Tasks page with shared content to process
  */
 
 import { Capacitor } from '@capacitor/core';
@@ -80,6 +82,7 @@ export function getRouteFromDeepLink(link: DeepLinkResult): string {
     '/f1': '/f1',
     '/bindicator': '/bindicator',
     '/tasks': '/tasks',
+    '/tasks/add': '/tasks?shared=true',
     '/rewards': '/rewards',
     '/notes': '/notes',
     '/gallery': '/gallery',

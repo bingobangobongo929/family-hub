@@ -2,9 +2,10 @@ import UIKit
 import Social
 import MobileCoreServices
 import UniformTypeIdentifiers
+import UserNotifications
 
 /// Share Extension for Family Hub
-/// Allows users to share photos and text from other apps to add calendar events
+/// Allows users to share photos and text from other apps to add calendar events or tasks
 class ShareViewController: UIViewController {
 
     // MARK: - Properties
@@ -49,7 +50,7 @@ class ShareViewController: UIViewController {
 
     private lazy var addButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Scan with AI", for: .normal)
+        button.setTitle("Send", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.setTitleColor(UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0), for: .normal) // Teal
         button.addTarget(self, action: #selector(addTapped), for: .touchUpInside)
@@ -80,7 +81,7 @@ class ShareViewController: UIViewController {
 
     private lazy var infoLabel: UILabel = {
         let label = UILabel()
-        label.text = "This will open Family Hub to scan and create calendar events"
+        label.text = "Send to Family Hub for AI processing"
         label.font = .systemFont(ofSize: 13)
         label.textColor = .tertiaryLabel
         label.numberOfLines = 0
@@ -96,10 +97,19 @@ class ShareViewController: UIViewController {
         return indicator
     }()
 
+    private lazy var successCheckmark: UIImageView = {
+        let imageView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        imageView.tintColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0) // Teal
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.isHidden = true
+        return imageView
+    }()
+
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        requestNotificationPermission()
         extractSharedContent()
     }
 
@@ -114,6 +124,7 @@ class ShareViewController: UIViewController {
         headerView.addSubview(addButton)
         containerView.addSubview(previewImageView)
         containerView.addSubview(textPreviewLabel)
+        containerView.addSubview(successCheckmark)
         containerView.addSubview(infoLabel)
         containerView.addSubview(activityIndicator)
 
@@ -146,6 +157,11 @@ class ShareViewController: UIViewController {
             textPreviewLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
             textPreviewLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
 
+            successCheckmark.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            successCheckmark.topAnchor.constraint(equalTo: headerView.bottomAnchor, constant: 40),
+            successCheckmark.widthAnchor.constraint(equalToConstant: 64),
+            successCheckmark.heightAnchor.constraint(equalToConstant: 64),
+
             infoLabel.topAnchor.constraint(equalTo: previewImageView.bottomAnchor, constant: 20),
             infoLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
             infoLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
@@ -154,6 +170,35 @@ class ShareViewController: UIViewController {
             activityIndicator.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             activityIndicator.centerYAnchor.constraint(equalTo: previewImageView.centerYAnchor),
         ])
+    }
+
+    // MARK: - Notifications
+    private func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
+            if let error = error {
+                print("[ShareExtension] Notification permission error: \(error)")
+            }
+        }
+    }
+
+    private func sendProcessingNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Processing..."
+        content.body = "Scanning your shared content with AI"
+        content.sound = nil // Silent - just visual indicator
+        content.categoryIdentifier = "PROCESSING"
+
+        let request = UNNotificationRequest(
+            identifier: "familyhub-processing",
+            content: content,
+            trigger: nil // Deliver immediately
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("[ShareExtension] Failed to send processing notification: \(error)")
+            }
+        }
     }
 
     // MARK: - Content Extraction
@@ -261,17 +306,21 @@ class ShareViewController: UIViewController {
             return
         }
 
-        // Update info label
-        var types: [String] = []
+        // Update info label based on content type
+        var hasImage = false
+        var hasText = false
         for item in sharedItems {
             switch item {
-            case .image: types.append("image")
-            case .text: types.append("text")
+            case .image: hasImage = true
+            case .text: hasText = true
             }
         }
 
-        let typeString = types.joined(separator: " and ")
-        infoLabel.text = "Family Hub will scan this \(typeString) to create calendar events"
+        if hasImage {
+            infoLabel.text = "Tap Send to scan this image for calendar events"
+        } else if hasText {
+            infoLabel.text = "Tap Send to create a task from this text"
+        }
     }
 
     private func showError(_ message: String) {
@@ -288,11 +337,35 @@ class ShareViewController: UIViewController {
     }
 
     @objc private func addTapped() {
+        // Disable button immediately
+        addButton.isEnabled = false
+        addButton.setTitle("Sending...", for: .disabled)
+
+        // Show instant feedback
+        showSendingState()
+
         // Save shared content to App Group for the main app to read
         saveToAppGroup()
 
-        // Open main app with deep link
-        openMainApp()
+        // Send processing notification
+        sendProcessingNotification()
+
+        // Show success after a brief moment, then open app
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.showSuccessAndOpenApp()
+        }
+    }
+
+    private func showSendingState() {
+        // Animate preview fading
+        UIView.animate(withDuration: 0.2) { [weak self] in
+            self?.previewImageView.alpha = 0.5
+            self?.textPreviewLabel.alpha = 0.5
+        }
+
+        // Update info label
+        infoLabel.text = "Sending to Family Hub..."
+        infoLabel.textColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0)
     }
 
     private func saveToAppGroup() {
@@ -317,62 +390,71 @@ class ShareViewController: UIViewController {
         defaults.synchronize()
     }
 
+    private func showSuccessAndOpenApp() {
+        // Update UI to show success
+        UIView.animate(withDuration: 0.3, animations: { [weak self] in
+            self?.previewImageView.isHidden = true
+            self?.textPreviewLabel.isHidden = true
+            self?.previewImageView.alpha = 0
+            self?.textPreviewLabel.alpha = 0
+            self?.successCheckmark.isHidden = false
+            self?.successCheckmark.transform = CGAffineTransform(scaleX: 0.5, y: 0.5)
+        }) { [weak self] _ in
+            UIView.animate(withDuration: 0.2, delay: 0, usingSpringWithDamping: 0.6, initialSpringVelocity: 0.5) {
+                self?.successCheckmark.transform = .identity
+            }
+        }
+
+        // Update labels
+        titleLabel.text = "Sent!"
+        infoLabel.text = "Opening Family Hub..."
+        infoLabel.font = .systemFont(ofSize: 15, weight: .medium)
+
+        // Hide cancel button, show done state
+        cancelButton.isHidden = true
+        addButton.setTitle("Done", for: .disabled)
+
+        // Open app after brief delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+            self?.openMainApp()
+        }
+    }
+
     private func openMainApp() {
-        guard let url = URL(string: "familyhub://calendar/scan") else {
-            showSuccessAndClose()
+        // Determine URL based on content type
+        var hasImage = false
+        var hasText = false
+        for item in sharedItems {
+            switch item {
+            case .image: hasImage = true
+            case .text: hasText = true
+            }
+        }
+
+        // Image -> calendar scan, Text -> tasks
+        let urlString = hasImage ? "familyhub://calendar/scan" : "familyhub://tasks/add"
+
+        guard let url = URL(string: urlString) else {
+            closeExtension()
             return
         }
 
         // Try to open the app via URL scheme
         if #available(iOS 16.0, *) {
             extensionContext?.open(url) { [weak self] success in
-                if success {
-                    // App opened successfully
-                    self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
-                } else {
-                    // App didn't open - show success message with instructions
-                    self?.showSuccessAndClose()
-                }
+                // Close extension regardless of success
+                self?.closeExtension()
             }
         } else {
-            // Older iOS - just show success message
-            showSuccessAndClose()
+            // Older iOS - just close
+            closeExtension()
         }
     }
 
-    private func showSuccessAndClose() {
-        DispatchQueue.main.async { [weak self] in
-            // Update UI to show success
-            self?.addButton.isEnabled = false
-            self?.addButton.setTitle("Saved!", for: .disabled)
-
-            // Update info label with instructions
-            self?.infoLabel.text = "Open Family Hub and go to Calendar to scan this image with AI"
-            self?.infoLabel.textColor = .label
-            self?.infoLabel.font = .systemFont(ofSize: 15, weight: .medium)
-
-            // Add a checkmark
-            let checkmark = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
-            checkmark.tintColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0) // Teal
-            checkmark.translatesAutoresizingMaskIntoConstraints = false
-            self?.containerView.addSubview(checkmark)
-
-            if let infoLabel = self?.infoLabel, let containerView = self?.containerView {
-                NSLayoutConstraint.activate([
-                    checkmark.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-                    checkmark.bottomAnchor.constraint(equalTo: infoLabel.topAnchor, constant: -12),
-                    checkmark.widthAnchor.constraint(equalToConstant: 48),
-                    checkmark.heightAnchor.constraint(equalToConstant: 48)
-                ])
-            }
-
-            // Hide the preview image
-            self?.previewImageView.isHidden = true
-
-            // Auto-close after 2 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
-            }
+    private func closeExtension() {
+        // Small delay to let success animation complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
         }
     }
 }

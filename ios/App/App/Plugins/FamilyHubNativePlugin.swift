@@ -7,6 +7,7 @@ import AVFoundation
 import WidgetKit
 import PhotosUI
 import SwiftUI  // Required for Xcode 26 - fixes PHPicker + WidgetKit conflict
+import UserNotifications
 
 /// Native plugin for Family Hub providing iOS-specific features
 @objc(FamilyHubNativePlugin)
@@ -26,6 +27,7 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "checkReduceMotion", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "writeWidgetData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "refreshWidgets", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "sendLocalNotification", returnType: CAPPluginReturnPromise),
     ]
 
     private let appGroupId = "group.app.familyhub.home"
@@ -299,6 +301,45 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
             }
         } else {
             call.resolve(["success": false, "reason": "Widgets require iOS 14+"])
+        }
+    }
+
+    // MARK: - Local Notifications
+    @objc func sendLocalNotification(_ call: CAPPluginCall) {
+        guard let title = call.getString("title") else {
+            call.reject("Missing title")
+            return
+        }
+
+        let body = call.getString("body") ?? ""
+        let identifier = call.getString("id") ?? UUID().uuidString
+        let sound = call.getBool("sound") ?? true
+        let data = call.getObject("data") ?? [:]
+
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = sound ? .default : nil
+        content.userInfo = data
+
+        // Add category for actionable notifications
+        if let category = call.getString("category") {
+            content.categoryIdentifier = category
+        }
+
+        // Deliver immediately (no trigger = immediate delivery)
+        let request = UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: nil
+        )
+
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                call.reject("Failed to send notification: \(error.localizedDescription)")
+            } else {
+                call.resolve(["success": true, "id": identifier])
+            }
         }
     }
 }

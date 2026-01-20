@@ -129,10 +129,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           try {
             const content = await getSharedContent()
             if (content.hasContent) {
-              console.log('[AppLayout] Found pending shared content')
+              console.log('[AppLayout] Found pending shared content:', content)
               setPendingSharedContent(true)
-              // Navigate to calendar with scan parameter
-              router.push('/calendar?scan=true')
+              // Route based on content type: images -> calendar, text -> tasks
+              const hasImages = content.images && content.images.length > 0
+              if (hasImages) {
+                router.push('/calendar?scan=true')
+              } else {
+                router.push('/tasks?shared=true')
+              }
             }
           } catch (e) {
             console.error('[AppLayout] Failed to check shared content:', e)
@@ -154,9 +159,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         try {
           const content = await getSharedContent()
           if (content.hasContent) {
-            console.log('[AppLayout] Found shared content on initial load')
+            console.log('[AppLayout] Found shared content on initial load:', content)
             setPendingSharedContent(true)
-            router.push('/calendar?scan=true')
+            // Route based on content type: images -> calendar, text -> tasks
+            const hasImages = content.images && content.images.length > 0
+            if (hasImages) {
+              router.push('/calendar?scan=true')
+            } else {
+              router.push('/tasks?shared=true')
+            }
           }
         } catch (e) {
           console.error('[AppLayout] Failed to check shared content:', e)

@@ -14,6 +14,7 @@ import CategorySelector from './CategorySelector'
 import { patternToRRule, describeRecurrence } from '@/lib/rrule'
 import MemberMultiSelect, { getMemberIdsByNames } from './MemberMultiSelect'
 import { hapticTap, hapticSuccess, hapticError } from '@/lib/haptics'
+import { NotificationTemplates } from '@/lib/local-notifications'
 import {
   isNativeIOS,
   openDocumentScanner,
@@ -701,9 +702,17 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents, initialI
         setStep('preview')
       } else {
         setError(t('aiCalendar.noEventsExtracted'))
+        // Send failure notification if this was from share extension
+        if (initialImages && initialImages.length > 0) {
+          await NotificationTemplates.parseFailed('event')
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process input')
+      // Send failure notification if this was from share extension
+      if (initialImages && initialImages.length > 0) {
+        await NotificationTemplates.processingError()
+      }
     } finally {
       setIsProcessing(false)
     }
