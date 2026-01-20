@@ -146,9 +146,9 @@ struct BinWidgetData: Codable {
 
     static let placeholder = BinWidgetData(
         collections: [
-            BinCollection(id: "1", type: "madaffald", name: "Food Waste", emoji: "🟤", nextDate: Date().addingTimeInterval(86400), daysUntil: 1),
-            BinCollection(id: "2", type: "restaffald", name: "General Waste", emoji: "⚫", nextDate: Date().addingTimeInterval(259200), daysUntil: 3),
-            BinCollection(id: "3", type: "papir_pap", name: "Paper & Cardboard", emoji: "🔵", nextDate: Date().addingTimeInterval(604800), daysUntil: 7)
+            BinCollection(id: "1", type: "madaffald", name: "Food Waste", emoji: "🥬", nextDate: Date().addingTimeInterval(86400), daysUntil: 1),
+            BinCollection(id: "2", type: "restaffald", name: "General Waste", emoji: "🗑️", nextDate: Date().addingTimeInterval(259200), daysUntil: 3),
+            BinCollection(id: "3", type: "papir_pap", name: "Paper & Cardboard", emoji: "📦", nextDate: Date().addingTimeInterval(604800), daysUntil: 7)
         ],
         lastUpdated: Date()
     )

@@ -49,8 +49,9 @@ class ShareViewController: UIViewController {
 
     private lazy var addButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setTitle("Add Event", for: .normal)
+        button.setTitle("Scan with AI", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.setTitleColor(UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0), for: .normal) // Teal
         button.addTarget(self, action: #selector(addTapped), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -318,28 +319,60 @@ class ShareViewController: UIViewController {
 
     private func openMainApp() {
         guard let url = URL(string: "familyhub://calendar/scan") else {
-            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+            showSuccessAndClose()
             return
         }
 
-        // iOS 16+ method: open URL via extension context
+        // Try to open the app via URL scheme
         if #available(iOS 16.0, *) {
-            // Use the newer open method
-            extensionContext?.open(url) { success in
-                self.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+            extensionContext?.open(url) { [weak self] success in
+                if success {
+                    // App opened successfully
+                    self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+                } else {
+                    // App didn't open - show success message with instructions
+                    self?.showSuccessAndClose()
+                }
             }
         } else {
-            // Fallback for older iOS: use selector-based approach
-            let selector = sel_registerName("openURL:")
-            var responder: UIResponder? = self
-            while let r = responder {
-                if r.responds(to: selector) {
-                    r.perform(selector, with: url)
-                    break
-                }
-                responder = r.next
+            // Older iOS - just show success message
+            showSuccessAndClose()
+        }
+    }
+
+    private func showSuccessAndClose() {
+        DispatchQueue.main.async { [weak self] in
+            // Update UI to show success
+            self?.addButton.isEnabled = false
+            self?.addButton.setTitle("Saved!", for: .disabled)
+
+            // Update info label with instructions
+            self?.infoLabel.text = "Open Family Hub and go to Calendar to scan this image with AI"
+            self?.infoLabel.textColor = .label
+            self?.infoLabel.font = .systemFont(ofSize: 15, weight: .medium)
+
+            // Add a checkmark
+            let checkmark = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+            checkmark.tintColor = UIColor(red: 0.08, green: 0.72, blue: 0.65, alpha: 1.0) // Teal
+            checkmark.translatesAutoresizingMaskIntoConstraints = false
+            self?.containerView.addSubview(checkmark)
+
+            if let infoLabel = self?.infoLabel, let containerView = self?.containerView {
+                NSLayoutConstraint.activate([
+                    checkmark.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+                    checkmark.bottomAnchor.constraint(equalTo: infoLabel.topAnchor, constant: -12),
+                    checkmark.widthAnchor.constraint(equalToConstant: 48),
+                    checkmark.heightAnchor.constraint(equalToConstant: 48)
+                ])
             }
-            extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+
+            // Hide the preview image
+            self?.previewImageView.isHidden = true
+
+            // Auto-close after 2 seconds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                self?.extensionContext?.completeRequest(returningItems: nil, completionHandler: nil)
+            }
         }
     }
 }
