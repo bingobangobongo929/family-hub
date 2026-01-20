@@ -17,6 +17,12 @@ import { setupKeyboardListeners, dismissKeyboard } from '@/lib/keyboard'
 import { NotificationTemplates } from '@/lib/local-notifications'
 import { supabase } from '@/lib/supabase'
 
+// Type for pending auto-process request
+interface PendingAutoProcess {
+  intent: 'task' | 'calendar'
+  timestamp: number
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, session } = useAuth()
   const { isMobile, isKitchen, device } = useDevice()
@@ -28,6 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [appReady, setAppReady] = useState(false)
   const [pendingSharedContent, setPendingSharedContent] = useState(false)
   const [isAutoProcessing, setIsAutoProcessing] = useState(false)
+  const [pendingAutoProcess, setPendingAutoProcess] = useState<PendingAutoProcess | null>(null)
   const hasRestoredRoute = useRef(false)
   const initialLoadComplete = useRef(false)
   const hasCheckedSharedContent = useRef(false)
@@ -130,17 +137,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         // Check for pending shared content from share extension
         // Note: New flow uses intent from share extension, this is fallback for old content
-        if (isNativeIOS() && !hasCheckedSharedContent.current) {
+        if (isNativeIOS()) {
           try {
             const content = await getSharedContent()
             if (content.hasContent) {
-              console.log('[AppLayout] Found pending shared content:', content)
+              console.log('[AppLayout] Found pending shared content on foreground:', content)
               setPendingSharedContent(true)
 
-              // If content has intent, use the new auto-processing flow
-              if (content.intent) {
-                router.push(`/?process=true&intent=${content.intent}`)
-              } else {
+              // If content has intent, use the new auto-processing flow via state
+              if (content.intent && !hasAutoProcessed.current) {
+                console.log('[AppLayout] Setting pending auto-process for intent:', content.intent)
+                setPendingAutoProcess({ intent: content.intent as 'task' | 'calendar', timestamp: Date.now() })
+              } else if (!content.intent) {
                 // Fallback: route based on content type
                 const hasImages = content.images && content.images.length > 0
                 if (hasImages) {
@@ -169,14 +177,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         hasCheckedSharedContent.current = true
         try {
           const content = await getSharedContent()
+          console.log('[AppLayout] Initial shared content check:', content)
           if (content.hasContent) {
             console.log('[AppLayout] Found shared content on initial load:', content)
             setPendingSharedContent(true)
 
-            // If content has intent, use the new auto-processing flow
-            if (content.intent) {
-              router.push(`/?process=true&intent=${content.intent}`)
-            } else {
+            // If content has intent, use the new auto-processing flow via state
+            if (content.intent && !hasAutoProcessed.current) {
+              console.log('[AppLayout] Setting pending auto-process from initial load:', content.intent)
+              setPendingAutoProcess({ intent: content.intent as 'task' | 'calendar', timestamp: Date.now() })
+            } else if (!content.intent) {
               // Fallback: route based on content type
               const hasImages = content.images && content.images.length > 0
               if (hasImages) {
@@ -198,10 +208,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [isNative, clearBadge, router])
 
-  // Handle deep links from iOS widgets
+  // Handle deep links from iOS widgets and share extension
   useEffect(() => {
     initDeepLinkHandler((route) => {
       console.log('[AppLayout] Deep link navigation to:', route)
+
+      // Check if this is a process route from share extension
+      if (route.includes('process=true')) {
+        const urlParams = new URLSearchParams(route.split('?')[1] || '')
+        const intent = urlParams.get('intent') as 'task' | 'calendar' | null
+        if (intent && !hasAutoProcessed.current) {
+          console.log('[AppLayout] Deep link triggered auto-process with intent:', intent)
+          setPendingAutoProcess({ intent, timestamp: Date.now() })
+        }
+      }
+
       router.push(route)
     })
 
@@ -246,14 +267,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // then we auto-process and send notification without showing UI
   useEffect(() => {
     const autoProcessSharedContent = async () => {
-      // Use window.location.search instead of useSearchParams to avoid Suspense requirement
-      if (typeof window === 'undefined') return
+      // Check if we have pending auto-process from state (set by shared content check)
+      if (!pendingAutoProcess || hasAutoProcessed.current || !isNativeIOS()) {
+        console.log('[AutoProcess] Skipping - pending:', !!pendingAutoProcess, 'processed:', hasAutoProcessed.current, 'native:', isNativeIOS())
+        return
+      }
 
-      const urlParams = new URLSearchParams(window.location.search)
-      const isProcessRoute = urlParams.get('process') === 'true'
-      const intentParam = urlParams.get('intent')
-
-      if (!isProcessRoute || !intentParam || hasAutoProcessed.current || !isNativeIOS()) {
+      // Wait for user to be available
+      if (!user) {
+        console.log('[AutoProcess] Waiting for user to be available...')
         return
       }
 
@@ -261,22 +283,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       hasAutoProcessed.current = true
       setIsAutoProcessing(true)
 
-      console.log('[AutoProcess] Starting auto-processing with intent:', intentParam)
+      const intent = pendingAutoProcess.intent
+      console.log('[AutoProcess] Starting auto-processing with intent:', intent)
 
       try {
         // Get shared content (includes the intent saved by share extension)
         const content = await getSharedContent()
-        console.log('[AutoProcess] Shared content:', content)
+        console.log('[AutoProcess] Shared content:', JSON.stringify(content, null, 2))
 
         if (!content.hasContent) {
           console.log('[AutoProcess] No shared content found')
           await NotificationTemplates.processingError()
-          router.replace('/')
+          setPendingAutoProcess(null)
           return
         }
-
-        // Use intent from URL param (more reliable than stored intent)
-        const intent = intentParam as 'task' | 'calendar'
 
         if (intent === 'task') {
           await processAsTask(content)
@@ -286,33 +306,43 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         // Clear shared content
         await clearSharedContent()
+        console.log('[AutoProcess] Cleared shared content')
 
-        // Navigate away from process route
-        router.replace('/')
       } catch (error) {
         console.error('[AutoProcess] Error:', error)
         await NotificationTemplates.processingError()
-        router.replace('/')
       } finally {
         setIsAutoProcessing(false)
+        setPendingAutoProcess(null)
+        // Reset the ref so future shares can be processed
+        // Use a small delay to prevent immediate re-processing
+        setTimeout(() => {
+          hasAutoProcessed.current = false
+          console.log('[AutoProcess] Reset hasAutoProcessed for future shares')
+        }, 1000)
       }
     }
 
     // Process as Task
     const processAsTask = async (content: { texts?: string[]; images?: string[] }) => {
+      console.log('[AutoProcess:Task] Starting task processing')
       const text = content.texts?.join('\n') || ''
       if (!text) {
+        console.log('[AutoProcess:Task] No text content found')
         await NotificationTemplates.parseFailed('task')
         return
       }
+      console.log('[AutoProcess:Task] Text to process:', text.substring(0, 100))
 
       try {
         // Get auth token
         const { data: { session: authSession } } = await supabase.auth.getSession()
         const token = authSession?.access_token
+        console.log('[AutoProcess:Task] Auth token available:', !!token)
 
         if (!token) {
           // Create simple task without AI parsing
+          console.log('[AutoProcess:Task] No token, creating simple task')
           const { data: task, error } = await supabase
             .from('tasks')
             .insert({
@@ -324,13 +354,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             .select()
             .single()
 
-          if (error) throw error
+          if (error) {
+            console.error('[AutoProcess:Task] Supabase insert error:', error)
+            throw error
+          }
 
+          console.log('[AutoProcess:Task] Task created:', task?.id)
           await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
           return
         }
 
         // Parse with AI
+        console.log('[AutoProcess:Task] Calling AI parse API')
         const parseResponse = await fetch('/api/tasks/parse', {
           method: 'POST',
           headers: {
@@ -341,14 +376,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })
 
         if (!parseResponse.ok) {
+          const errorText = await parseResponse.text()
+          console.error('[AutoProcess:Task] Parse API error:', parseResponse.status, errorText)
           throw new Error('Failed to parse task')
         }
 
         const parseData = await parseResponse.json()
+        console.log('[AutoProcess:Task] Parse result:', JSON.stringify(parseData, null, 2))
         const createdTasks: string[] = []
 
         if (parseData.tasks && parseData.tasks.length > 0) {
           for (const parsedTask of parseData.tasks) {
+            console.log('[AutoProcess:Task] Creating task:', parsedTask.title)
             const { data: task, error } = await supabase
               .from('tasks')
               .insert({
@@ -367,7 +406,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               .select()
               .single()
 
+            if (error) {
+              console.error('[AutoProcess:Task] Insert error for task:', error)
+            }
             if (!error && task) {
+              console.log('[AutoProcess:Task] Task inserted:', task.id)
               createdTasks.push(task.title)
             }
           }
@@ -375,7 +418,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (createdTasks.length === 0) {
           // Create simple task
-          const { data: task } = await supabase
+          console.log('[AutoProcess:Task] No AI tasks, creating simple task')
+          const { data: task, error } = await supabase
             .from('tasks')
             .insert({
               title: text.length > 100 ? text.substring(0, 97) + '...' : text,
@@ -386,24 +430,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             .select()
             .single()
 
+          if (error) {
+            console.error('[AutoProcess:Task] Simple task insert error:', error)
+          }
+          console.log('[AutoProcess:Task] Simple task created:', task?.id)
           await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
         } else if (createdTasks.length === 1) {
+          console.log('[AutoProcess:Task] Sending single task notification')
           await NotificationTemplates.taskCreated(createdTasks[0])
         } else {
+          console.log('[AutoProcess:Task] Sending multi-task notification:', createdTasks.length)
           await NotificationTemplates.tasksCreated(createdTasks.length)
         }
       } catch (error) {
-        console.error('[AutoProcess] Task processing error:', error)
+        console.error('[AutoProcess:Task] Task processing error:', error)
         await NotificationTemplates.parseFailed('task')
       }
     }
 
     // Process as Calendar
     const processAsCalendar = async (content: { texts?: string[]; images?: string[] }) => {
+      console.log('[AutoProcess:Calendar] Starting calendar processing')
       const images = content.images || []
       const text = content.texts?.join('\n') || ''
 
+      console.log('[AutoProcess:Calendar] Images count:', images.length, 'Text length:', text.length)
       if (images.length === 0 && !text) {
+        console.log('[AutoProcess:Calendar] No content to process')
         await NotificationTemplates.parseFailed('event')
         return
       }
@@ -412,8 +465,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         // Get AI model from settings
         const savedSettings = localStorage.getItem('family-hub-settings')
         const aiModel = savedSettings ? JSON.parse(savedSettings).ai_model || 'gemini-2.0-flash' : 'gemini-2.0-flash'
+        console.log('[AutoProcess:Calendar] Using AI model:', aiModel)
 
         // Call calendar AI
+        console.log('[AutoProcess:Calendar] Calling calendar AI API')
         const response = await fetch('/api/calendar-ai', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -426,14 +481,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         })
 
         if (!response.ok) {
+          const errorText = await response.text()
+          console.error('[AutoProcess:Calendar] API error:', response.status, errorText)
           throw new Error('Failed to process calendar content')
         }
 
         const data = await response.json()
+        console.log('[AutoProcess:Calendar] API response:', JSON.stringify(data, null, 2))
         const createdEvents: string[] = []
 
         if (data.events && data.events.length > 0) {
+          console.log('[AutoProcess:Calendar] Found', data.events.length, 'events to create')
           for (const event of data.events) {
+            console.log('[AutoProcess:Calendar] Creating event:', event.title)
             const startDateTime = event.all_day
               ? `${event.start_date}T00:00:00`
               : `${event.start_date}T${event.start_time || '09:00'}:00`
@@ -458,30 +518,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               .select()
               .single()
 
+            if (error) {
+              console.error('[AutoProcess:Calendar] Insert error:', error)
+            }
             if (!error && insertedEvent) {
+              console.log('[AutoProcess:Calendar] Event created:', insertedEvent.id)
               createdEvents.push(insertedEvent.title)
             }
           }
+        } else {
+          console.log('[AutoProcess:Calendar] No events found in AI response')
         }
 
         if (createdEvents.length === 0) {
+          console.log('[AutoProcess:Calendar] No events created, sending failure notification')
           await NotificationTemplates.parseFailed('event')
         } else if (createdEvents.length === 1) {
+          console.log('[AutoProcess:Calendar] Sending single event notification')
           await NotificationTemplates.eventCreated(createdEvents[0])
         } else {
+          console.log('[AutoProcess:Calendar] Sending multi-event notification:', createdEvents.length)
           await NotificationTemplates.eventsCreated(createdEvents.length)
         }
       } catch (error) {
-        console.error('[AutoProcess] Calendar processing error:', error)
+        console.error('[AutoProcess:Calendar] Calendar processing error:', error)
         await NotificationTemplates.parseFailed('event')
       }
     }
 
-    // Only auto-process when app is ready and we have the params
-    if (appReady && !loading) {
+    // Only auto-process when app is ready, user is available, and we have pending work
+    if (appReady && !loading && user && pendingAutoProcess) {
+      console.log('[AutoProcess] Triggering auto-process - appReady:', appReady, 'loading:', loading, 'user:', !!user, 'pending:', !!pendingAutoProcess)
       autoProcessSharedContent()
     }
-  }, [pathname, appReady, loading, user, router])
+  }, [appReady, loading, user, pendingAutoProcess])
 
   // Dismiss keyboard when tapping outside inputs
   const handleMainClick = useCallback((e: React.MouseEvent) => {
