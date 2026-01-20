@@ -10,7 +10,7 @@ import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
 import Screensaver from './Screensaver'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
-import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
+import { saveCurrentRoute, getSavedRoute, markAppBackgrounded } from '@/lib/route-persistence'
 import { initDeepLinkHandler, cleanupDeepLinkHandler } from '@/lib/deep-link-handler'
 import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
 
@@ -137,6 +137,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             console.error('[AppLayout] Failed to check shared content:', e)
           }
         }
+      } else {
+        // App going to background - mark the time for cold start detection
+        markAppBackgrounded()
       }
     })
 

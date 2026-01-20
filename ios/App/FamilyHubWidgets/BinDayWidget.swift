@@ -54,7 +54,7 @@ struct BinDayWidgetEntryView: View {
     }
 }
 
-// MARK: - Small Widget
+// MARK: - Small Widget (Redesigned)
 struct SmallBinView: View {
     let collections: [BinCollection]
 
@@ -63,168 +63,198 @@ struct SmallBinView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
             HStack {
                 Image(systemName: "trash.fill")
-                    .foregroundColor(.green)
-                Text("Bins")
-                    .font(.headline)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(WidgetColors.teal)
+                Text("BINS")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.secondary)
+                Spacer()
             }
 
             if let bin = nextCollection {
-                Spacer()
+                Spacer(minLength: 8)
 
+                // Large emoji centered
                 HStack {
+                    Spacer()
                     Text(bin.emoji)
-                        .font(.system(size: 40))
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(bin.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
-
-                        Text(urgencyText(bin))
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(urgencyColor(bin))
-                    }
+                        .font(.system(size: 52))
+                    Spacer()
                 }
 
-                Spacer()
+                Spacer(minLength: 6)
 
-                // Alert badge if urgent
-                if bin.daysUntil <= 1 {
-                    HStack {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption)
-                        Text(bin.daysUntil == 0 ? "Put out now!" : "Tomorrow!")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(urgencyColor(bin))
-                    .cornerRadius(8)
+                // Bin name - truncated if needed
+                Text(bin.name)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                Spacer(minLength: 8)
+
+                // Urgency badge at bottom
+                HStack {
+                    Spacer()
+                    urgencyBadge(bin)
+                    Spacer()
                 }
             } else {
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.title)
-                        .foregroundColor(.green)
+                        .font(.system(size: 32))
+                        .foregroundColor(WidgetColors.safeGreen)
                     Text("All clear!")
-                        .font(.caption)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 Spacer()
             }
         }
-        .padding()
+        .padding(14)
         .widgetURL(URL(string: DeepLinks.bindicator))
     }
 
-    func urgencyText(_ bin: BinCollection) -> String {
-        switch bin.daysUntil {
-        case 0: return "Today!"
-        case 1: return "Tomorrow"
-        case 2: return "In 2 days"
-        default: return "In \(bin.daysUntil) days"
+    @ViewBuilder
+    func urgencyBadge(_ bin: BinCollection) -> some View {
+        let (text, color, icon) = urgencyInfo(bin)
+        HStack(spacing: 4) {
+            if let icon = icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .bold))
+            }
+            Text(text)
+                .font(.system(size: 11, weight: .bold))
         }
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(color)
+        .cornerRadius(10)
     }
 
-    func urgencyColor(_ bin: BinCollection) -> Color {
-        switch bin.urgencyLevel {
-        case .today: return .red
-        case .tomorrow: return .orange
-        case .soon: return .yellow
-        case .later: return .green
+    func urgencyInfo(_ bin: BinCollection) -> (String, Color, String?) {
+        switch bin.daysUntil {
+        case 0:
+            return ("TODAY!", WidgetColors.urgentRed, "exclamationmark.triangle.fill")
+        case 1:
+            return ("Tomorrow", WidgetColors.warningOrange, "clock.fill")
+        case 2:
+            return ("In 2 days", WidgetColors.teal, nil)
+        default:
+            return ("In \(bin.daysUntil) days", WidgetColors.teal, nil)
         }
     }
 }
 
-// MARK: - Medium Widget
+// MARK: - Medium Widget (Redesigned)
 struct MediumBinView: View {
     let collections: [BinCollection]
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Left side - Next collection highlight
+        HStack(spacing: 0) {
+            // Left side - Next collection with large emoji
             if let nextBin = collections.first {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header
+                    HStack(spacing: 4) {
                         Image(systemName: "trash.fill")
-                            .foregroundColor(.green)
-                        Text("Next Collection")
-                            .font(.caption)
-                            .fontWeight(.semibold)
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(WidgetColors.teal)
+                        Text("NEXT")
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.secondary)
                     }
 
-                    Spacer()
+                    Spacer(minLength: 6)
 
+                    // Large emoji
                     Text(nextBin.emoji)
-                        .font(.system(size: 48))
+                        .font(.system(size: 44))
 
+                    Spacer(minLength: 4)
+
+                    // Bin name
                     Text(nextBin.name)
-                        .font(.subheadline)
-                        .fontWeight(.bold)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(.primary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
 
-                    HStack {
+                    // Urgency text
+                    HStack(spacing: 4) {
                         Image(systemName: urgencyIcon(nextBin))
-                            .font(.caption)
+                            .font(.system(size: 10, weight: .semibold))
                         Text(urgencyText(nextBin))
-                            .font(.caption)
-                            .fontWeight(.bold)
+                            .font(.system(size: 12, weight: .semibold))
                     }
                     .foregroundColor(urgencyColor(nextBin))
 
-                    Spacer()
+                    Spacer(minLength: 4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 8)
             }
 
-            Divider()
+            // Teal accent divider
+            WidgetAccentBar(color: WidgetColors.teal.opacity(0.3), width: 2)
 
-            // Right side - Other upcoming bins
-            VStack(alignment: .leading, spacing: 8) {
+            // Right side - Upcoming list
+            VStack(alignment: .leading, spacing: 6) {
                 Text("UPCOMING")
-                    .font(.caption2)
-                    .fontWeight(.bold)
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.secondary)
+                    .padding(.bottom, 2)
 
-                ForEach(collections.dropFirst().prefix(3)) { bin in
-                    HStack(spacing: 8) {
-                        Text(bin.emoji)
-                            .font(.title3)
+                if collections.count > 1 {
+                    ForEach(collections.dropFirst().prefix(3)) { bin in
+                        HStack(spacing: 8) {
+                            Text(bin.emoji)
+                                .font(.system(size: 20))
 
-                        VStack(alignment: .leading, spacing: 0) {
-                            Text(bin.name)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .lineLimit(1)
-                            Text(shortUrgencyText(bin))
-                                .font(.caption2)
-                                .foregroundColor(urgencyColor(bin))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(bin.name)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+                                Text(shortUrgencyText(bin))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .foregroundColor(urgencyColor(bin))
+                            }
+                            Spacer()
+                        }
+                    }
+                } else {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle")
+                                .font(.system(size: 20))
+                                .foregroundColor(WidgetColors.safeGreen)
+                            Text("Nothing else\nthis week")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
                         }
                         Spacer()
                     }
+                    Spacer()
                 }
 
-                if collections.count <= 1 {
-                    Text("No other bins soon")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Spacer()
+                Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 12)
         }
-        .padding()
+        .padding(14)
         .widgetURL(URL(string: DeepLinks.bindicator))
     }
 
@@ -262,53 +292,57 @@ struct MediumBinView: View {
 
     func urgencyColor(_ bin: BinCollection) -> Color {
         switch bin.urgencyLevel {
-        case .today: return .red
-        case .tomorrow: return .orange
-        case .soon: return .yellow
-        case .later: return .green
+        case .today: return WidgetColors.urgentRed
+        case .tomorrow: return WidgetColors.warningOrange
+        case .soon: return WidgetColors.cautionYellow
+        case .later: return WidgetColors.teal
         }
     }
 }
 
-// MARK: - Lock Screen Widget
+// MARK: - Lock Screen Widget (Redesigned)
 struct AccessoryBinView: View {
     let collections: [BinCollection]
 
     var body: some View {
         if let bin = collections.first {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Image(systemName: "trash.fill")
-                    Text("Bins")
-                    Spacer()
-                    if bin.daysUntil <= 1 {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                    }
-                }
-                .font(.caption)
+            HStack(spacing: 6) {
+                // Emoji
+                Text(bin.emoji)
+                    .font(.system(size: 24))
 
-                HStack {
-                    Text(bin.emoji)
+                VStack(alignment: .leading, spacing: 1) {
+                    // Bin name
                     Text(bin.name)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 13, weight: .semibold))
                         .lineLimit(1)
-                }
-                .font(.headline)
 
-                Text(shortUrgencyText(bin))
-                    .font(.caption2)
+                    // Day indicator
+                    HStack(spacing: 3) {
+                        if bin.daysUntil <= 1 {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 9))
+                        }
+                        Text(shortUrgencyText(bin))
+                            .font(.system(size: 11, weight: .medium))
+                    }
                     .foregroundColor(.secondary)
+                }
+
+                Spacer()
             }
         } else {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Image(systemName: "trash.fill")
+            HStack(spacing: 6) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.system(size: 20))
+                VStack(alignment: .leading, spacing: 1) {
                     Text("Bins")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("All clear")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
-                .font(.caption)
-
-                Text("All clear")
-                    .font(.headline)
+                Spacer()
             }
         }
     }
@@ -338,6 +372,12 @@ struct BinDayWidget: Widget {
 }
 
 // MARK: - Preview
+#Preview(as: .systemSmall) {
+    BinDayWidget()
+} timeline: {
+    BinDayEntry(date: Date(), data: BinWidgetData.placeholder)
+}
+
 #Preview(as: .systemMedium) {
     BinDayWidget()
 } timeline: {

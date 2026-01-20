@@ -47,6 +47,8 @@ struct F1CountdownWidgetEntryView: View {
             SmallF1View(data: entry.data, currentDate: entry.date)
         case .systemMedium:
             MediumF1View(data: entry.data, currentDate: entry.date)
+        case .systemLarge:
+            LargeF1View(data: entry.data, currentDate: entry.date)
         case .accessoryRectangular:
             AccessoryF1View(data: entry.data, currentDate: entry.date)
         default:
@@ -55,185 +57,199 @@ struct F1CountdownWidgetEntryView: View {
     }
 }
 
-// MARK: - Small Widget
+// MARK: - Small Widget (Redesigned)
 struct SmallF1View: View {
     let data: F1WidgetData
     let currentDate: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            // F1 Header with racing red
+        VStack(alignment: .leading, spacing: 0) {
+            // Header with F1 logo style
             HStack {
                 Text("F1")
-                    .font(.title3)
-                    .fontWeight(.black)
-                    .foregroundColor(.red)
+                    .font(.system(size: 16, weight: .black, design: .rounded))
+                    .foregroundColor(WidgetColors.f1Red)
                 Spacer()
                 if let session = data.nextSession {
                     Text(session.countryFlag)
-                        .font(.title2)
+                        .font(.system(size: 22))
                 }
             }
 
             if let session = data.nextSession {
-                Spacer()
+                Spacer(minLength: 8)
 
-                // Session type (Qualifying, Race, etc)
-                Text(session.name)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
+                // Large countdown centered
+                Text(session.startTime.countdownStringFull())
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                Spacer(minLength: 6)
+
+                // Race name abbreviated
+                Text(session.raceName.widgetAbbreviated())
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity, alignment: .center)
 
-                Spacer()
+                Spacer(minLength: 8)
 
-                // Countdown - larger and more prominent
+                // Session type badge
                 HStack {
-                    Image(systemName: "timer")
-                        .font(.caption)
-                    Text(countdownText(to: session.startTime))
-                        .font(.system(.subheadline, design: .monospaced))
-                        .fontWeight(.bold)
+                    Spacer()
+                    sessionBadge(session.name)
+                    Spacer()
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity)
-                .background(Color.red)
-                .cornerRadius(10)
             } else {
                 Spacer()
-                VStack(spacing: 8) {
-                    Image(systemName: "flag.checkered")
-                        .font(.title)
-                        .foregroundColor(.secondary)
-                    Text("Off-season")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+                offSeasonView()
                 Spacer()
             }
         }
-        .padding()
+        .padding(14)
         .widgetURL(URL(string: DeepLinks.f1))
     }
 
-    func countdownText(to date: Date) -> String {
-        date.countdownString()
+    @ViewBuilder
+    func sessionBadge(_ name: String) -> some View {
+        Text(name.uppercased())
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(WidgetColors.f1Red)
+            .cornerRadius(8)
+    }
+
+    @ViewBuilder
+    func offSeasonView() -> some View {
+        VStack(spacing: 8) {
+            Image(systemName: "flag.checkered")
+                .font(.system(size: 28))
+                .foregroundColor(.secondary)
+            Text("Off-season")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Medium Widget
+// MARK: - Medium Widget (Redesigned)
 struct MediumF1View: View {
     let data: F1WidgetData
     let currentDate: Date
 
     var body: some View {
-        HStack(spacing: 16) {
-            // Left: Next Session
+        HStack(spacing: 0) {
+            // Left side - Session info
             if let session = data.nextSession {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Header
+                    HStack(spacing: 6) {
                         Text("F1")
-                            .font(.headline)
-                            .fontWeight(.black)
-                            .foregroundColor(.red)
-                        Spacer()
+                            .font(.system(size: 14, weight: .black, design: .rounded))
+                            .foregroundColor(WidgetColors.f1Red)
                         Text(session.countryFlag)
-                            .font(.title)
+                            .font(.system(size: 18))
                     }
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
+                    // Session type
                     Text(session.name.uppercased())
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(.red)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(WidgetColors.f1Red)
 
-                    Text(session.raceName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
+                    // Race name
+                    Text(session.raceName.widgetAbbreviated())
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.primary)
                         .lineLimit(2)
+                        .minimumScaleFactor(0.8)
 
+                    // Circuit
                     Text(session.circuitName)
-                        .font(.caption)
+                        .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .lineLimit(1)
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     // Countdown badge
-                    HStack {
+                    HStack(spacing: 4) {
                         Image(systemName: "timer")
-                            .font(.caption)
-                        Text(countdownText(to: session.startTime))
-                            .font(.system(.caption, design: .monospaced))
-                            .fontWeight(.bold)
+                            .font(.system(size: 10, weight: .semibold))
+                        Text(session.startTime.countdownString())
+                            .font(.system(size: 12, weight: .bold, design: .monospaced))
                     }
                     .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color.red)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(WidgetColors.f1Red)
                     .cornerRadius(8)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 8)
             }
 
-            Divider()
+            // Teal accent divider
+            WidgetAccentBar(color: WidgetColors.teal.opacity(0.3), width: 2)
 
-            // Right: Session time details
+            // Right side - Time details
             if let session = data.nextSession {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("SESSION TIME")
-                        .font(.caption2)
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SESSION")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.secondary)
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(formatDate(session.startTime))
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+                    Text(formatDate(session.startTime))
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.primary)
 
-                        Text(formatTime(session.startTime))
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.red)
+                    Text(formatTime(session.startTime))
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(WidgetColors.f1Red)
 
-                        Text("Local time")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("Local time")
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
 
                     Spacer()
 
-                    if let race = data.nextRace, race.name != session.raceName {
+                    if let race = data.nextRace, race.name != session.raceName || session.name != "Race" {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("RACE")
-                                .font(.caption2)
-                                .fontWeight(.bold)
+                                .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.secondary)
-                            Text(formatDate(race.startTime))
-                                .font(.caption)
+                            Text(formatDateTime(race.startTime))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(.primary)
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.leading, 12)
             } else {
                 VStack {
                     Spacer()
                     Image(systemName: "flag.checkered")
-                        .font(.largeTitle)
+                        .font(.system(size: 32))
                         .foregroundColor(.secondary)
                     Text("Off-season")
-                        .font(.caption)
+                        .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding()
+        .padding(14)
         .widgetURL(URL(string: DeepLinks.f1))
     }
 
@@ -249,60 +265,240 @@ struct MediumF1View: View {
         return formatter.string(from: date)
     }
 
-    func countdownText(to date: Date) -> String {
-        date.countdownString()
+    func formatDateTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE HH:mm"
+        return formatter.string(from: date)
     }
 }
 
-// MARK: - Lock Screen Widget
+// MARK: - Large Widget (NEW)
+struct LargeF1View: View {
+    let data: F1WidgetData
+    let currentDate: Date
+
+    // Mock session schedule - in real app this would come from data
+    var sessionSchedule: [(name: String, day: String, time: String, isNext: Bool, isComplete: Bool)] {
+        guard let session = data.nextSession else { return [] }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        let dayName = formatter.string(from: session.startTime)
+        formatter.dateFormat = "HH:mm"
+        let timeStr = formatter.string(from: session.startTime)
+
+        // Return the next session info
+        return [
+            (name: session.name, day: dayName, time: timeStr, isNext: true, isComplete: false)
+        ]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let session = data.nextSession {
+                // Header
+                HStack {
+                    HStack(spacing: 8) {
+                        Text("F1")
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundColor(WidgetColors.f1Red)
+                        Text(session.countryFlag)
+                            .font(.system(size: 24))
+                    }
+                    Spacer()
+                    // Countdown badge
+                    HStack(spacing: 4) {
+                        Image(systemName: "timer")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text(session.startTime.countdownString())
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(WidgetColors.f1Red)
+                    .cornerRadius(10)
+                }
+
+                Spacer(minLength: 12)
+
+                // Race name and circuit
+                Text(session.raceName)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+
+                Text(session.circuitName)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 12)
+
+                // Divider
+                Rectangle()
+                    .fill(WidgetColors.teal.opacity(0.2))
+                    .frame(height: 2)
+                    .cornerRadius(1)
+
+                Spacer(minLength: 12)
+
+                // Next session highlight
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("NEXT SESSION")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+
+                    HStack {
+                        // Session icon
+                        ZStack {
+                            Circle()
+                                .fill(WidgetColors.f1Red)
+                                .frame(width: 36, height: 36)
+                            Image(systemName: sessionIcon(session.name))
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(session.name)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                            Text(formatFullDateTime(session.startTime))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer()
+
+                        // Large time
+                        VStack(alignment: .trailing, spacing: 0) {
+                            Text(formatTime(session.startTime))
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(WidgetColors.f1Red)
+                            Text("local")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+
+                Spacer(minLength: 12)
+
+                // Race info if different from current session
+                if let race = data.nextRace, session.name != "Race" {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("RACE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.secondary)
+                            Text(formatFullDateTime(race.startTime))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.primary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "flag.checkered")
+                            .font(.system(size: 20))
+                            .foregroundColor(WidgetColors.f1Red)
+                    }
+                    .padding(12)
+                    .background(Color.secondary.opacity(0.1))
+                    .cornerRadius(12)
+                }
+
+                Spacer(minLength: 0)
+            } else {
+                // Off-season
+                Spacer()
+                VStack(spacing: 16) {
+                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text("Off-season")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    Text("No upcoming races scheduled")
+                        .font(.system(size: 13))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                Spacer()
+            }
+        }
+        .padding(16)
+        .widgetURL(URL(string: DeepLinks.f1))
+    }
+
+    func sessionIcon(_ name: String) -> String {
+        switch name.lowercased() {
+        case "race": return "flag.checkered"
+        case "qualifying", "sprint qualifying": return "timer"
+        case "sprint": return "hare"
+        default: return "car" // Practice sessions
+        }
+    }
+
+    func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    func formatFullDateTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMM d 'at' HH:mm"
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Lock Screen Widget (Redesigned)
 struct AccessoryF1View: View {
     let data: F1WidgetData
     let currentDate: Date
 
     var body: some View {
         if let session = data.nextSession {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
-                    Text("F1")
-                        .fontWeight(.black)
-                    Text(session.countryFlag)
-                    Spacer()
-                    Text(countdownText(to: session.startTime))
-                        .fontWeight(.semibold)
-                }
-                .font(.caption)
+            HStack(spacing: 6) {
+                // Flag emoji
+                Text(session.countryFlag)
+                    .font(.system(size: 22))
 
-                Text(session.name)
-                    .font(.headline)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: 1) {
+                    // Race name abbreviated
+                    Text(session.raceName.widgetAbbreviated())
+                        .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
 
-                Text(formatTime(session.startTime))
-                    .font(.caption2)
+                    // Countdown
+                    HStack(spacing: 4) {
+                        Text(session.name)
+                            .font(.system(size: 10, weight: .medium))
+                        Text("in")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                        Text(session.startTime.countdownString())
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    }
                     .foregroundColor(.secondary)
+                }
+
+                Spacer()
             }
         } else {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack {
+            HStack(spacing: 6) {
+                Image(systemName: "flag.checkered")
+                    .font(.system(size: 20))
+                VStack(alignment: .leading, spacing: 1) {
                     Text("F1")
-                        .fontWeight(.black)
-                    Image(systemName: "flag.checkered")
+                        .font(.system(size: 13, weight: .bold))
+                    Text("Off-season")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
                 }
-                .font(.caption)
-
-                Text("Off-season")
-                    .font(.headline)
+                Spacer()
             }
         }
-    }
-
-    func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE HH:mm"
-        return formatter.string(from: date)
-    }
-
-    func countdownText(to date: Date) -> String {
-        date.countdownString()
     }
 }
 
@@ -317,12 +513,24 @@ struct F1CountdownWidget: Widget {
         }
         .configurationDisplayName("F1 Countdown")
         .description("Countdown to the next Formula 1 session.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular])
     }
 }
 
 // MARK: - Preview
+#Preview(as: .systemSmall) {
+    F1CountdownWidget()
+} timeline: {
+    F1CountdownEntry(date: Date(), data: F1WidgetData.placeholder)
+}
+
 #Preview(as: .systemMedium) {
+    F1CountdownWidget()
+} timeline: {
+    F1CountdownEntry(date: Date(), data: F1WidgetData.placeholder)
+}
+
+#Preview(as: .systemLarge) {
     F1CountdownWidget()
 } timeline: {
     F1CountdownEntry(date: Date(), data: F1WidgetData.placeholder)
