@@ -12,6 +12,7 @@ import Screensaver from './Screensaver'
 import { DEFAULT_SETTINGS } from '@/lib/database.types'
 import { saveCurrentRoute, getSavedRoute } from '@/lib/route-persistence'
 import { initDeepLinkHandler, cleanupDeepLinkHandler } from '@/lib/deep-link-handler'
+import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -22,8 +23,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [appReady, setAppReady] = useState(false)
+  const [pendingSharedContent, setPendingSharedContent] = useState(false)
   const hasRestoredRoute = useRef(false)
   const initialLoadComplete = useRef(false)
+  const hasCheckedSharedContent = useRef(false)
 
   const isLoginPage = pathname === '/login'
   const isSupabaseConfigured = process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -116,19 +119,52 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isNative) return
 
-    const handleAppStateChange = App.addListener('appStateChange', ({ isActive }) => {
+    const handleAppStateChange = App.addListener('appStateChange', async ({ isActive }) => {
       if (isActive) {
         clearBadge()
+
+        // Check for pending shared content from share extension
+        if (isNativeIOS() && !hasCheckedSharedContent.current) {
+          try {
+            const content = await getSharedContent()
+            if (content.hasContent) {
+              console.log('[AppLayout] Found pending shared content')
+              setPendingSharedContent(true)
+              // Navigate to calendar with scan parameter
+              router.push('/calendar?scan=true')
+            }
+          } catch (e) {
+            console.error('[AppLayout] Failed to check shared content:', e)
+          }
+        }
       }
     })
 
-    // Also clear badge on initial mount
+    // Also clear badge and check shared content on initial mount
     clearBadge()
+
+    // Check for shared content on initial load
+    const checkInitialSharedContent = async () => {
+      if (isNativeIOS() && !hasCheckedSharedContent.current) {
+        hasCheckedSharedContent.current = true
+        try {
+          const content = await getSharedContent()
+          if (content.hasContent) {
+            console.log('[AppLayout] Found shared content on initial load')
+            setPendingSharedContent(true)
+            router.push('/calendar?scan=true')
+          }
+        } catch (e) {
+          console.error('[AppLayout] Failed to check shared content:', e)
+        }
+      }
+    }
+    checkInitialSharedContent()
 
     return () => {
       handleAppStateChange.then(h => h.remove())
     }
-  }, [isNative, clearBadge])
+  }, [isNative, clearBadge, router])
 
   // Handle deep links from iOS widgets
   useEffect(() => {

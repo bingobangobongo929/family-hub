@@ -157,14 +157,33 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents, initialI
   // Auto-process flag for share extension content
   const autoProcessPendingRef = useRef(false)
 
+  // Track if we should auto-process (set by initialImages effect, consumed by images effect)
+  const shouldAutoProcessRef = useRef(false)
+
   // Load initial images from share extension when modal opens
   useEffect(() => {
     if (isOpen && initialImages && initialImages.length > 0) {
+      console.log('[AICalendarInput] Loading initial images from share extension:', initialImages.length)
       setImages(initialImages)
-      // Auto-process shared images after a short delay
-      autoProcessPendingRef.current = true
+      shouldAutoProcessRef.current = true
     }
   }, [isOpen, initialImages])
+
+  // Auto-process when images are loaded from share extension
+  useEffect(() => {
+    if (shouldAutoProcessRef.current && images.length > 0 && !isProcessing && step === 'input') {
+      shouldAutoProcessRef.current = false
+      console.log('[AICalendarInput] Auto-processing shared images...')
+      // Delay slightly to ensure UI is rendered
+      const timer = setTimeout(() => {
+        handleProcessRef.current?.()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [images, isProcessing, step])
+
+  // Ref to handleProcess for auto-processing
+  const handleProcessRef = useRef<(() => void) | null>(null)
 
   // Voice input state
   const [isRecording, setIsRecording] = useState(false)
@@ -689,6 +708,11 @@ export default function AICalendarInput({ isOpen, onClose, onAddEvents, initialI
       setIsProcessing(false)
     }
   }
+
+  // Keep ref updated for auto-processing
+  useEffect(() => {
+    handleProcessRef.current = handleProcess
+  })
 
   const handleToggleEvent = (index: number) => {
     setExtractedEvents(events =>
