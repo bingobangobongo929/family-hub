@@ -326,19 +326,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Process as Task
     const processAsTask = async (content: { texts?: string[]; images?: string[] }) => {
       console.log('[AutoProcess:Task] Starting task processing')
+      console.log('[AutoProcess:Task] isNativeIOS:', isNativeIOS())
       const text = content.texts?.join('\n') || ''
       if (!text) {
         console.log('[AutoProcess:Task] No text content found')
-        await NotificationTemplates.parseFailed('task')
+        const notifResult = await NotificationTemplates.parseFailed('task')
+        console.log('[AutoProcess:Task] Parse failed notification result:', notifResult)
         return
       }
       console.log('[AutoProcess:Task] Text to process:', text.substring(0, 100))
 
       try {
-        // Get auth token
-        const { data: { session: authSession } } = await supabase.auth.getSession()
-        const token = authSession?.access_token
-        console.log('[AutoProcess:Task] Auth token available:', !!token)
+        // Use session from context (more reliable than getSession)
+        const token = session?.access_token
+        console.log('[AutoProcess:Task] Auth token available:', !!token, 'Session exists:', !!session)
 
         if (!token) {
           // Create simple task without AI parsing
@@ -360,7 +361,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           }
 
           console.log('[AutoProcess:Task] Task created:', task?.id)
-          await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
+          const notifResult = await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
+          console.log('[AutoProcess:Task] Notification result:', notifResult)
           return
         }
 
@@ -434,30 +436,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             console.error('[AutoProcess:Task] Simple task insert error:', error)
           }
           console.log('[AutoProcess:Task] Simple task created:', task?.id)
-          await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
+          const nr1 = await NotificationTemplates.taskCreated(task?.title || text.substring(0, 50))
+          console.log('[AutoProcess:Task] Notification result:', nr1)
         } else if (createdTasks.length === 1) {
           console.log('[AutoProcess:Task] Sending single task notification')
-          await NotificationTemplates.taskCreated(createdTasks[0])
+          const nr2 = await NotificationTemplates.taskCreated(createdTasks[0])
+          console.log('[AutoProcess:Task] Notification result:', nr2)
         } else {
           console.log('[AutoProcess:Task] Sending multi-task notification:', createdTasks.length)
-          await NotificationTemplates.tasksCreated(createdTasks.length)
+          const nr3 = await NotificationTemplates.tasksCreated(createdTasks.length)
+          console.log('[AutoProcess:Task] Notification result:', nr3)
         }
       } catch (error) {
         console.error('[AutoProcess:Task] Task processing error:', error)
-        await NotificationTemplates.parseFailed('task')
+        const nr4 = await NotificationTemplates.parseFailed('task')
+        console.log('[AutoProcess:Task] Error notification result:', nr4)
       }
     }
 
     // Process as Calendar
     const processAsCalendar = async (content: { texts?: string[]; images?: string[] }) => {
       console.log('[AutoProcess:Calendar] Starting calendar processing')
+      console.log('[AutoProcess:Calendar] isNativeIOS:', isNativeIOS())
       const images = content.images || []
       const text = content.texts?.join('\n') || ''
 
       console.log('[AutoProcess:Calendar] Images count:', images.length, 'Text length:', text.length)
       if (images.length === 0 && !text) {
         console.log('[AutoProcess:Calendar] No content to process')
-        await NotificationTemplates.parseFailed('event')
+        const nr = await NotificationTemplates.parseFailed('event')
+        console.log('[AutoProcess:Calendar] No content notification result:', nr)
         return
       }
 
@@ -532,26 +540,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         if (createdEvents.length === 0) {
           console.log('[AutoProcess:Calendar] No events created, sending failure notification')
-          await NotificationTemplates.parseFailed('event')
+          const nr1 = await NotificationTemplates.parseFailed('event')
+          console.log('[AutoProcess:Calendar] Notification result:', nr1)
         } else if (createdEvents.length === 1) {
           console.log('[AutoProcess:Calendar] Sending single event notification')
-          await NotificationTemplates.eventCreated(createdEvents[0])
+          const nr2 = await NotificationTemplates.eventCreated(createdEvents[0])
+          console.log('[AutoProcess:Calendar] Notification result:', nr2)
         } else {
           console.log('[AutoProcess:Calendar] Sending multi-event notification:', createdEvents.length)
-          await NotificationTemplates.eventsCreated(createdEvents.length)
+          const nr3 = await NotificationTemplates.eventsCreated(createdEvents.length)
+          console.log('[AutoProcess:Calendar] Notification result:', nr3)
         }
       } catch (error) {
         console.error('[AutoProcess:Calendar] Calendar processing error:', error)
-        await NotificationTemplates.parseFailed('event')
+        const nr4 = await NotificationTemplates.parseFailed('event')
+        console.log('[AutoProcess:Calendar] Error notification result:', nr4)
       }
     }
 
     // Only auto-process when app is ready, user is available, and we have pending work
     if (appReady && !loading && user && pendingAutoProcess) {
-      console.log('[AutoProcess] Triggering auto-process - appReady:', appReady, 'loading:', loading, 'user:', !!user, 'pending:', !!pendingAutoProcess)
+      console.log('[AutoProcess] Triggering auto-process - appReady:', appReady, 'loading:', loading, 'user:', !!user, 'session:', !!session, 'pending:', !!pendingAutoProcess)
       autoProcessSharedContent()
     }
-  }, [appReady, loading, user, pendingAutoProcess])
+  }, [appReady, loading, user, session, pendingAutoProcess])
 
   // Dismiss keyboard when tapping outside inputs
   const handleMainClick = useCallback((e: React.MouseEvent) => {
