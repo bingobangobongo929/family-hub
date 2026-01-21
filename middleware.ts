@@ -25,6 +25,7 @@ const CRON_ROUTES = [
   '/api/notifications/triggers/events',
   '/api/notifications/triggers/routines',
   '/api/notifications/triggers/shopping-list',
+  '/api/notifications/triggers/tasks',
   '/api/notifications/triggers/f1-sessions',
   '/api/notifications/triggers/f1-news',
   '/api/notifications/triggers/f1-results',
