@@ -15,6 +15,7 @@ const PUBLIC_API_ROUTES = [
 const SERVICE_ROLE_ROUTES = [
   '/api/routines/completion',
   '/api/notifications/log',
+  '/api/notifications/debug',  // Debug endpoints handle their own auth
 ]
 
 // Routes that use CRON_SECRET instead of user auth (cron jobs only)
