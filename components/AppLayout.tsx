@@ -177,34 +177,43 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Also clear badge and check shared content on initial mount
     clearBadge()
 
-    // Check for shared content on initial load
-    const checkInitialSharedContent = async () => {
-      if (isNativeIOS() && !hasCheckedSharedContent.current) {
-        hasCheckedSharedContent.current = true
-        try {
-          const content = await getSharedContent()
-          console.log('[AppLayout] Initial shared content check:', content)
-          if (content.hasContent) {
-            console.log('[AppLayout] Found shared content on initial load:', content)
-            setPendingSharedContent(true)
+    // Check for shared content on initial load (with retry for App Group sync delay)
+    const checkInitialSharedContent = async (attempt = 1) => {
+      if (!isNativeIOS() || hasCheckedSharedContent.current) return
 
-            // If content has intent, use the new auto-processing flow via state
-            if (content.intent && !hasAutoProcessed.current) {
-              console.log('[AppLayout] Setting pending auto-process from initial load:', content.intent)
-              setPendingAutoProcess({ intent: content.intent as 'task' | 'calendar', timestamp: Date.now() })
-            } else if (!content.intent) {
-              // Fallback: route based on content type
-              const hasImages = content.images && content.images.length > 0
-              if (hasImages) {
-                router.push('/calendar?scan=true')
-              } else {
-                router.push('/tasks?shared=true')
-              }
+      try {
+        const content = await getSharedContent()
+        console.log(`[AppLayout] Initial shared content check (attempt ${attempt}):`, content)
+
+        if (content.hasContent) {
+          hasCheckedSharedContent.current = true
+          console.log('[AppLayout] Found shared content on initial load:', content)
+          setPendingSharedContent(true)
+
+          // If content has intent, use the new auto-processing flow via state
+          if (content.intent && !hasAutoProcessed.current) {
+            console.log('[AppLayout] Setting pending auto-process from initial load:', content.intent)
+            setPendingAutoProcess({ intent: content.intent as 'task' | 'calendar', timestamp: Date.now() })
+          } else if (!content.intent) {
+            // Fallback: route based on content type
+            const hasImages = content.images && content.images.length > 0
+            if (hasImages) {
+              router.push('/calendar?scan=true')
+            } else {
+              router.push('/tasks?shared=true')
             }
           }
-        } catch (e) {
-          console.error('[AppLayout] Failed to check shared content:', e)
+        } else if (attempt < 3) {
+          // Retry after a short delay - App Group sync can be slow
+          console.log(`[AppLayout] No content found, retrying in 500ms (attempt ${attempt}/3)`)
+          setTimeout(() => checkInitialSharedContent(attempt + 1), 500)
+        } else {
+          hasCheckedSharedContent.current = true
+          console.log('[AppLayout] No shared content after 3 attempts')
         }
+      } catch (e) {
+        console.error('[AppLayout] Failed to check shared content:', e)
+        hasCheckedSharedContent.current = true
       }
     }
     checkInitialSharedContent()

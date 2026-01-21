@@ -221,8 +221,16 @@ public class FamilyHubNativePlugin: CAPPlugin, CAPBridgedPlugin {
 
     // MARK: - Shared Content (from Share Extension)
     @objc func getSharedContent(_ call: CAPPluginCall) {
-        guard let defaults = UserDefaults(suiteName: "group.app.familyhub.home"),
-              let sharedData = defaults.dictionary(forKey: "shared_content") else {
+        guard let defaults = UserDefaults(suiteName: "group.app.familyhub.home") else {
+            call.resolve(["hasContent": false])
+            return
+        }
+
+        // Force sync to pick up changes from share extension
+        // This is critical - without it, we may read stale/empty data
+        defaults.synchronize()
+
+        guard let sharedData = defaults.dictionary(forKey: "shared_content") else {
             call.resolve(["hasContent": false])
             return
         }
