@@ -3,9 +3,11 @@
  *
  * Provides local notification functionality for iOS native app.
  * Used for showing instant feedback notifications (e.g., AI processing complete).
+ * Falls back to push notifications if local notifications are unavailable.
  */
 
 import { isNativeIOS, FamilyHubNative } from './native-plugin'
+import { supabase } from './supabase'
 
 // Re-export for convenience
 export { isNativeIOS }
@@ -26,13 +28,51 @@ interface LocalNotificationResult {
 }
 
 /**
+ * Send a push notification via the server API
+ * Used as fallback when local notifications aren't available
+ */
+async function sendPushNotificationFallback(options: LocalNotificationOptions): Promise<LocalNotificationResult> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token || !session?.user?.id) {
+      console.log('[LocalNotifications] No session for push fallback')
+      return { success: false }
+    }
+
+    const response = await fetch('/api/notifications/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        user_id: session.user.id,
+        title: options.title,
+        body: options.body || '',
+        data: {
+          type: options.category?.toLowerCase() || 'share_extension',
+          ...options.data,
+        },
+      }),
+    })
+
+    const result = await response.json()
+    console.log('[LocalNotifications] Push fallback result:', result)
+    return { success: result.sent > 0, id: options.id }
+  } catch (error) {
+    console.error('[LocalNotifications] Push fallback failed:', error)
+    return { success: false }
+  }
+}
+
+/**
  * Send a local notification immediately
- * Only works on native iOS, no-ops on web
+ * Falls back to push notification if local notifications unavailable
  */
 export async function sendLocalNotification(options: LocalNotificationOptions): Promise<LocalNotificationResult> {
   if (!isNativeIOS()) {
-    console.log('[LocalNotifications] Not on native iOS, skipping notification')
-    return { success: false }
+    console.log('[LocalNotifications] Not on native iOS, trying push fallback')
+    return sendPushNotificationFallback(options)
   }
 
   try {
@@ -46,8 +86,15 @@ export async function sendLocalNotification(options: LocalNotificationOptions): 
     })
     console.log('[LocalNotifications] Notification sent:', result)
     return result
-  } catch (error) {
+  } catch (error: any) {
     console.error('[LocalNotifications] Failed to send notification:', error)
+
+    // If UNIMPLEMENTED, fall back to push notification
+    if (error?.code === 'UNIMPLEMENTED') {
+      console.log('[LocalNotifications] Local not available, trying push fallback')
+      return sendPushNotificationFallback(options)
+    }
+
     return { success: false }
   }
 }
