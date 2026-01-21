@@ -9,6 +9,7 @@ import { usePush } from '@/lib/push-context'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 import { getDebugLogs, clearDebugLogs } from '@/lib/debug-logger'
+import { getSharedContent, clearSharedContent, isNativeIOS } from '@/lib/native-plugin'
 
 interface StatusCheck {
   name: string
@@ -78,6 +79,8 @@ export default function NotificationDebugPage() {
   const [resetting, setResetting] = useState(false)
   const [consoleLogs, setConsoleLogs] = useState<ReturnType<typeof getDebugLogs>>([])
   const [autoRefreshLogs, setAutoRefreshLogs] = useState(true)
+  const [sharedContent, setSharedContent] = useState<any>(null)
+  const [checkingShared, setCheckingShared] = useState(false)
 
   // Fetch notification status
   const fetchStatus = useCallback(async () => {
@@ -307,6 +310,56 @@ export default function NotificationDebugPage() {
           Logs auto-refresh every second. Green = AutoProcess logs. Look for [AutoProcess] entries after sharing.
         </p>
       </Card>
+
+      {/* Share Extension Debug */}
+      {isNativeIOS() && (
+        <Card className="mb-4">
+          <CardHeader title="Share Extension Debug" icon={<Send className="w-5 h-5" />} />
+          <div className="mt-4 space-y-3">
+            <div className="flex gap-2">
+              <Button
+                onClick={async () => {
+                  setCheckingShared(true)
+                  try {
+                    const content = await getSharedContent()
+                    setSharedContent(content)
+                    console.log('[Debug] Shared content check:', content)
+                  } catch (e) {
+                    setSharedContent({ error: String(e) })
+                  }
+                  setCheckingShared(false)
+                }}
+                variant="secondary"
+                size="sm"
+                disabled={checkingShared}
+              >
+                {checkingShared ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Check Shared Content
+              </Button>
+              <Button
+                onClick={async () => {
+                  await clearSharedContent()
+                  setSharedContent({ cleared: true })
+                }}
+                variant="secondary"
+                size="sm"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Clear
+              </Button>
+            </div>
+            {sharedContent && (
+              <pre className="bg-slate-900 text-green-400 p-3 rounded text-xs overflow-auto max-h-40">
+                {JSON.stringify(sharedContent, null, 2)}
+              </pre>
+            )}
+            <p className="text-xs text-slate-500">
+              After sharing from another app, tap "Check" to see if content was saved to App Group.
+              If empty, the share extension isn't saving correctly.
+            </p>
+          </div>
+        </Card>
+      )}
 
       {/* Client-Side Push Status */}
       <Card className="mb-4">
