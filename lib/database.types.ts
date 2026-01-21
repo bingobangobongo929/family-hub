@@ -102,7 +102,7 @@ export interface CalendarEvent {
   member_id: string | null // Deprecated - use event_members junction table
   category_id: string | null
   location: string | null
-  source: 'manual' | 'google' | 'apple' | 'outlook'
+  source: 'manual' | 'google' | 'apple' | 'outlook' | 'ai'
   source_id: string | null
   recurrence_rule: string | null
   created_at: string
