@@ -535,7 +535,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 all_day: event.all_day,
                 color: event.color || '#3b82f6',
                 location: event.location || null,
-                source: 'ai',
+                source: 'manual', // TODO: Change to 'ai' after running migration 028
                 user_id: user?.id,
               })
               .select()
