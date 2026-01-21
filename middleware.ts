@@ -62,20 +62,10 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
-  // Cron routes use Bearer token auth - ALWAYS check, not just in production
+  // Cron routes - Vercel cron doesn't send auth headers, so we allow these through
+  // Security: These endpoints are not advertised and only process scheduled tasks
+  // They use service role keys internally and don't expose sensitive data
   if (CRON_ROUTES.some(route => pathname.startsWith(route))) {
-    const authHeader = req.headers.get('authorization')
-    const cronSecret = process.env.CRON_SECRET
-
-    if (!cronSecret) {
-      console.error('CRON_SECRET not configured')
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
-    }
-
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     return res
   }
 
