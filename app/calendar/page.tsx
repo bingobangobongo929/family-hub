@@ -693,7 +693,7 @@ export default function CalendarPage() {
         category_id: event.category_id || null,
         location: event.location || null,
         recurrence_rule: event.recurrence_rrule || null,
-        source: 'manual' as const,
+        source: 'ai' as const,
         user_id: user?.id || 'demo',
       }
 
