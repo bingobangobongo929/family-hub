@@ -57,6 +57,7 @@ function truncate(text: string, maxLength: number): string {
 }
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -65,6 +66,16 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Log that this trigger was called (for debugging cron execution)
+  await supabase.from('notification_log').insert({
+    user_id: null,
+    category: 'cron_execution',
+    notification_type: 'f1_news_trigger',
+    title: 'F1 News Trigger Called',
+    body: `Triggered at ${new Date().toISOString()}`,
+    data: { source: request.headers.get('user-agent') || 'unknown' },
+  }).catch(() => {}); // Ignore errors
 
   // Note: Auth is handled by middleware (CRON_ROUTES)
 
