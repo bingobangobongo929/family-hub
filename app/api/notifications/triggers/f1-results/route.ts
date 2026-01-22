@@ -129,7 +129,8 @@ export async function GET(request: NextRequest) {
                      `${currentLeader.points} pts (+${gap} over ${secondPlace.familyName})`;
 
         try {
-          const response = await fetch(new URL('/api/notifications/send', request.url), {
+          const sendUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/notifications/send`;
+          const response = await fetch(sendUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -173,7 +174,8 @@ export async function GET(request: NextRequest) {
                         `${favoriteDriver.points} pts (+${gap} gap) • ${favoriteDriver.wins} wins`;
 
             try {
-              const response = await fetch(new URL('/api/notifications/send', request.url), {
+              const sendUrl2 = `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/notifications/send`;
+              const response = await fetch(sendUrl2, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',

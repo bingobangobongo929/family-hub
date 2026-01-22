@@ -197,7 +197,8 @@ export async function GET(request: NextRequest) {
 
       // Send notification
       try {
-        const response = await fetch(new URL('/api/notifications/send', request.url), {
+        const sendUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/notifications/send`;
+        const response = await fetch(sendUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

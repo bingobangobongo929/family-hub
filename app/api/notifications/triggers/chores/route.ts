@@ -50,7 +50,8 @@ export async function GET(request: NextRequest) {
         const choreList = userChores.slice(0, 3).map(c => c.title).join(', ');
         const moreText = choreCount > 3 ? ` +${choreCount - 3} more` : '';
 
-        const response = await fetch(new URL('/api/notifications/send', request.url), {
+        const sendUrl = `${process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin}/api/notifications/send`;
+        const response = await fetch(sendUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
