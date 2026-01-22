@@ -34,16 +34,32 @@ const CATEGORIES = Object.keys(CATEGORY_CONFIG)
 
 // Record shopping list change for notification debouncing
 async function recordShoppingChange(userId: string | undefined, itemName: string, action: 'added' | 'removed' | 'completed') {
-  if (!userId) {
-    console.warn('[Shopping] Cannot record change - no user ID')
+  // If no userId passed, try to get it from the current session
+  let effectiveUserId = userId
+
+  if (!effectiveUserId) {
+    try {
+      // Import supabase dynamically to avoid circular imports
+      const { supabase } = await import('@/lib/supabase')
+      const { data: { session } } = await supabase.auth.getSession()
+      effectiveUserId = session?.user?.id
+      console.log('[Shopping] Got user ID from session:', effectiveUserId?.substring(0, 8))
+    } catch (e) {
+      console.error('[Shopping] Failed to get session:', e)
+    }
+  }
+
+  if (!effectiveUserId) {
+    console.warn('[Shopping] Cannot record change - no user ID (not logged in?)')
     return
   }
+
   try {
-    console.log('[Shopping] Recording change:', { userId: userId.substring(0, 8), itemName, action })
+    console.log('[Shopping] Recording change:', { userId: effectiveUserId.substring(0, 8), itemName, action })
     const response = await fetch('/api/notifications/triggers/shopping-list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, item_name: itemName, action }),
+      body: JSON.stringify({ user_id: effectiveUserId, item_name: itemName, action }),
     })
     const result = await response.json()
     if (!response.ok) {
