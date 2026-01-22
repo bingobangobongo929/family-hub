@@ -1122,6 +1122,22 @@ export default function SettingsPage() {
       {/* Notification Preferences */}
       <NotificationPreferences />
 
+      {/* Debug Link */}
+      <Card className="mb-6">
+        <div className="p-4">
+          <a
+            href="/debug-notifications"
+            className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl border border-orange-200 dark:border-orange-800"
+          >
+            <div>
+              <p className="font-medium text-orange-700 dark:text-orange-300">🔧 Debug Notifications</p>
+              <p className="text-sm text-orange-600 dark:text-orange-400">Troubleshoot notification issues</p>
+            </div>
+            <span className="text-orange-500">→</span>
+          </a>
+        </div>
+      </Card>
+
       {/* Family Context */}
       <Card className="mb-6">
         <CardHeader title="Family Context" icon={<FileText className="w-5 h-5" />} />
