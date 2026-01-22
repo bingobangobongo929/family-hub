@@ -19,6 +19,99 @@ export async function GET(request: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey);
   const debug: any = { steps: [] };
 
+  // Check for test mode - if ?test=true, run full test with notification
+  const { searchParams } = new URL(request.url);
+  const runTest = searchParams.get('test') === 'true';
+
+  if (runTest) {
+    // Run the full POST test flow
+    const { data: tokenUser } = await supabase
+      .from('push_tokens')
+      .select('user_id')
+      .limit(1)
+      .single();
+
+    if (!tokenUser) {
+      return NextResponse.json({ error: 'No user with push token found' }, { status: 404 });
+    }
+
+    debug.user_id = tokenUser.user_id.substring(0, 8) + '...';
+
+    // Insert a test change (dated 15 minutes ago so it's in the notification window)
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+    const { data: insertData, error: insertError } = await supabase
+      .from('shopping_list_changes')
+      .insert({
+        user_id: tokenUser.user_id,
+        item_name: 'TEST: Debug Item ' + Date.now(),
+        action: 'added',
+        created_at: fifteenMinutesAgo.toISOString(),
+      })
+      .select();
+
+    debug.steps.push({
+      step: 'Insert test change (15 min ago)',
+      success: !insertError,
+      error: insertError?.message,
+      code: insertError?.code,
+      hint: insertError?.hint,
+      data: insertData,
+    });
+
+    if (insertError) {
+      debug.rls_fix_needed = true;
+      debug.sql_to_run = `
+-- Fix RLS policy for shopping_list_changes
+DROP POLICY IF EXISTS "Service role can manage shopping list changes" ON shopping_list_changes;
+
+CREATE POLICY "Service role can manage shopping list changes"
+  ON shopping_list_changes FOR ALL
+  USING (true)
+  WITH CHECK (true);
+      `.trim();
+      return NextResponse.json(debug);
+    }
+
+    // Now trigger the shopping notification
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+
+    try {
+      const triggerResponse = await fetch(`${baseUrl}/api/notifications/triggers/shopping-list`, {
+        method: 'GET',
+      });
+
+      const triggerResult = await triggerResponse.json();
+
+      debug.steps.push({
+        step: 'Trigger shopping notification',
+        status: triggerResponse.status,
+        result: triggerResult,
+      });
+
+      debug.notification_sent = triggerResult.count > 0;
+
+    } catch (error: any) {
+      debug.steps.push({
+        step: 'Trigger shopping notification',
+        error: error.message,
+      });
+    }
+
+    // Clean up test item
+    await supabase
+      .from('shopping_list_changes')
+      .delete()
+      .like('item_name', 'TEST: Debug Item%');
+
+    debug.steps.push({
+      step: 'Cleanup test data',
+      success: true,
+    });
+
+    return NextResponse.json(debug);
+  }
+
   // Check if table exists
   const { data: tableCheck, error: tableError } = await supabase
     .from('shopping_list_changes')
