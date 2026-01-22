@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const { data: logs, error } = await supabase
     .from('notification_log')
     .select('*')
-    .order('created_at', { ascending: false })
+    .order('sent_at', { ascending: false })
     .limit(50);
 
   if (error) {
