@@ -216,7 +216,7 @@ async function sendAPNsNotification(
   }
 }
 
-// HTTP/2 request to APNs
+// HTTP/2 request to APNs with timeout
 function sendHttp2Request(
   apnsHost: string,
   deviceToken: string,
@@ -225,12 +225,27 @@ function sendHttp2Request(
   payload: NotificationPayload
 ): Promise<{ success: boolean; reason?: string }> {
   return new Promise((resolve) => {
+    let resolved = false;
     const client = http2.connect(`https://${apnsHost}`);
 
+    // 10-second timeout to prevent hanging Lambda
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        console.error('APNs request timed out after 10 seconds');
+        client.close();
+        resolve({ success: false, reason: 'timeout' });
+      }
+    }, 10000);
+
     client.on('error', (err) => {
-      console.error('HTTP/2 connection error:', err);
-      client.close();
-      resolve({ success: false, reason: 'connection_error' });
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        console.error('HTTP/2 connection error:', err);
+        client.close();
+        resolve({ success: false, reason: 'connection_error' });
+      }
     });
 
     const body = JSON.stringify({
@@ -269,28 +284,36 @@ function sendHttp2Request(
     });
 
     req.on('end', () => {
-      client.close();
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        client.close();
 
-      if (statusCode === 200) {
-        console.log('APNs notification sent successfully');
-        resolve({ success: true });
-      } else {
-        let errorReason = 'unknown';
-        try {
-          const errorJson = JSON.parse(responseData);
-          errorReason = errorJson.reason || 'unknown';
-        } catch {
-          errorReason = responseData || `status_${statusCode}`;
+        if (statusCode === 200) {
+          console.log('APNs notification sent successfully');
+          resolve({ success: true });
+        } else {
+          let errorReason = 'unknown';
+          try {
+            const errorJson = JSON.parse(responseData);
+            errorReason = errorJson.reason || 'unknown';
+          } catch {
+            errorReason = responseData || `status_${statusCode}`;
+          }
+          console.error('APNs error:', statusCode, errorReason);
+          resolve({ success: false, reason: errorReason });
         }
-        console.error('APNs error:', statusCode, errorReason);
-        resolve({ success: false, reason: errorReason });
       }
     });
 
     req.on('error', (err) => {
-      console.error('HTTP/2 request error:', err);
-      client.close();
-      resolve({ success: false, reason: 'request_error' });
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timeout);
+        console.error('HTTP/2 request error:', err);
+        client.close();
+        resolve({ success: false, reason: 'request_error' });
+      }
     });
 
     req.write(body);
