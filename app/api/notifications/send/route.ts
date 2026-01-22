@@ -267,7 +267,7 @@ function sendHttp2Request(
       'apns-topic': bundleId,
       'apns-push-type': 'alert',
       'apns-priority': '10',
-      'apns-expiration': '0',
+      'apns-expiration': String(Math.floor(Date.now() / 1000) + 86400), // Expire in 24 hours
       'content-type': 'application/json',
       'content-length': Buffer.byteLength(body),
     });
