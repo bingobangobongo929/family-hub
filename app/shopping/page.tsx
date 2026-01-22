@@ -34,16 +34,25 @@ const CATEGORIES = Object.keys(CATEGORY_CONFIG)
 
 // Record shopping list change for notification debouncing
 async function recordShoppingChange(userId: string | undefined, itemName: string, action: 'added' | 'removed' | 'completed') {
-  if (!userId) return
+  if (!userId) {
+    console.warn('[Shopping] Cannot record change - no user ID')
+    return
+  }
   try {
-    await fetch('/api/notifications/triggers/shopping-list', {
+    console.log('[Shopping] Recording change:', { userId: userId.substring(0, 8), itemName, action })
+    const response = await fetch('/api/notifications/triggers/shopping-list', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_id: userId, item_name: itemName, action }),
     })
+    const result = await response.json()
+    if (!response.ok) {
+      console.error('[Shopping] Failed to record change:', result)
+    } else {
+      console.log('[Shopping] Change recorded:', result)
+    }
   } catch (e) {
-    // Silent fail - don't block the user action
-    console.debug('Failed to record shopping change for notification:', e)
+    console.error('[Shopping] Error recording change:', e)
   }
 }
 

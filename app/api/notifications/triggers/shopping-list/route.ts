@@ -224,30 +224,48 @@ export async function POST(request: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const { user_id, item_name, action } = await request.json();
+    const body = await request.json();
+    const { user_id, item_name, action } = body;
+
+    // Enhanced logging for debugging
+    console.log('Shopping change received:', { user_id: user_id?.substring(0, 8), item_name, action });
 
     if (!user_id || !item_name || !action) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      console.log('Missing fields:', { has_user_id: !!user_id, has_item_name: !!item_name, has_action: !!action });
+      return NextResponse.json({
+        error: 'Missing required fields',
+        received: { has_user_id: !!user_id, has_item_name: !!item_name, has_action: !!action }
+      }, { status: 400 });
     }
 
     // Record the change
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('shopping_list_changes')
       .insert({
         user_id,
         item_name,
         action,
-      });
+      })
+      .select();
 
     if (error) {
       console.error('Error recording shopping change:', error);
-      return NextResponse.json({ error: 'Failed to record change' }, { status: 500 });
+      return NextResponse.json({
+        error: 'Failed to record change',
+        detail: error.message,
+        code: error.code,
+        hint: error.hint
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, recorded: true });
+    console.log('Shopping change recorded:', data);
+    return NextResponse.json({ success: true, recorded: true, id: data?.[0]?.id });
 
   } catch (error) {
     console.error('Error in shopping list POST:', error);
-    return NextResponse.json({ error: 'Failed to record change' }, { status: 500 });
+    return NextResponse.json({
+      error: 'Failed to record change',
+      detail: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
