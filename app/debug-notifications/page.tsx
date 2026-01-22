@@ -164,6 +164,24 @@ export default function DebugNotificationsPage() {
     setTesting(false)
   }
 
+  const resetF1State = async () => {
+    if (!user?.id) {
+      alert('Not logged in')
+      return
+    }
+    try {
+      const response = await fetch('/api/notifications/debug/reset-f1', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id })
+      })
+      const data = await response.json()
+      alert(data.success ? 'F1 state reset! New articles will now trigger notifications.' : `Failed: ${data.error}`)
+    } catch (e: any) {
+      alert(`Error: ${e.message}`)
+    }
+  }
+
   return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold">Notification Diagnostics</h1>
@@ -183,6 +201,13 @@ export default function DebugNotificationsPage() {
         className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-semibold disabled:opacity-50"
       >
         {testing ? 'Running Tests...' : 'Run Full Diagnostics'}
+      </button>
+
+      <button
+        onClick={resetF1State}
+        className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg font-semibold"
+      >
+        🔄 Reset F1 Notification State (get missed articles)
       </button>
 
       {results.length > 0 && (

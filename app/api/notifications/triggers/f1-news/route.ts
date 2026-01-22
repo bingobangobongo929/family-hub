@@ -252,14 +252,17 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Update notification state with most recent article ID
+      // Update notification state with most recent article's pubDate
+      // BUG FIX: Was using new Date() which caused articles published between
+      // the most recent article and cron run time to be skipped forever
       if (articlesToNotify.length > 0) {
+        const mostRecentArticlePubDate = articlesToNotify[0].pubDate;
         await supabase
           .from('f1_notification_state')
           .upsert({
             user_id: pref.user_id,
             last_news_article_id: articlesToNotify[0].id,
-            last_news_check: new Date().toISOString(),
+            last_news_check: mostRecentArticlePubDate, // Use article pubDate, not current time!
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' });
       }
