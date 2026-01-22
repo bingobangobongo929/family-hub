@@ -70,20 +70,55 @@ export async function GET(request: NextRequest) {
     const twentyMinutesAgo = new Date(now.getTime() - 20 * 60 * 1000);
 
     // Get ALL changes from the last 20 minutes
-    const { data: allChanges } = await supabase
+    const { data: allChanges, error: changesError } = await supabase
       .from('shopping_list_changes')
       .select('*')
       .gte('created_at', twentyMinutesAgo.toISOString())
       .order('created_at', { ascending: false });
 
+    // Log EVERY cron execution with full details
+    const logData = {
+      triggered_at: now.toISOString(),
+      changes_found: allChanges?.length || 0,
+      changes_error: changesError?.message || null,
+      ten_min_ago: tenMinutesAgo.toISOString(),
+      twenty_min_ago: twentyMinutesAgo.toISOString(),
+      changes: allChanges?.map(c => ({
+        item: c.item_name,
+        action: c.action,
+        created: c.created_at,
+        age_minutes: Math.round((now.getTime() - new Date(c.created_at).getTime()) / 60000)
+      })) || []
+    };
+
+    await supabase.from('notification_log').insert({
+      user_id: null,
+      category: 'cron_execution',
+      notification_type: 'shopping_list_trigger',
+      title: 'Shopping List Trigger',
+      body: `Found ${allChanges?.length || 0} changes`,
+      data: logData,
+    });
+
     if (!allChanges || allChanges.length === 0) {
-      return NextResponse.json({ message: 'No recent changes', sent: 0 });
+      return NextResponse.json({ message: 'No recent changes', sent: 0, logged: true });
     }
 
     // Check debounce: only notify if the most recent change is > 10 minutes old
     const mostRecentChange = new Date(allChanges[0].created_at);
+    const mostRecentAgeMinutes = Math.round((now.getTime() - mostRecentChange.getTime()) / 60000);
+
     if (mostRecentChange > tenMinutesAgo) {
-      return NextResponse.json({ message: 'Still editing, debouncing', sent: 0 });
+      // Log debounce event
+      await supabase.from('notification_log').insert({
+        user_id: null,
+        category: 'cron_execution',
+        notification_type: 'shopping_list_debounce',
+        title: 'Shopping List DEBOUNCED',
+        body: `Most recent change is only ${mostRecentAgeMinutes} min old (need >10)`,
+        data: { most_recent_age: mostRecentAgeMinutes, changes_count: allChanges.length },
+      });
+      return NextResponse.json({ message: 'Still editing, debouncing', sent: 0, mostRecentAge: mostRecentAgeMinutes });
     }
 
     // Get changes to notify about (between 10-20 minutes ago)
@@ -93,7 +128,16 @@ export async function GET(request: NextRequest) {
     });
 
     if (changesToNotify.length === 0) {
-      return NextResponse.json({ message: 'No new changes to notify', sent: 0 });
+      // Log when changes exist but none in window
+      await supabase.from('notification_log').insert({
+        user_id: null,
+        category: 'cron_execution',
+        notification_type: 'shopping_list_no_window',
+        title: 'Shopping List NO CHANGES IN WINDOW',
+        body: `${allChanges.length} changes exist but 0 in 10-20 min window`,
+        data: { total_changes: allChanges.length, most_recent_age: mostRecentAgeMinutes },
+      });
+      return NextResponse.json({ message: 'No new changes to notify', sent: 0, reason: 'not_in_window' });
     }
 
     // Get unique user IDs who made changes (to check notify_own_changes)

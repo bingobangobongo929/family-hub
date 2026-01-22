@@ -5,6 +5,76 @@ import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase'
 import Card from '@/components/Card'
 
+function CronLogsSection() {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  const fetchLogs = async () => {
+    setLoading(true)
+    try {
+      const response = await fetch('/api/notifications/debug/logs')
+      const data = await response.json()
+      // Filter to only cron_execution logs
+      const cronLogs = (data.logs || []).filter((l: any) =>
+        l.category === 'cron_execution' || l.type?.includes('shopping')
+      )
+      setLogs(cronLogs.slice(0, 20))
+    } catch (e) {
+      console.error('Failed to fetch logs:', e)
+    }
+    setLoading(false)
+  }
+
+  const copyLogs = () => {
+    const text = logs.map(l =>
+      `[${l.created_at}] ${l.type}: ${l.title} - ${l.body || ''}`
+    ).join('\n')
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="flex justify-between items-center mb-2">
+        <h2 className="font-semibold">Cron Job Logs</h2>
+        <div className="flex gap-2">
+          {logs.length > 0 && (
+            <button
+              onClick={copyLogs}
+              className="px-2 py-1 bg-gray-500 text-white text-xs rounded"
+            >
+              {copied ? '✓' : '📋'}
+            </button>
+          )}
+          <button
+            onClick={fetchLogs}
+            disabled={loading}
+            className="px-3 py-1 bg-green-500 text-white text-sm rounded-lg disabled:opacity-50"
+          >
+            {loading ? '...' : 'Load Logs'}
+          </button>
+        </div>
+      </div>
+      {logs.length > 0 ? (
+        <div className="space-y-1 max-h-64 overflow-y-auto">
+          {logs.map((l, i) => (
+            <div key={i} className="text-xs p-2 bg-gray-50 dark:bg-gray-800 rounded">
+              <div className="font-mono text-gray-500">{l.created_at?.substring(11, 19)}</div>
+              <div className="font-medium">{l.type}</div>
+              <div className="text-gray-600 dark:text-gray-400">{l.title}</div>
+              {l.body && <div className="text-gray-500">{l.body}</div>}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-500">Click "Load Logs" to see recent cron executions</p>
+      )}
+    </Card>
+  )
+}
+
 export default function DebugNotificationsPage() {
   const { user, loading: authLoading } = useAuth()
   const [results, setResults] = useState<any[]>([])
@@ -158,6 +228,8 @@ ${text}
           </div>
         </Card>
       )}
+
+      <CronLogsSection />
 
       <Card className="p-4">
         <h2 className="font-semibold mb-2">Manual Test Links</h2>
