@@ -206,11 +206,29 @@ export async function GET(request: NextRequest) {
             }),
           });
 
-          if (response.ok) {
+          const responseData = await response.json().catch(() => ({}));
+
+          if (response.ok && responseData.sent > 0) {
             sentCount++;
             results.push({ user_id: pref.user_id, article: article.title, sent: true });
           } else {
-            results.push({ user_id: pref.user_id, article: article.title, sent: false });
+            // Log DETAILED failure info
+            console.error('F1 notification send failed:', {
+              userId: pref.user_id.substring(0, 8),
+              status: response.status,
+              responseData,
+            });
+
+            await supabase.from('notification_log').insert({
+              user_id: pref.user_id,
+              category: 'cron_execution',
+              notification_type: 'f1_send_failed',
+              title: 'F1 Send FAILED',
+              body: `Status ${response.status}: ${JSON.stringify(responseData).substring(0, 200)}`,
+              data: { status: response.status, response: responseData, article: article.title },
+            });
+
+            results.push({ user_id: pref.user_id, article: article.title, sent: false, detail: responseData });
           }
         } catch (error) {
           console.error('Error sending F1 news notification:', error);
@@ -243,12 +261,32 @@ export async function GET(request: NextRequest) {
             }),
           });
 
-          if (response.ok) {
+          const responseData = await response.json().catch(() => ({}));
+
+          if (response.ok && responseData.sent > 0) {
             sentCount++;
             results.push({ user_id: pref.user_id, article: `${articlesToNotify.length} articles`, sent: true });
+          } else {
+            console.error('F1 summary notification send failed:', {
+              userId: pref.user_id.substring(0, 8),
+              status: response.status,
+              responseData,
+            });
+
+            await supabase.from('notification_log').insert({
+              user_id: pref.user_id,
+              category: 'cron_execution',
+              notification_type: 'f1_summary_send_failed',
+              title: 'F1 Summary Send FAILED',
+              body: `Status ${response.status}: ${JSON.stringify(responseData).substring(0, 200)}`,
+              data: { status: response.status, response: responseData },
+            });
+
+            results.push({ user_id: pref.user_id, article: `${articlesToNotify.length} articles`, sent: false, detail: responseData });
           }
         } catch (error) {
           console.error('Error sending F1 news summary notification:', error);
+          results.push({ user_id: pref.user_id, article: 'summary', sent: false, reason: 'exception' });
         }
       }
 

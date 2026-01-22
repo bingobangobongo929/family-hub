@@ -122,9 +122,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Get changes to notify about (between 10-20 minutes ago)
+    // BUG FIX: Was using > twentyMinutesAgo which excluded changes exactly 20 min old
+    // Changed to >= to include the boundary
     const changesToNotify = allChanges.filter(c => {
       const changeTime = new Date(c.created_at);
-      return changeTime <= tenMinutesAgo && changeTime > twentyMinutesAgo;
+      return changeTime <= tenMinutesAgo && changeTime >= twentyMinutesAgo;
     });
 
     if (changesToNotify.length === 0) {
@@ -213,7 +215,9 @@ export async function GET(request: NextRequest) {
           }),
         });
 
-        if (response.ok) {
+        const responseData = await response.json().catch(() => ({}));
+
+        if (response.ok && responseData.sent > 0) {
           sentCount++;
 
           // Log notification
@@ -230,7 +234,23 @@ export async function GET(request: NextRequest) {
 
           results.push({ user_id: userId, sent: true });
         } else {
-          results.push({ user_id: userId, sent: false, reason: 'send_failed' });
+          // Log DETAILED failure info
+          console.error('Shopping notification send failed:', {
+            userId: userId.substring(0, 8),
+            status: response.status,
+            responseData,
+          });
+
+          await supabase.from('notification_log').insert({
+            user_id: userId,
+            category: 'cron_execution',
+            notification_type: 'shopping_send_failed',
+            title: 'Shopping Send FAILED',
+            body: `Status ${response.status}: ${JSON.stringify(responseData).substring(0, 200)}`,
+            data: { status: response.status, response: responseData },
+          });
+
+          results.push({ user_id: userId, sent: false, reason: `send_failed_${response.status}`, detail: responseData });
         }
       } catch (error) {
         console.error('Error sending shopping notification:', error);

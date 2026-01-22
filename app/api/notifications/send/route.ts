@@ -47,11 +47,18 @@ function ensureVapidConfigured(): boolean {
 let cachedJwt: { token: string; expiry: number } | null = null;
 
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const requestId = Math.random().toString(36).substring(7);
+
+  // Log ALL incoming requests to the send endpoint
+  console.log(`[SEND-${requestId}] Notification send request received from: ${request.headers.get('user-agent') || 'unknown'}`);
+
   // Initialize Supabase at runtime (not build time)
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
+    console.error(`[SEND-${requestId}] Missing Supabase config!`);
     return NextResponse.json({ error: 'Missing Supabase config' }, { status: 500 });
   }
 
@@ -59,6 +66,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const payload: NotificationPayload = await request.json();
+
+    // Log the payload (truncated for security)
+    console.log(`[SEND-${requestId}] Payload:`, {
+      user_id: payload.user_id?.substring(0, 8) + '...',
+      title: payload.title?.substring(0, 50),
+      has_body: !!payload.body,
+      data_type: payload.data?.type,
+    });
 
     if (!payload.title || !payload.body) {
       return NextResponse.json(
@@ -76,8 +91,14 @@ export async function POST(request: NextRequest) {
 
     const { data: tokens, error: tokenError } = await query;
 
+    console.log(`[SEND-${requestId}] Token query result:`, {
+      tokenCount: tokens?.length || 0,
+      error: tokenError?.message || null,
+      platforms: tokens?.map(t => t.platform),
+    });
+
     if (tokenError) {
-      console.error('Error fetching tokens:', tokenError);
+      console.error(`[SEND-${requestId}] Error fetching tokens:`, tokenError);
       return NextResponse.json(
         { error: 'Failed to fetch push tokens' },
         { status: 500 }
@@ -85,6 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!tokens || tokens.length === 0) {
+      console.log(`[SEND-${requestId}] No tokens found for user`);
       return NextResponse.json(
         { message: 'No push tokens found', sent: 0 },
         { status: 200 }
@@ -106,6 +128,32 @@ export async function POST(request: NextRequest) {
     const successCount = results.filter(r => r.success).length;
     const failures = results.filter(r => !r.success);
 
+    const duration = Date.now() - startTime;
+    console.log(`[SEND-${requestId}] Complete in ${duration}ms:`, {
+      sent: successCount,
+      total: tokens.length,
+      failures: failures.length > 0 ? failures : 'none',
+    });
+
+    // Log to database for visibility in debug page
+    try {
+      await supabase.from('notification_log').insert({
+        user_id: payload.user_id || null,
+        category: 'cron_execution',
+        notification_type: 'send_endpoint_result',
+        title: `Send: ${successCount}/${tokens.length}`,
+        body: payload.title?.substring(0, 100),
+        data: {
+          request_id: requestId,
+          duration_ms: duration,
+          sent: successCount,
+          total: tokens.length,
+          failures: failures,
+          data_type: payload.data?.type,
+        },
+      });
+    } catch {} // Ignore logging errors
+
     return NextResponse.json({
       message: `Sent ${successCount}/${tokens.length} notifications`,
       sent: successCount,
@@ -114,7 +162,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error sending notification:', error);
+    console.error(`[SEND-${requestId}] Exception:`, error);
     return NextResponse.json(
       { error: 'Failed to send notification' },
       { status: 500 }
