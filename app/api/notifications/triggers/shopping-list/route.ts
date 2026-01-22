@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
     const body = details || `${changesToNotify.length} change${changesToNotify.length > 1 ? 's' : ''}`;
 
     let sentCount = 0;
-    const results: { user_id: string; sent: boolean; reason?: string }[] = [];
+    const results: { user_id: string; sent: boolean; reason?: string; detail?: any }[] = [];
 
     // Send to each user
     for (const userId of userIds) {

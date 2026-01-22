@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     const stateMap = new Map((states || []).map(s => [s.user_id, s]));
 
     let sentCount = 0;
-    const results: { user_id: string; article: string; sent: boolean }[] = [];
+    const results: { user_id: string; article: string; sent: boolean; detail?: any; reason?: string }[] = [];
 
     for (const pref of prefs) {
       const state = stateMap.get(pref.user_id);
