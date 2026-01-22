@@ -9,6 +9,7 @@ export default function DebugNotificationsPage() {
   const { user, loading: authLoading } = useAuth()
   const [results, setResults] = useState<any[]>([])
   const [testing, setTesting] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const addResult = (step: string, status: 'pass' | 'fail' | 'info', detail: string) => {
     setResults(prev => [...prev, { step, status, detail, time: new Date().toISOString() }])
@@ -116,7 +117,31 @@ export default function DebugNotificationsPage() {
 
       {results.length > 0 && (
         <Card className="p-4">
-          <h2 className="font-semibold mb-2">Test Results</h2>
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="font-semibold">Test Results</h2>
+            <button
+              onClick={() => {
+                const text = results.map(r =>
+                  `${r.status === 'pass' ? '✅' : r.status === 'fail' ? '❌' : 'ℹ️'} ${r.step}: ${r.detail}`
+                ).join('\n')
+                const fullReport = `=== NOTIFICATION DEBUG REPORT ===
+Time: ${new Date().toISOString()}
+Auth Loading: ${authLoading}
+User ID: ${user?.id || 'NULL'}
+User Email: ${user?.email || 'NULL'}
+
+=== TEST RESULTS ===
+${text}
+`
+                navigator.clipboard.writeText(fullReport)
+                setCopied(true)
+                setTimeout(() => setCopied(false), 2000)
+              }}
+              className="px-3 py-1 bg-blue-500 text-white text-sm rounded-lg"
+            >
+              {copied ? '✓ Copied!' : '📋 Copy All'}
+            </button>
+          </div>
           <div className="space-y-2">
             {results.map((r, i) => (
               <div key={i} className={`p-2 rounded text-sm ${
