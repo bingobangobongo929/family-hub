@@ -167,24 +167,17 @@ export function PushProvider({ children }: { children: ReactNode }) {
     }
   }, [user, saveTokenToServer, log]);
 
-  // When user logs in, save any stored token
+  // When user logs in, save current token to server
+  // Note: We use the token state, not stored token, to avoid sandbox/production mismatch
   useEffect(() => {
-    const saveStoredToken = async () => {
+    const saveCurrentToken = async () => {
       if (!user) return;
 
       if (isNative) {
-        // Native iOS
-        try {
-          const { value: storedToken } = await Preferences.get({ key: PUSH_TOKEN_KEY });
-          if (storedToken) {
-            console.log('Found stored iOS token, saving to server...');
-            setToken(storedToken);
-            setPlatform('ios');
-            setIsEnabled(true);
-            await saveTokenToServer(storedToken, 'ios');
-          }
-        } catch (e) {
-          console.error('Failed to get stored token:', e);
+        // Native iOS - use current token state (set by handleToken from iOS registration)
+        if (token && platform === 'ios') {
+          console.log('User logged in, saving current iOS token to server...');
+          await saveTokenToServer(token, 'ios');
         }
       } else if (isWebPushAvailable) {
         // Web push
@@ -205,8 +198,8 @@ export function PushProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    saveStoredToken();
-  }, [user, isNative, isWebPushAvailable, saveTokenToServer]);
+    saveCurrentToken();
+  }, [user, isNative, isWebPushAvailable, saveTokenToServer, token, platform]);
 
   // Handle incoming notification
   const handleNotification = useCallback((notification: PushNotificationSchema) => {
@@ -259,21 +252,16 @@ export function PushProvider({ children }: { children: ReactNode }) {
         setPlatform('ios');
 
         if (status === 'granted') {
-          // Load stored token
+          // IMPORTANT: Clear cached token to force fresh registration from iOS
+          // This fixes sandbox/production token mismatch when switching between builds
           try {
-            log('Checking for stored token...');
-            const { value: storedToken } = await Preferences.get({ key: PUSH_TOKEN_KEY });
-            if (storedToken) {
-              log(`Found stored token: ${storedToken.substring(0, 10)}...`);
-              setToken(storedToken);
-              setIsEnabled(true);
-            }
+            log('Clearing cached token to force fresh registration...');
+            await Preferences.remove({ key: PUSH_TOKEN_KEY });
           } catch (e) {
-            log(`Error loading stored token: ${e}`);
-            setError(`Failed to load stored token: ${e}`);
+            log(`Error clearing cached token: ${e}`);
           }
 
-          // Initialize listeners
+          // Initialize listeners - this will call register() and get fresh token from iOS
           log('Calling initPushNotifications...');
           try {
             const success = await initPushNotifications(handleToken, handleNotification, handleAction);
